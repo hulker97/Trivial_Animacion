@@ -1204,6 +1204,631 @@ function nextTurn() {
 // ════════════════════════════════════════════════════════
 //  RENDER SVG TABLERO
 // ════════════════════════════════════════════════════════
+// Ilustraciones SVG en miniatura para cada película
+// Cada función recibe (cx, cy) centro y devuelve SVG paths/shapes
+// Las casillas son 22x18px centradas en (cx,cy) — dibujo en coordenadas relativas [-11,11] x [-9,9]
+
+const MOVIE_ICONS = {
+
+  // ══ HÉROES ══
+  'El Rey León': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- cielo naranja -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#E65100"/>
+      <!-- sol -->
+      <circle cx="5" cy="-4" r="3.5" fill="#FFD700" opacity="0.9"/>
+      <!-- roca del orgullo (silueta) -->
+      <ellipse cx="-2" cy="4" rx="8" ry="4" fill="#3E2723"/>
+      <polygon points="-2,-2 -8,4 6,4" fill="#4E342E"/>
+      <!-- silueta Simba (simple) -->
+      <ellipse cx="-2" cy="-1" rx="2.5" ry="1.8" fill="#1A1A1A"/>
+      <circle cx="-2" cy="-3" r="1.8" fill="#1A1A1A"/>
+      <!-- melena -->
+      <ellipse cx="-2" cy="-3" rx="2.8" ry="2.5" fill="#212121" opacity="0.7"/>
+    </g>`,
+
+  'Toy Story': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- fondo cielo azul -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#1976D2"/>
+      <!-- nubes -->
+      <ellipse cx="-4" cy="-4" rx="4" ry="2" fill="white" opacity="0.8"/>
+      <ellipse cx="5" cy="-6" rx="3" ry="1.5" fill="white" opacity="0.7"/>
+      <!-- silueta Woody (sombrero + cuerpo) -->
+      <rect x="-3" y="0" width="6" height="7" rx="1" fill="#F9A825"/>
+      <rect x="-2" y="-5" width="4" height="5" rx="1" fill="#F9A825"/>
+      <!-- sombrero vaquero -->
+      <ellipse cx="0" cy="-5" rx="5" ry="1.2" fill="#5D4037"/>
+      <rect x="-2" y="-8" width="4" height="4" rx="1" fill="#5D4037"/>
+      <!-- estrella del sheriff -->
+      <polygon points="0,-1.5 0.7,0.5 2.5,0.5 1,1.8 1.5,3.5 0,2.3 -1.5,3.5 -1,1.8 -2.5,0.5 -0.7,0.5" fill="#FFD700" transform="translate(0,1) scale(0.5)"/>
+    </g>`,
+
+  'La Sirenita': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- mar -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#0277BD"/>
+      <!-- olas -->
+      <path d="M-11,2 Q-6,-1 -2,2 Q2,5 6,2 Q10,-1 11,2 L11,9 L-11,9 Z" fill="#01579B"/>
+      <!-- silueta Ariel (cola) -->
+      <ellipse cx="1" cy="3" rx="3" ry="5" fill="#00897B"/>
+      <path d="M-2,6 Q1,9 4,6" stroke="#00897B" stroke-width="2" fill="none"/>
+      <!-- torso -->
+      <ellipse cx="1" cy="-1" rx="2" ry="3" fill="#F48FB1"/>
+      <!-- cabello rojo -->
+      <ellipse cx="1" cy="-4" rx="3" ry="3" fill="#E53935"/>
+      <path d="M-2,-2 Q-4,2 -3,5" stroke="#E53935" stroke-width="1.5" fill="none"/>
+    </g>`,
+
+  'Frozen': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- fondo azul noche -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#1A237E"/>
+      <!-- aurora boreal -->
+      <path d="M-11,-5 Q-5,-8 0,-4 Q5,0 11,-3" stroke="#00E5FF" stroke-width="2" fill="none" opacity="0.7"/>
+      <path d="M-11,-2 Q-4,-6 2,-1 Q7,2 11,0" stroke="#69F0AE" stroke-width="1.5" fill="none" opacity="0.6"/>
+      <!-- copo de nieve central -->
+      <line x1="0" y1="-1" x2="0" y2="7" stroke="white" stroke-width="1.2"/>
+      <line x1="-3.5" y1="1.5" x2="3.5" y2="4.5" stroke="white" stroke-width="1.2"/>
+      <line x1="-3.5" y1="4.5" x2="3.5" y2="1.5" stroke="white" stroke-width="1.2"/>
+      <circle cx="0" cy="3" r="1" fill="#00E5FF"/>
+      <!-- silueta Elsa -->
+      <ellipse cx="0" cy="-5" rx="1.5" ry="1.8" fill="#90CAF9"/>
+      <path d="M-2,-3 L-1.5,0 L1.5,0 L2,-3" fill="#7986CB"/>
+    </g>`,
+
+  'Enredados': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- fondo morado oscuro -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#4A148C"/>
+      <!-- torre -->
+      <rect x="-2" y="-2" width="4" height="9" fill="#795548"/>
+      <polygon points="-3,-2 3,-2 0,-6" fill="#B71C1C"/>
+      <!-- ventana con luz -->
+      <rect x="-1" y="0" width="2" height="2.5" fill="#FFF9C4"/>
+      <!-- cabello rubio largo -->
+      <path d="M-1,-3 Q-8,0 -9,6 Q-7,8 -5,7 Q-4,4 -2,2" stroke="#FFD740" stroke-width="2" fill="none"/>
+      <path d="M1,-3 Q6,-1 7,4" stroke="#FFD740" stroke-width="2" fill="none"/>
+      <!-- linternas flotantes -->
+      <circle cx="4" cy="-5" r="1" fill="#FFD740" opacity="0.9"/>
+      <circle cx="7" cy="-7" r="0.8" fill="#FFD740" opacity="0.8"/>
+      <circle cx="-5" cy="-6" r="0.9" fill="#FFD740" opacity="0.85"/>
+      <line x1="4" y1="-4" x2="4" y2="-6.5" stroke="#FF8F00" stroke-width="0.6"/>
+    </g>`,
+
+  'Los Increíbles': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- fondo rojo -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#B71C1C"/>
+      <!-- logo "i" estilizado -->
+      <circle cx="0" cy="-4" r="3" fill="#FFD700"/>
+      <text x="0" y="-2.5" text-anchor="middle" font-size="5" fill="#B71C1C" font-weight="bold">i</text>
+      <!-- silueta Mr. Incredible -->
+      <rect x="-3" y="0" width="6" height="7" rx="2" fill="#C62828"/>
+      <ellipse cx="0" cy="-1" rx="3.5" ry="3" fill="#C62828"/>
+      <!-- máscara negra -->
+      <path d="M-3,0 Q-1,-2 0,-1.5 Q1,-2 3,0" fill="#212121"/>
+      <!-- símbolo en el pecho -->
+      <circle cx="0" cy="3" r="1.5" fill="#FFD700"/>
+      <text x="0" y="3.8" text-anchor="middle" font-size="3" fill="#B71C1C" font-weight="bold">i</text>
+    </g>`,
+
+  // ══ HISTORIA ══
+  'Buscando a Nemo': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- océano -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#01579B"/>
+      <!-- burbujas -->
+      <circle cx="-3" cy="-5" r="1" fill="none" stroke="#81D4FA" stroke-width="0.8"/>
+      <circle cx="5" cy="-7" r="0.7" fill="none" stroke="#81D4FA" stroke-width="0.7"/>
+      <circle cx="2" cy="-3" r="1.2" fill="none" stroke="#81D4FA" stroke-width="0.8"/>
+      <!-- Nemo (pez payaso) -->
+      <ellipse cx="0" cy="2" rx="4" ry="3" fill="#F4511E"/>
+      <!-- rayas blancas -->
+      <line x1="-1.5" y1="-1" x2="-1.5" y2="5" stroke="white" stroke-width="1.2"/>
+      <line x1="1.5" y1="-1" x2="1.5" y2="5" stroke="white" stroke-width="1.2"/>
+      <!-- cola -->
+      <path d="M4,1 Q7,-1 7,5 Z" fill="#F4511E"/>
+      <!-- ojo -->
+      <circle cx="-2" cy="1" r="1.2" fill="white"/>
+      <circle cx="-2.2" cy="1" r="0.7" fill="#1A237E"/>
+    </g>`,
+
+  'Cómo Entrenar a tu Dragón': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- cielo nocturno -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#0D1B2A"/>
+      <!-- luna -->
+      <circle cx="7" cy="-5" r="3" fill="#FFF9C4"/>
+      <circle cx="8.5" cy="-5" r="2.5" fill="#0D1B2A"/>
+      <!-- silueta Furia Nocturna (toothless) -->
+      <ellipse cx="-1" cy="2" rx="5" ry="3" fill="#1A1A1A"/>
+      <!-- cabeza -->
+      <ellipse cx="-4" cy="-1" rx="3" ry="2.5" fill="#212121"/>
+      <!-- ojos verdes -->
+      <ellipse cx="-4.5" cy="-1.5" rx="1.2" ry="1.5" fill="#76FF03"/>
+      <ellipse cx="-3" cy="-1.5" rx="1.2" ry="1.5" fill="#76FF03"/>
+      <!-- pupila -->
+      <ellipse cx="-4.5" cy="-1.5" rx="0.5" ry="1" fill="black"/>
+      <ellipse cx="-3" cy="-1.5" rx="0.5" ry="1" fill="black"/>
+      <!-- alas abiertas -->
+      <path d="M3,0 Q7,-4 8,-2 Q6,1 3,2 Z" fill="#1A1A1A"/>
+      <path d="M3,0 Q-2,-5 -6,-4 Q-5,0 -4,-1" fill="#1A1A1A"/>
+    </g>`,
+
+  'Ratatouille': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- cocina fondo cálido -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#4E342E"/>
+      <!-- sartén -->
+      <ellipse cx="1" cy="5" rx="7" ry="3" fill="#424242"/>
+      <rect x="-7" y="2" width="14" height="4" rx="1" fill="#616161"/>
+      <!-- vapores -->
+      <path d="M-2,0 Q-3,-2 -2,-4" stroke="white" stroke-width="0.8" fill="none" opacity="0.6"/>
+      <path d="M1,-1 Q2,-3 1,-5" stroke="white" stroke-width="0.8" fill="none" opacity="0.6"/>
+      <path d="M4,0 Q5,-2 4,-4" stroke="white" stroke-width="0.8" fill="none" opacity="0.6"/>
+      <!-- Remy (silueta rata) -->
+      <ellipse cx="-1" cy="2" rx="3" ry="2" fill="#9E9E9E"/>
+      <circle cx="-3" cy="0" r="2" fill="#BDBDBD"/>
+      <!-- orejas -->
+      <circle cx="-4.5" cy="-1.5" r="1.2" fill="#EF9A9A"/>
+      <circle cx="-2" cy="-1.8" r="1" fill="#EF9A9A"/>
+      <!-- gorro de chef -->
+      <rect x="-4.5" y="-4" width="3" height="2.5" rx="0.5" fill="white"/>
+      <rect x="-5" y="-2.5" width="4" height="0.8" fill="white"/>
+    </g>`,
+
+  'WALL-E': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- fondo tierra árida -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#795548"/>
+      <!-- cielo marrón -->
+      <rect x="-11" y="-9" width="22" height="10" rx="3" fill="#5D4037"/>
+      <!-- estrella solitaria -->
+      <circle cx="7" cy="-6" r="0.8" fill="#FFD740"/>
+      <!-- WALL-E (cuerpo) -->
+      <rect x="-3" y="0" width="6" height="6" rx="1" fill="#F9A825"/>
+      <!-- ojos binoculares -->
+      <rect x="-4" y="-4" width="3" height="3" rx="1" fill="#1976D2"/>
+      <rect x="1" y="-4" width="3" height="3" rx="1" fill="#1976D2"/>
+      <!-- lente interior -->
+      <circle cx="-2.5" cy="-2.5" r="1" fill="#82B1FF"/>
+      <circle cx="2.5" cy="-2.5" r="1" fill="#82B1FF"/>
+      <!-- ruedas -->
+      <rect x="-5" y="5" width="4" height="2" rx="1" fill="#424242"/>
+      <rect x="1" y="5" width="4" height="2" rx="1" fill="#424242"/>
+      <!-- planta en la mano -->
+      <line x1="6" y1="3" x2="9" y2="0" stroke="#4CAF50" stroke-width="1"/>
+      <ellipse cx="9" cy="-1" rx="2" ry="1.5" fill="#66BB6A"/>
+    </g>`,
+
+  'Up': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- cielo azul -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#1976D2"/>
+      <!-- globos de colores -->
+      <circle cx="-4" cy="-5" r="2" fill="#E53935"/>
+      <circle cx="0" cy="-7" r="1.8" fill="#FFD740"/>
+      <circle cx="4" cy="-5" r="2" fill="#66BB6A"/>
+      <circle cx="-7" cy="-4" r="1.5" fill="#AB47BC"/>
+      <circle cx="7" cy="-4" r="1.5" fill="#FF7043"/>
+      <!-- cuerdas -->
+      <line x1="-4" y1="-3" x2="-1" y2="1" stroke="#5D4037" stroke-width="0.5"/>
+      <line x1="0" y1="-5.2" x2="0" y2="1" stroke="#5D4037" stroke-width="0.5"/>
+      <line x1="4" y1="-3" x2="1" y2="1" stroke="#5D4037" stroke-width="0.5"/>
+      <!-- casita -->
+      <rect x="-3" y="1" width="6" height="5" fill="#F9A825"/>
+      <polygon points="-4,1 4,1 0,-2" fill="#B71C1C"/>
+      <!-- ventana -->
+      <rect x="-1.5" y="2.5" width="2" height="2" fill="#81D4FA"/>
+    </g>`,
+
+  'Buscando a Dory': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- océano profundo -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#1A237E"/>
+      <!-- luz submarina -->
+      <ellipse cx="0" cy="0" rx="6" ry="8" fill="#1565C0" opacity="0.5"/>
+      <!-- Dory (pez cirujano azul) -->
+      <ellipse cx="0" cy="2" rx="5" ry="3.5" fill="#1E88E5"/>
+      <!-- rayas amarillas -->
+      <line x1="0" y1="-1.5" x2="0" y2="5.5" stroke="#FFD740" stroke-width="1"/>
+      <!-- aleta dorsal -->
+      <path d="M-1,-1.5 Q0,-5 1,-1.5" fill="#1565C0"/>
+      <!-- cola -->
+      <path d="M5,0 Q8,-2 9,2 Q8,4 5,4 Z" fill="#1565C0"/>
+      <!-- ojo -->
+      <circle cx="-3" cy="1" r="1.5" fill="white"/>
+      <circle cx="-3.2" cy="1" r="0.8" fill="#1A237E"/>
+      <!-- pupila -->
+      <circle cx="-3.5" cy="0.8" r="0.4" fill="black"/>
+    </g>`,
+
+  // ══ VILLANOS ══
+  'Shrek': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- pantano verde -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#2E7D32"/>
+      <ellipse cx="0" cy="6" rx="10" ry="4" fill="#1B5E20"/>
+      <!-- silueta Shrek -->
+      <ellipse cx="0" cy="2" rx="5" ry="5" fill="#558B2F"/>
+      <!-- cabeza verde grande -->
+      <ellipse cx="0" cy="-3" rx="5" ry="4.5" fill="#689F38"/>
+      <!-- orejas de ogro -->
+      <ellipse cx="-5" cy="-4" rx="1.5" ry="2" fill="#689F38" transform="rotate(-20,-5,-4)"/>
+      <ellipse cx="5" cy="-4" rx="1.5" ry="2" fill="#689F38" transform="rotate(20,5,-4)"/>
+      <!-- ojos -->
+      <ellipse cx="-2" cy="-4" rx="1.5" ry="1.2" fill="white"/>
+      <ellipse cx="2" cy="-4" rx="1.5" ry="1.2" fill="white"/>
+      <circle cx="-2" cy="-4" r="0.8" fill="#795548"/>
+      <circle cx="2" cy="-4" r="0.8" fill="#795548"/>
+      <!-- sonrisa -->
+      <path d="M-2.5,-1 Q0,1 2.5,-1" stroke="#33691E" stroke-width="1" fill="none"/>
+    </g>`,
+
+  'Madagascar': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- jungla -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#1B5E20"/>
+      <!-- hojas de palmera -->
+      <path d="M0,-2 Q-6,-6 -9,-4" stroke="#33691E" stroke-width="3" fill="none"/>
+      <path d="M0,-2 Q3,-8 7,-7" stroke="#33691E" stroke-width="3" fill="none"/>
+      <path d="M0,-2 Q-2,-8 0,-9" stroke="#2E7D32" stroke-width="2.5" fill="none"/>
+      <!-- Alex el león (silueta) -->
+      <ellipse cx="0" cy="4" rx="4" ry="3" fill="#F9A825"/>
+      <circle cx="-1" cy="0" r="3.5" fill="#FBC02D"/>
+      <!-- melena -->
+      <circle cx="-1" cy="0" r="4.5" fill="#5D4037" opacity="0.8"/>
+      <circle cx="-1" cy="0" r="3" fill="#FBC02D"/>
+      <!-- ojos -->
+      <ellipse cx="-2.5" cy="-0.5" rx="1" ry="1.2" fill="#FF8F00"/>
+      <ellipse cx="0.5" cy="-0.5" rx="1" ry="1.2" fill="#FF8F00"/>
+      <circle cx="-2.5" cy="-0.5" r="0.5" fill="black"/>
+      <circle cx="0.5" cy="-0.5" r="0.5" fill="black"/>
+    </g>`,
+
+  'El Gato con Botas': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- noche española -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#1A1A2E"/>
+      <!-- luna llena -->
+      <circle cx="7" cy="-5" r="3.5" fill="#FFF9C4"/>
+      <!-- silueta gato con sombrero -->
+      <!-- sombrero -->
+      <ellipse cx="-1" cy="-4" rx="5" ry="1" fill="#1A1A1A"/>
+      <rect x="-3" y="-7.5" width="4" height="4" rx="0.5" fill="#212121"/>
+      <circle cx="2.5" cy="-5" r="1" fill="#E53935"/>
+      <!-- cabeza de gato -->
+      <circle cx="-1" cy="-1" r="3" fill="#FF8F00"/>
+      <!-- orejas -->
+      <polygon points="-4,-3 -3,-6 -1,-3" fill="#FF8F00"/>
+      <polygon points="2,-3 3,-6 1,-3" fill="#FF8F00"/>
+      <!-- ojos verdes -->
+      <ellipse cx="-2" cy="-1.5" rx="1.2" ry="1.5" fill="#76FF03"/>
+      <ellipse cx="0.5" cy="-1.5" rx="1.2" ry="1.5" fill="#76FF03"/>
+      <ellipse cx="-2" cy="-1.5" rx="0.4" ry="1" fill="black"/>
+      <ellipse cx="0.5" cy="-1.5" rx="0.4" ry="1" fill="black"/>
+      <!-- capa -->
+      <path d="M-4,1 Q-1,4 2,1 L3,7 L-5,7 Z" fill="#E53935"/>
+      <!-- botas -->
+      <rect x="-4" y="6" width="3" height="2" rx="1" fill="#3E2723"/>
+      <rect x="1" y="6" width="3" height="2" rx="1" fill="#3E2723"/>
+    </g>`,
+
+  'Kung Fu Panda': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- China al amanecer -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#B71C1C"/>
+      <!-- sol chino -->
+      <circle cx="0" cy="-5" r="3" fill="#FFD740" opacity="0.9"/>
+      <!-- bambú -->
+      <rect x="-8" y="-8" width="1.5" height="17" fill="#388E3C"/>
+      <rect x="6" y="-5" width="1.5" height="14" fill="#388E3C"/>
+      <!-- nudo bambú -->
+      <rect x="-8.2" y="-2" width="1.9" height="0.8" fill="#2E7D32"/>
+      <rect x="5.8" y="2" width="1.9" height="0.8" fill="#2E7D32"/>
+      <!-- Po (panda gordo) -->
+      <ellipse cx="0" cy="5" rx="5" ry="4" fill="white"/>
+      <ellipse cx="0" cy="1" rx="4" ry="3.5" fill="white"/>
+      <!-- manchas negras panda -->
+      <ellipse cx="-2" cy="0" rx="2" ry="2.5" fill="#1A1A1A"/>
+      <ellipse cx="2" cy="0" rx="2" ry="2.5" fill="#1A1A1A"/>
+      <!-- ojos -->
+      <circle cx="-1.5" cy="-0.5" r="1" fill="white"/>
+      <circle cx="1.5" cy="-0.5" r="1" fill="white"/>
+      <circle cx="-1.5" cy="-0.5" r="0.5" fill="#1A237E"/>
+      <circle cx="1.5" cy="-0.5" r="0.5" fill="#1A237E"/>
+    </g>`,
+
+  // ══ SECUNDARIOS ══
+  'La Bella y la Bestia': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- fondo romántico -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#311B92"/>
+      <!-- luna y estrellas -->
+      <circle cx="7" cy="-6" r="2.5" fill="#FFF9C4"/>
+      <circle cx="-7" cy="-5" r="0.7" fill="white" opacity="0.8"/>
+      <circle cx="-3" cy="-7" r="0.5" fill="white" opacity="0.9"/>
+      <!-- rosa encantada con cúpula -->
+      <ellipse cx="0" cy="7" rx="4" ry="1" fill="#4A148C"/>
+      <path d="M-3,5 Q-3,-2 0,-4 Q3,-2 3,5 Q3,7 0,8 Q-3,7 -3,5" fill="rgba(255,255,255,0.15)" stroke="#7B1FA2" stroke-width="0.5"/>
+      <!-- tallo -->
+      <line x1="0" y1="6" x2="0" y2="2" stroke="#388E3C" stroke-width="1"/>
+      <!-- rosa -->
+      <circle cx="0" cy="1" r="2.5" fill="#E91E8C"/>
+      <circle cx="0" cy="0.5" r="1.5" fill="#F06292"/>
+      <!-- pétalos caídos -->
+      <ellipse cx="-3" cy="4" rx="1" ry="0.6" fill="#E91E8C" opacity="0.8"/>
+      <ellipse cx="3" cy="5" rx="0.8" ry="0.5" fill="#F48FB1" opacity="0.8"/>
+    </g>`,
+
+  'Cenicienta': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- medianoche azul -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#1A237E"/>
+      <!-- castillo silueta -->
+      <rect x="-3" y="-2" width="6" height="10" fill="#283593"/>
+      <rect x="-5" y="2" width="10" height="7" fill="#283593"/>
+      <polygon points="-3,-2 0,-6 3,-2" fill="#283593"/>
+      <polygon points="-5,2 -5,0 -3.5,2" fill="#1A237E"/>
+      <polygon points="5,2 5,0 3.5,2" fill="#1A237E"/>
+      <!-- luna -->
+      <circle cx="7" cy="-5" r="2.5" fill="#FFF9C4"/>
+      <!-- zapatilla de cristal -->
+      <path d="M-4,5 Q-2,3 2,4 Q5,5 5,7 L-4,7 Z" fill="#81D4FA" opacity="0.8"/>
+      <path d="M-4,5 Q-3,3 -1,3" stroke="#B3E5FC" stroke-width="0.8" fill="none"/>
+      <!-- brillo -->
+      <circle cx="3" cy="5" r="0.8" fill="white" opacity="0.9"/>
+    </g>`,
+
+  'Blancanieves': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- bosque oscuro -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#1B5E20"/>
+      <!-- árboles -->
+      <polygon points="-9,-9 -7,-3 -5,-9" fill="#0D47A1"/>
+      <polygon points="5,-9 8,-2 11,-9" fill="#0D47A1"/>
+      <!-- manzana envenenada -->
+      <circle cx="0" cy="-1" r="4" fill="#E53935"/>
+      <line x1="0" y1="-5" x2="0" y2="-4.5" stroke="#388E3C" stroke-width="1"/>
+      <path d="M0,-5 Q2,-7 3,-5" stroke="#388E3C" stroke-width="0.8" fill="none"/>
+      <!-- destello en la manzana -->
+      <circle cx="-1.5" cy="-2.5" r="1" fill="white" opacity="0.7"/>
+      <!-- los 7 enanitos (siluetas mini) -->
+      <circle cx="-8" cy="5" r="1.5" fill="#FBC02D"/>
+      <circle cx="-5" cy="6" r="1.5" fill="#1976D2"/>
+      <circle cx="-2" cy="5" r="1.5" fill="#E53935"/>
+      <circle cx="1" cy="6" r="1.5" fill="#388E3C"/>
+      <circle cx="4" cy="5" r="1.5" fill="#AB47BC"/>
+      <circle cx="7" cy="6" r="1.5" fill="#FF7043"/>
+      <circle cx="9" cy="5" r="1.5" fill="#607D8B"/>
+    </g>`,
+
+  'Peter Pan': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- cielo nocturno Londres -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#0D1B2A"/>
+      <!-- luna grande -->
+      <circle cx="0" cy="-2" r="6" fill="#FFF9C4"/>
+      <!-- silueta Peter Pan volando -->
+      <ellipse cx="0" cy="-2" rx="2" ry="3" fill="#1A1A1A"/>
+      <circle cx="0" cy="-5" r="2" fill="#1A1A1A"/>
+      <!-- sombrero con pluma -->
+      <ellipse cx="0" cy="-6.5" rx="2.5" ry="0.8" fill="#1A1A1A"/>
+      <line x1="1.5" y1="-7" x2="3" y2="-9" stroke="#388E3C" stroke-width="1"/>
+      <!-- Campanilla (destello) -->
+      <circle cx="7" cy="-7" r="1.5" fill="#FFD740"/>
+      <circle cx="7" cy="-7" r="2.5" fill="#FFD740" opacity="0.3"/>
+      <!-- tejados Londres abajo -->
+      <polygon points="-11,7 -6,4 -1,7 4,4 9,7 11,6 11,9 -11,9" fill="#212121"/>
+    </g>`,
+
+  // ══ LUGARES ══
+  'Aladdín': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- Agrabah al atardecer -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#E65100"/>
+      <!-- sol poniente -->
+      <circle cx="0" cy="-3" r="5" fill="#FFD740" opacity="0.7"/>
+      <!-- silueta Agrabah (cúpulas) -->
+      <rect x="-4" y="2" width="8" height="6" fill="#BF360C"/>
+      <ellipse cx="-4" cy="2" rx="2" ry="2.5" fill="#BF360C"/>
+      <ellipse cx="0" cy="1" rx="2.5" ry="3" fill="#D84315"/>
+      <ellipse cx="4" cy="2" rx="2" ry="2.5" fill="#BF360C"/>
+      <!-- minarete -->
+      <rect x="-0.5" y="-4" width="1" height="6" fill="#BF360C"/>
+      <polygon points="-1.5,-4 1.5,-4 0,-7" fill="#E64A19"/>
+      <!-- Genio (destello azul) -->
+      <circle cx="8" cy="-6" r="2" fill="#1976D2" opacity="0.8"/>
+      <circle cx="8" cy="-6" r="3" fill="#42A5F5" opacity="0.3"/>
+    </g>`,
+
+  'Mulán': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- China montañas -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#B71C1C"/>
+      <!-- sol rojo chino -->
+      <circle cx="0" cy="-4" r="3.5" fill="#FFD740"/>
+      <!-- Gran Muralla silueta -->
+      <path d="M-11,3 L-7,1 L-5,3 L-3,1 L-1,3 L1,1 L3,3 L5,1 L7,3 L9,1 L11,3 L11,9 L-11,9 Z" fill="#795548"/>
+      <!-- torres -->
+      <rect x="-9" y="-1" width="3" height="4" fill="#6D4C41"/>
+      <rect x="6" y="-1" width="3" height="4" fill="#6D4C41"/>
+      <!-- Mushu (dragón pequeño rojo) -->
+      <path d="M-5,-6 Q0,-9 5,-6 Q6,-3 4,-1 Q0,0 -4,-1 Q-6,-3 -5,-6" fill="#E53935"/>
+      <!-- Mushu cabeza -->
+      <circle cx="-5" cy="-5" r="2" fill="#E53935"/>
+      <ellipse cx="-6.5" cy="-5" rx="0.8" ry="1.5" fill="#E53935" transform="rotate(-30,-6.5,-5)"/>
+      <circle cx="-6" cy="-6" r="0.5" fill="#FFD740"/>
+    </g>`,
+
+  'Lilo & Stitch': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- Hawaii atardecer -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#E91E8C"/>
+      <!-- sol poniente sobre el mar -->
+      <circle cx="0" cy="2" r="5" fill="#FF6F00" opacity="0.8"/>
+      <!-- mar -->
+      <rect x="-11" y="5" width="22" height="4" rx="2" fill="#0277BD"/>
+      <!-- palmera -->
+      <line x1="-7" y1="9" x2="-5" y2="-2" stroke="#5D4037" stroke-width="1.5"/>
+      <path d="M-5,-2 Q-9,-5 -10,-3" stroke="#388E3C" stroke-width="2" fill="none"/>
+      <path d="M-5,-2 Q-4,-7 -2,-6" stroke="#388E3C" stroke-width="2" fill="none"/>
+      <!-- Stitch (alien azul) -->
+      <ellipse cx="3" cy="3" rx="4" ry="3" fill="#1E88E5"/>
+      <!-- cabeza -->
+      <circle cx="3" cy="0" r="3.5" fill="#42A5F5"/>
+      <!-- orejas de Stitch -->
+      <ellipse cx="0.5" cy="-3" rx="1.2" ry="2" fill="#42A5F5" transform="rotate(-20,0.5,-3)"/>
+      <ellipse cx="5.5" cy="-3" rx="1.2" ry="2" fill="#42A5F5" transform="rotate(20,5.5,-3)"/>
+      <!-- ojos grandes -->
+      <ellipse cx="1.5" cy="0" rx="1.5" ry="1.8" fill="#1A237E"/>
+      <ellipse cx="4.5" cy="0" rx="1.5" ry="1.8" fill="#1A237E"/>
+      <circle cx="1.8" cy="-0.3" r="0.6" fill="white"/>
+      <circle cx="4.8" cy="-0.3" r="0.6" fill="white"/>
+    </g>`,
+
+  'Tarzán': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- selva profunda -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#1B5E20"/>
+      <!-- luz que filtra -->
+      <path d="M-3,-9 L-6,9" stroke="#FFF9C4" stroke-width="3" opacity="0.15"/>
+      <path d="M3,-9 L6,9" stroke="#FFF9C4" stroke-width="2" opacity="0.1"/>
+      <!-- liana -->
+      <path d="M-8,-8 Q2,0 -2,9" stroke="#795548" stroke-width="1.5" fill="none"/>
+      <!-- silueta Tarzán en la liana -->
+      <circle cx="-2" cy="-1" r="2.5" fill="#F5E0C3"/>
+      <ellipse cx="-2" cy="3" rx="2" ry="3" fill="#F5E0C3"/>
+      <!-- pelo oscuro -->
+      <ellipse cx="-2" cy="-2" rx="2.5" ry="1.8" fill="#3E2723"/>
+      <!-- gorila (fondo) -->
+      <circle cx="5" cy="4" r="3" fill="#1A1A1A"/>
+      <circle cx="5" cy="1" r="2.5" fill="#212121"/>
+      <!-- ojos gorila -->
+      <circle cx="4" cy="1" r="0.6" fill="#FF8F00"/>
+      <circle cx="6" cy="1" r="0.6" fill="#FF8F00"/>
+    </g>`,
+
+  'Moana/Vaiana': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- océano pacífico -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#01579B"/>
+      <!-- olas -->
+      <path d="M-11,3 Q-6,0 -2,3 Q2,6 6,3 Q9,0 11,3" stroke="#29B6F6" stroke-width="1.5" fill="none"/>
+      <!-- Te Kā (volcán al fondo) -->
+      <polygon points="0,-9 -5,0 5,0" fill="#BF360C" opacity="0.7"/>
+      <circle cx="0" cy="-6" r="2" fill="#FF6F00" opacity="0.8"/>
+      <!-- espiral del océano (Te Fiti) -->
+      <path d="M-4,5 Q-2,3 0,5 Q2,7 4,5" stroke="#00E5FF" stroke-width="1.5" fill="none" opacity="0.8"/>
+      <!-- Maui (anzuelo) -->
+      <path d="M5,-4 Q8,-6 8,-3 Q8,0 5,1" stroke="#F9A825" stroke-width="2" fill="none"/>
+      <path d="M5,1 L4,3" stroke="#F9A825" stroke-width="2"/>
+      <!-- barca hawaiana -->
+      <path d="M-9,2 Q0,-1 9,2 L9,4 Q0,3 -9,4 Z" fill="#795548"/>
+    </g>`,
+
+  // ══ MUNDO ══
+  'Coco': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- tierra de los muertos -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#4A148C"/>
+      <!-- cielo mágico anaranjado -->
+      <rect x="-11" y="-9" width="22" height="10" rx="3" fill="#E65100"/>
+      <!-- puente de pétalos de cempasúchil -->
+      <path d="M-11,2 Q-5,-2 0,1 Q5,4 11,2" stroke="#FF6F00" stroke-width="3" fill="none"/>
+      <path d="M-11,3 Q-5,-1 0,2 Q5,5 11,3" stroke="#FFD740" stroke-width="2" fill="none"/>
+      <!-- edificios coloridos -->
+      <rect x="-10" y="-3" width="3" height="11" fill="#E91E8C"/>
+      <rect x="-6" y="-5" width="3" height="13" fill="#1976D2"/>
+      <rect x="3" y="-4" width="3" height="12" fill="#FFD740"/>
+      <rect x="7" y="-2" width="3" height="10" fill="#E53935"/>
+      <!-- estrella / nota musical -->
+      <circle cx="0" cy="-5" r="2" fill="#FFD740"/>
+      <line x1="2" y1="-5" x2="2" y2="-3" stroke="#FF6F00" stroke-width="1"/>
+      <ellipse cx="1.5" cy="-3" rx="0.8" ry="0.5" fill="#FF6F00"/>
+    </g>`,
+
+  'Encanto': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- Colombia colorida -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#1B5E20"/>
+      <!-- mariposas (símbolo de Encanto) -->
+      <path d="M-3,-3 Q-5,-6 -7,-4 Q-5,-1 -3,-3" fill="#FFD740"/>
+      <path d="M-3,-3 Q-4,-1 -6,0 Q-5,3 -3,-2" fill="#FF8F00"/>
+      <path d="M3,-3 Q5,-6 7,-4 Q5,-1 3,-3" fill="#FFD740"/>
+      <path d="M3,-3 Q4,-1 6,0 Q5,3 3,-2" fill="#FF8F00"/>
+      <!-- casa Madrigal -->
+      <rect x="-4" y="1" width="8" height="7" fill="#FFD740"/>
+      <polygon points="-5,1 0,-3 5,1" fill="#E53935"/>
+      <!-- ventana con luz mágica -->
+      <rect x="-1.5" y="3" width="3" height="3" fill="#E91E8C"/>
+      <circle cx="0" cy="4.5" r="1" fill="#FFD740" opacity="0.8"/>
+      <!-- montañas colombianas -->
+      <polygon points="-11,-9 -7,-3 -3,-9" fill="#2E7D32" opacity="0.8"/>
+      <polygon points="3,-9 7,-2 11,-9" fill="#1B5E20" opacity="0.8"/>
+    </g>`,
+
+  'Zootrópolis': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- ciudad moderna -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#0277BD"/>
+      <!-- skyline de Zootrópolis -->
+      <rect x="-10" y="-3" width="4" height="12" fill="#0D47A1"/>
+      <rect x="-5" y="-6" width="3" height="15" fill="#1565C0"/>
+      <rect x="-1" y="-4" width="3" height="13" fill="#0D47A1"/>
+      <rect x="3" y="-7" width="4" height="16" fill="#1565C0"/>
+      <rect x="8" y="-2" width="3" height="11" fill="#0D47A1"/>
+      <!-- ventanas -->
+      <rect x="-9" y="-2" width="1" height="1" fill="#FFD740"/>
+      <rect x="-9" y="0" width="1" height="1" fill="#FFD740"/>
+      <rect x="4" y="-5" width="1" height="1" fill="#FFD740"/>
+      <rect x="6" y="-3" width="1" height="1" fill="#FFD740"/>
+      <!-- luna -->
+      <circle cx="8" cy="-6" r="2" fill="#FFF9C4"/>
+      <!-- Nick el zorro (silueta) -->
+      <circle cx="-2" cy="3" r="2.5" fill="#FF6F00"/>
+      <polygon points="-4,1 -2,-2 0,1" fill="#FF6F00"/>
+      <polygon points="-4.5,1 -2,0 -4,3" fill="#FF6F00"/>
+      <!-- Judy (coneja) -->
+      <circle cx="2" cy="3" r="2" fill="#9E9E9E"/>
+      <ellipse cx="1.2" cy="0.5" rx="0.7" ry="2" fill="#BDBDBD"/>
+      <ellipse cx="2.8" cy="0.5" rx="0.7" ry="2" fill="#BDBDBD"/>
+    </g>`,
+
+  'Los Mitchell contra las Máquinas': (cx,cy,s=1) => `
+    <g transform="translate(${cx},${cy}) scale(${s})">
+      <!-- fondo digital caótico -->
+      <rect x="-11" y="-9" width="22" height="18" rx="3" fill="#1A237E"/>
+      <!-- circuitos digitales -->
+      <line x1="-11" y1="-2" x2="-4" y2="-2" stroke="#00E5FF" stroke-width="0.8" opacity="0.7"/>
+      <line x1="-4" y1="-2" x2="-4" y2="3" stroke="#00E5FF" stroke-width="0.8" opacity="0.7"/>
+      <line x1="-4" y1="3" x2="4" y2="3" stroke="#76FF03" stroke-width="0.8" opacity="0.7"/>
+      <line x1="4" y1="3" x2="4" y2="-5" stroke="#76FF03" stroke-width="0.8" opacity="0.7"/>
+      <line x1="4" y1="-5" x2="11" y2="-5" stroke="#00E5FF" stroke-width="0.8" opacity="0.7"/>
+      <!-- robot PAL (malo) -->
+      <rect x="-3" y="-6" width="6" height="5" rx="1" fill="#E53935"/>
+      <circle cx="-1" cy="-4" r="1" fill="white"/>
+      <circle cx="1" cy="-4" r="1" fill="white"/>
+      <circle cx="-1" cy="-4" r="0.5" fill="#B71C1C"/>
+      <circle cx="1" cy="-4" r="0.5" fill="#B71C1C"/>
+      <!-- la familia Mitchell (siluetas) -->
+      <circle cx="-4" cy="4" r="2" fill="#FF8F00"/>
+      <circle cx="0" cy="3" r="2.5" fill="#F9A825"/>
+      <circle cx="4" cy="4" r="2" fill="#FFB300"/>
+      <circle cx="7" cy="5" r="1.5" fill="#FF6F00"/>
+    </g>`,
+};
+
+// Función para obtener el icono SVG de una película dado un índice de casilla
+function getMovieIcon(movieTitle, cx, cy, scale=1) {
+  if (MOVIE_ICONS[movieTitle]) {
+    return MOVIE_ICONS[movieTitle](cx, cy, scale);
+  }
+  return null;
+}
+
+
 function renderBoard() {
   const svg = document.getElementById("board-svg");
   const validIds  = new Set((game ? game.validTargets : []).map(t => t.id));
@@ -1416,15 +2041,10 @@ const RING_MOVIE_DATA = [
     }
     if (isValid) { borderCol = isFinal ? "#FFD700" : "#FFFFFF"; borderW = 2.5; }
 
-    // Halo si es destino válido
-    if (isValid){
-      s += `<ellipse cx="${cell.x.toFixed(1)}" cy="${cell.y.toFixed(1)}" rx="${W+7}" ry="${H+6}"
-               fill="${isFinal?'#FFD700':'white'}" opacity="${isFinal?0.5:0.3}"
-               filter="url(#pulse)" onclick="onCellClick(${cell.id})" style="cursor:pointer"/>`;
-    }
-    if (isHQ){
+    // HQ: halo de color
+    if (isHQ && isValid){
       s += `<circle cx="${cell.x.toFixed(1)}" cy="${cell.y.toFixed(1)}"
-               r="${W+6}" fill="${bg}" opacity="0.25" filter="url(#pulse)"/>`;
+               r="${W+8}" fill="${bg}" opacity="0.35" filter="url(#pulse)"/>`;
     }
 
     // Casilla — rectángulo rotado tangencialmente, estilo fotograma
