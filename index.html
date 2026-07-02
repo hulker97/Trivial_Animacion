@@ -1297,39 +1297,34 @@ function renderBoard() {
                x2="${sp.trackEdge.x.toFixed(1)}" y2="${sp.trackEdge.y.toFixed(1)}"
                stroke="${col}" stroke-width="2" opacity="0.7"/>`;
 
-    // Casillas del spoke — rectangulares alineadas con el brazo
+    // Casillas del spoke — MISMO tamaño y estilo que el anillo exterior
     const fills  = SPOKE_FILLS[sp.categoria];
     const emojis = SPOKE_EMOJIS[sp.categoria];
     for (let ci=0; ci<sp.cells.length; ci++){
       const sc      = sp.cells[ci];
       const isValid = validIds.has(sc.id);
-      const rotDeg  = sp.angle + 90;
-      const W=22, H=17;
+      const rotDeg  = sp.angle + 90; // mismo sistema que anillo
+      const W=11, H=9; // exactamente igual que casillas normales del anillo
       const bg = fills[ci % fills.length];
 
       if (isValid){
-        s += `<ellipse cx="${sc.x.toFixed(1)}" cy="${sc.y.toFixed(1)}" rx="${W+10}" ry="${H+9}"
+        s += `<ellipse cx="${sc.x.toFixed(1)}" cy="${sc.y.toFixed(1)}" rx="${W+7}" ry="${H+6}"
                fill="white" opacity="0.35" filter="url(#pulse)"
                onclick="onCellClick(${sc.id})" style="cursor:pointer"/>`;
       }
       s += `<g transform="translate(${sc.x.toFixed(1)},${sc.y.toFixed(1)}) rotate(${rotDeg.toFixed(1)})"
                onclick="${isValid?'onCellClick('+sc.id+')':''}"
                style="${isValid?'cursor:pointer':''}">
-        <!-- fondo negro filmstrip -->
-        <rect x="${-W-2}" y="${-H-2}" width="${(W+2)*2}" height="${(H+2)*2}" rx="4" fill="#111" filter="url(#sh)"/>
-        <!-- fondo color película -->
+        <rect x="${-(W+2.5)}" y="${-(H+2.5)}" width="${(W+2.5)*2}" height="${(H+2.5)*2}" rx="5" fill="#111" filter="url(#sh)"/>
         <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3" fill="${bg}"/>
-        <!-- brillo superior -->
-        <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*0.45}" rx="3" fill="rgba(255,255,255,0.25)"/>
-        <!-- borde color si válido -->
-        ${isValid?`<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3" fill="none" stroke="#FFD700" stroke-width="2.5"/>`:''}
-        <!-- perforaciones laterales filmstrip -->
-        <rect x="${-W-1.5}" y="-4" width="3" height="8" rx="1" fill="#333"/>
-        <rect x="${W-1.5}" y="-4" width="3" height="8" rx="1" fill="#333"/>
+        <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*0.4}" rx="3" fill="rgba(255,255,255,0.22)"/>
+        <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3"
+              fill="none" stroke="${isValid?'#FFD700':'rgba(255,255,255,0.4)'}" stroke-width="${isValid?2.5:1.2}"/>
+        <rect x="${-(W+2)}" y="-3" width="4" height="6" rx="1" fill="#222"/>
+        <rect x="${W-2}" y="-3" width="4" height="6" rx="1" fill="#222"/>
       </g>`;
-      // Emoji encima
-      s += `<text x="${sc.x.toFixed(1)}" y="${(+sc.y+6).toFixed(1)}" text-anchor="middle"
-               font-size="${isValid?15:12}" style="pointer-events:none">${emojis[ci]}</text>`;
+      s += `<text x="${sc.x.toFixed(1)}" y="${(+sc.y+4).toFixed(1)}" text-anchor="middle"
+               font-size="${isValid?11:8}" style="pointer-events:none">${emojis[ci % emojis.length]}</text>`;
     }
   }
 
