@@ -999,9 +999,29 @@ function buildBoard() {
     const { x, y } = polar(angle, R_OUTER);
     return { id:i, x, y, angle, ...cell };
   });
-  const spokes = hqPositions.map(pos => {
+
+  // Casillas en los spokes: 3 casillas entre hub y anillo exterior
+  // Solo decorativas/visuales — el movimiento sigue siendo por el anillo
+  const N_SPOKE_CELLS = 3;
+  const spokes = hqPositions.map((pos, si) => {
     const angle = (pos / TOTAL_TRACK) * 360 - 90;
-    return { hqIndex:pos, angle, hubEdge: polar(angle, R_HUB), trackEdge: polar(angle, R_OUTER) };
+    const cat = CATS[si]; // la categoría del spoke = la del HQ
+    // Las casillas van desde R_HUB+22 hasta R_OUTER-24, distribuidas uniformemente
+    const cells = [];
+    for (let j = 0; j < N_SPOKE_CELLS; j++) {
+      const t = (j + 1) / (N_SPOKE_CELLS + 1); // 0.25, 0.5, 0.75
+      const r = R_HUB + 22 + t * (R_OUTER - 24 - R_HUB - 22);
+      const { x, y } = polar(angle, r);
+      cells.push({ x, y, categoria: cat, type: "spoke_normal" });
+    }
+    return {
+      hqIndex: pos,
+      angle,
+      hubEdge: polar(angle, R_HUB),
+      trackEdge: polar(angle, R_OUTER),
+      categoria: cat,
+      cells
+    };
   });
   return { ring, spokes, hqPositions };
 }
@@ -1154,11 +1174,22 @@ function renderBoard() {
   s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_OUTER+26}" fill="none" stroke="rgba(255,215,0,0.12)" stroke-width="20"/>`;
   s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_OUTER+26}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;
 
-  // ── Spokes coloreados (más gruesos y vivos)
+  // ── Spokes: línea de fondo + casillas
   for (const sp of BOARD.spokes) {
     const catColor = CATS_INFO[BOARD.ring[sp.hqIndex].categoria].color;
-    s += `<line x1="${sp.hubEdge.x.toFixed(1)}" y1="${sp.hubEdge.y.toFixed(1)}" x2="${sp.trackEdge.x.toFixed(1)}" y2="${sp.trackEdge.y.toFixed(1)}" stroke="${catColor}" stroke-width="4" opacity="0.35"/>`;
-    s += `<line x1="${sp.hubEdge.x.toFixed(1)}" y1="${sp.hubEdge.y.toFixed(1)}" x2="${sp.trackEdge.x.toFixed(1)}" y2="${sp.trackEdge.y.toFixed(1)}" stroke="white" stroke-width="1" opacity="0.15"/>`;
+    // Línea base del spoke
+    s += `<line x1="${sp.hubEdge.x.toFixed(1)}" y1="${sp.hubEdge.y.toFixed(1)}" x2="${sp.trackEdge.x.toFixed(1)}" y2="${sp.trackEdge.y.toFixed(1)}" stroke="${catColor}" stroke-width="5" opacity="0.3"/>`;
+    s += `<line x1="${sp.hubEdge.x.toFixed(1)}" y1="${sp.hubEdge.y.toFixed(1)}" x2="${sp.trackEdge.x.toFixed(1)}" y2="${sp.trackEdge.y.toFixed(1)}" stroke="white" stroke-width="1" opacity="0.12"/>`;
+    // Casillas del spoke
+    for (const sc of sp.cells) {
+      const col = CATS_INFO[sc.categoria].color;
+      // Halo
+      s += `<circle cx="${sc.x.toFixed(1)}" cy="${sc.y.toFixed(1)}" r="16" fill="${col}" opacity="0.2"/>`;
+      // Casilla principal
+      s += `<circle cx="${sc.x.toFixed(1)}" cy="${sc.y.toFixed(1)}" r="11" fill="${col}" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>`;
+      // Brillo interior
+      s += `<circle cx="${(+sc.x - 3).toFixed(1)}" cy="${(+sc.y - 3).toFixed(1)}" r="4" fill="rgba(255,255,255,0.3)" style="pointer-events:none"/>`;
+    }
   }
 
   // ── Casillas
