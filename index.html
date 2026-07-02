@@ -1010,7 +1010,7 @@ function buildBoard() {
     const rEnd   = R_OUTER - 22;
     const cells  = [];
     for (let ci = 0; ci < N_SPOKE_CELLS; ci++) {
-      const t = ci / N_SPOKE_CELLS;
+      const t = N_SPOKE_CELLS > 1 ? ci / (N_SPOKE_CELLS - 1) : 0;
       const r = rStart + t * (rEnd - rStart);
       const {x, y} = polar(angle, r);
       cells.push({id: 1000 + si*10 + ci, x, y, categoria:cat, type:"spoke_normal", spokeIndex:si, cellIndex:ci});
