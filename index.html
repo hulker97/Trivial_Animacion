@@ -1701,9 +1701,8 @@ function onActionBtn() {
   // Calcular casillas válidas
   game.validTargets = calcValidTargets();
 
-  // Si solo hay una opción (spoke desde hub, o en spoke), mover automático
+  // Si solo hay una opción Y no está en el hub → mover automático (ej: en spoke)
   if (game.validTargets.length === 1 && currentPlayer().position !== null) {
-    // Solo una casilla posible → mover directo
     movePlayerToCell(game.validTargets[0].id);
     game.validTargets = [];
     renderBoard();
@@ -1718,19 +1717,14 @@ function onActionBtn() {
     return;
   }
 
-  // Hub: mostrar modal de spoke con las opciones
-  if (currentPlayer().position === null) {
-    showSpokeModal();
-    return;
-  }
-
-  // Anillo con 2 opciones: resaltar casillas en el tablero para que el jugador haga clic
-  renderBoard(); // muestra las casillas resaltadas
+  // Hub o anillo: resaltar casillas válidas y esperar clic directo
+  renderBoard();
   updateActionPanel();
   renderTopbar();
 
+  const enHub = currentPlayer().position === null;
   const info = document.getElementById("cell-info");
-  info.innerHTML = `<div class="cell-type-label" style="color:#FFD700">Elige dónde moverte</div>
+  info.innerHTML = `<div class="cell-type-label" style="color:#FFD700">${enHub ? 'Elige por dónde salir' : 'Elige dónde moverte'}</div>
     <div class="cat-name" style="color:#B8C8F0">Pulsa una casilla resaltada</div>`;
   document.getElementById("btn-action").style.display = "none";
 }
