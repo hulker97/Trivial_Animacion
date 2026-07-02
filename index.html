@@ -1948,8 +1948,26 @@ function renderBoard() {
         <rect x="${-(W+2)}" y="-3" width="4" height="6" rx="1" fill="#222"/>
         <rect x="${W-2}" y="-3" width="4" height="6" rx="1" fill="#222"/>
       </g>`;
-      s += `<text x="${sc.x.toFixed(1)}" y="${(+sc.y+4).toFixed(1)}" text-anchor="middle"
-               font-size="${isValid?11:8}" style="pointer-events:none">${emojis[ci % emojis.length]}</text>`;
+      // Ilustración SVG en casilla de spoke
+      const _stitles = {
+        heroes:['El Rey León','Toy Story','La Sirenita','Frozen','Enredados','Los Increíbles'],
+        historia:['Buscando a Nemo','Cómo Entrenar a tu Dragón','Ratatouille','WALL-E','Up','Buscando a Dory'],
+        villanos:['Shrek','Madagascar','El Gato con Botas','Kung Fu Panda','Shrek','Madagascar'],
+        secundarios:['La Bella y la Bestia','Cenicienta','Blancanieves','Peter Pan','La Bella y la Bestia','Cenicienta'],
+        lugares:['Aladdín','Mulán','Lilo & Stitch','Tarzán','Moana/Vaiana','Aladdín'],
+        mundo:['Frozen','Coco','Encanto','Zootrópolis','Los Mitchell contra las Máquinas','Coco'],
+      };
+      const _st = (_stitles[sp.categoria]||[])[ci]||null;
+      const _scid = 'cps'+sc.id;
+      if (_st && MOVIE_ICONS[_st]) {
+        s += `<clipPath id="${_scid}"><rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3"/></clipPath>`;
+        s += `<g clip-path="url(#${_scid})">${MOVIE_ICONS[_st](0,0,1)}</g>`;
+        s += `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*0.35}" rx="3" fill="rgba(255,255,255,0.18)"/>`;
+        s += `<rect x="${-(W+2)}" y="-2.5" width="3.5" height="5" rx="1" fill="#111"/>`;
+        s += `<rect x="${W-1.5}" y="-2.5" width="3.5" height="5" rx="1" fill="#111"/>`;
+      } else {
+        s += `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3" fill="${bg}"/>`;
+      }
     }
   }
 
@@ -2047,49 +2065,52 @@ const RING_MOVIE_DATA = [
                r="${W+8}" fill="${bg}" opacity="0.35" filter="url(#pulse)"/>`;
     }
 
-    // Casilla — rectángulo rotado tangencialmente, estilo fotograma
+    // Casilla — ilustración SVG que llena la casilla completa
     const cellTitle = md ? md.title : '';
+    const clipId = 'cp' + cell.id;
+
+    if (isValid) {
+      s += `<ellipse cx="${cell.x.toFixed(1)}" cy="${cell.y.toFixed(1)}"
+               rx="${W+8}" ry="${H+7}" fill="${isFinal?'#FFD700':'white'}"
+               opacity="${isFinal?0.45:0.25}" filter="url(#pulse)"
+               onclick="onCellClick(${cell.id})" style="cursor:pointer"/>`;
+    }
+
     s += `<g transform="translate(${cell.x.toFixed(1)},${cell.y.toFixed(1)}) rotate(${rotDeg.toFixed(1)})"
              onclick="${isValid?'onCellClick('+cell.id+')':''}"
-             style="${isValid?'cursor:pointer':''}"
-             title="${cellTitle}">
-      <!-- marco negro filmstrip -->
-      <rect x="${-W-2.5}" y="${-H-2.5}" width="${(W+2.5)*2}" height="${(H+2.5)*2}" rx="${isHQ?7:5}" fill="#111" filter="url(#sh)"/>
-      <!-- fondo color -->
-      <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="${isHQ?5:3}" fill="${bg}"/>
-      <!-- brillo interior -->
-      <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*0.4}" rx="${isHQ?5:3}" fill="rgba(255,255,255,0.22)"/>
-      <!-- borde -->
-      <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="${isHQ?5:3}"
-            fill="none" stroke="${borderCol}" stroke-width="${borderW}"/>
-      <!-- perforaciones filmstrip (solo anillo, no HQ) -->
-      ${!isHQ && !isRA ? `<rect x="${-W-2}" y="-3" width="4" height="6" rx="1" fill="#222"/>
-      <rect x="${W-2}" y="-3" width="4" height="6" rx="1" fill="#222"/>` : ''}
-      ${isHQ ? `<!-- triángulos de esquina para HQ -->
-      <polygon points="${-W},${-H} ${-W+6},${-H} ${-W},${-H+6}" fill="rgba(255,255,255,0.3)"/>
-      <polygon points="${W},${H} ${W-6},${H} ${W},${H-6}" fill="rgba(255,255,255,0.15)"/>` : ''}
-    </g>`;
+             style="${isValid?'cursor:pointer':''}" title="${cellTitle}">`;
 
-    // Emoji / texto encima
+    // Marco negro exterior
+    s += `<rect x="${-(W+2.5)}" y="${-(H+2.5)}" width="${(W+2.5)*2}" height="${(H+2.5)*2}" rx="${isHQ?7:5}" fill="#111" filter="url(#sh)"/>`;
+
     if (isHQ) {
-      const emojis = {heroes:"⭐",historia:"🎬",villanos:"💀",secundarios:"🎭",lugares:"🗺️",mundo:"🌍"};
-      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+5).toFixed(1)}"
-               text-anchor="middle" font-size="${isValid?13:11}"
-               filter="${isValid?'url(#glowGold)':'url(#glow)'}"
-               style="pointer-events:none">${emojis[cell.categoria]}</text>`;
+      // HQ: fondo de color sólido con brillo
+      s += `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="5" fill="${bg}"/>`;
+      s += `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*0.45}" rx="5" fill="rgba(255,255,255,0.3)"/>`;
+      s += `<polygon points="${-W},${-H} ${-W+5},${-H} ${-W},${-H+5}" fill="rgba(255,255,255,0.4)"/>`;
+      const hqEmojis = {heroes:"⭐",historia:"🎬",villanos:"💀",secundarios:"🎭",lugares:"🗺️",mundo:"🌍"};
+      s += `<text x="0" y="5" text-anchor="middle" font-size="${isValid?13:11}" filter="${isValid?'url(#glowGold)':'url(#glow)'}" style="pointer-events:none">${hqEmojis[cell.categoria]}</text>`;
     } else if (isRA) {
-      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y-1).toFixed(1)}"
-               text-anchor="middle" font-size="5.5" fill="#FFD700" font-weight="bold"
-               style="pointer-events:none">ROLL</text>`;
-      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+5).toFixed(1)}"
-               text-anchor="middle" font-size="5.5" fill="#FFD700" font-weight="bold"
-               style="pointer-events:none">AGAIN</text>`;
+      // Roll Again: fondo dorado
+      s += `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3" fill="#F9A825"/>`;
+      s += `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*0.45}" rx="3" fill="rgba(255,255,255,0.35)"/>`;
+      s += `<text x="0" y="-1" text-anchor="middle" font-size="5" fill="#1A1A00" font-weight="bold">ROLL</text>`;
+      s += `<text x="0" y="5" text-anchor="middle" font-size="5" fill="#1A1A00" font-weight="bold">AGAIN</text>`;
+    } else if (md && MOVIE_ICONS[md.title]) {
+      // Casilla normal: ilustración SVG completa
+      s += `<clipPath id="${clipId}"><rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3"/></clipPath>`;
+      s += `<g clip-path="url(#${clipId})">${MOVIE_ICONS[md.title](0, 0, 1)}</g>`;
+      s += `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*0.35}" rx="3" fill="rgba(255,255,255,0.18)"/>`;
+      // Perforaciones filmstrip
+      s += `<rect x="${-(W+2)}" y="-2.5" width="3.5" height="5" rx="1" fill="#111"/>`;
+      s += `<rect x="${W-1.5}" y="-2.5" width="3.5" height="5" rx="1" fill="#111"/>`;
     } else {
-      const cellEmoji = md ? md.emoji : '🎬';
-      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+4).toFixed(1)}"
-               text-anchor="middle" font-size="${isValid?11:8}"
-               style="pointer-events:none">${cellEmoji}</text>`;
+      s += `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3" fill="${bg}"/>`;
     }
+
+    // Borde exterior
+    s += `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="${isHQ?5:3}" fill="none" stroke="${borderCol}" stroke-width="${borderW}"/>`;
+    s += `</g>`;
   }
 
   // ── HUB CENTRAL — hexágono azul como el Disney 2002
