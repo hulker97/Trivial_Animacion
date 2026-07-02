@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Trivial de Animación 🎬</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase/2.38.5/supabase.umd.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════
+   VARIABLES Y RESET
+═══════════════════════════════════════════════════════ */
+:root {
+  --bg:       #1a1209;
+  --bg2:      #241a0e;
+  --bg3:      #2e2010;
+  --cream:    #FBF5EA;
+  --gold:     #C9962C;
+  --gold2:    #E8B860;
+  --red:      #B8392B;
+  --purple:   #7A4A8C;
+  --teal:     #2C7A6E;
+  --blue:     #1F3550;
+  --darkred:  #5B2A1F;
+  --text:     #FBF5EA;
+  --text2:    #C8B896;
+  --border:   rgba(201,150,44,0.3);
+  --shadow:   0 4px 24px rgba(0,0,0,0.6);
+  --radius:   12px;
+
+  /* categorías */
+  --c-heroes:      #1F3550;
+  --c-historia:    #7A4A8C;
+  --c-villanos:    #5B2A1F;
+  --c-secundarios: #2C7A6E;
+  --c-lugares:     #B8392B;
+  --c-mundo:       #C9962C;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: 'Georgia', serif; background: var(--bg); color: var(--text); }
+body { overflow-x: hidden; }
+
+/* ═══════════════════════════════════════════════════════
+   PANTALLAS (SPA simple)
+═══════════════════════════════════════════════════════ */
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+/* ═══════════════════════════════════════════════════════
+   PANTALLA: INICIO
+═══════════════════════════════════════════════════════ */
+#screen-inicio {
+  background: radial-gradient(ellipse at center, #2e1e08 0%, #1a1209 70%);
+  padding: 2rem;
+  text-align: center;
+  gap: 2rem;
+}
+.logo-title {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  color: var(--gold);
+  text-shadow: 0 0 30px rgba(201,150,44,0.5);
+  letter-spacing: 2px;
+}
+.logo-sub {
+  font-size: 1.1rem;
+  color: var(--text2);
+  margin-top: 0.5rem;
+}
+.stars {
+  font-size: 2rem;
+  animation: twinkle 2s ease-in-out infinite alternate;
+}
+@keyframes twinkle { from { opacity: 0.6; } to { opacity: 1; } }
+
+.btn {
+  display: inline-block;
+  padding: 0.8rem 2rem;
+  border: none;
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+.btn-primary {
+  background: var(--gold);
+  color: #1a1209;
+  box-shadow: 0 4px 16px rgba(201,150,44,0.4);
+}
+.btn-primary:hover { background: var(--gold2); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(201,150,44,0.5); }
+.btn-secondary {
+  background: transparent;
+  color: var(--gold);
+  border: 2px solid var(--gold);
+}
+.btn-secondary:hover { background: rgba(201,150,44,0.1); }
+.btn-sm { padding: 0.4rem 1rem; font-size: 0.85rem; }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-danger:hover { background: #d44030; }
+
+/* ═══════════════════════════════════════════════════════
+   PANTALLA: SETUP
+═══════════════════════════════════════════════════════ */
+#screen-setup {
+  padding: 1.5rem;
+  gap: 1.5rem;
+  background: var(--bg);
+  align-items: stretch;
+  justify-content: flex-start;
+  overflow-y: auto;
+}
+.setup-header { text-align: center; }
+.setup-header h2 { color: var(--gold); font-size: 1.6rem; margin-bottom: 0.3rem; }
+.setup-header p { color: var(--text2); font-size: 0.9rem; }
+
+.panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.2rem;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 auto;
+}
+.panel h3 { color: var(--gold2); margin-bottom: 1rem; font-size: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+
+/* Jugadores */
+.jugador-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+  background: var(--bg3);
+  border-radius: 8px;
+  padding: 0.7rem;
+}
+.jugador-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: bold; font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.jugador-row input[type="text"] {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.7rem;
+  outline: none;
+}
+.jugador-row input:focus { border-color: var(--gold); }
+.ficha-btn {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.ficha-btn:hover { border-color: var(--gold); }
+
+/* Fichas grid */
+.fichas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+.ficha-card {
+  padding: 0.6rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg3);
+}
+.ficha-card:hover { border-color: var(--gold); transform: scale(1.03); }
+.ficha-card.selected { border-color: var(--gold); background: rgba(201,150,44,0.15); }
+.ficha-card.taken { opacity: 0.35; pointer-events: none; }
+.ficha-card .icon { font-size: 1.6rem; }
+.ficha-card .nombre { font-size: 0.7rem; color: var(--text2); margin-top: 0.3rem; line-height: 1.2; }
+
+/* Filtros */
+.filtros-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+.filtro-label { font-size: 0.8rem; color: var(--text2); margin-bottom: 0.3rem; }
+.filtro-select {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.6rem;
+}
+.filtro-select:focus { outline: none; border-color: var(--gold); }
+
+/* ═══════════════════════════════════════════════════════
+   PANTALLA: CARGANDO
+═══════════════════════════════════════════════════════ */
+#screen-loading {
+  gap: 1.5rem;
+  text-align: center;
+}
+.spinner {
+  width: 60px; height: 60px;
+  border: 4px solid var(--border);
+  border-top: 4px solid var(--gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════════════════════════════════
+   PANTALLA: JUEGO
+═══════════════════════════════════════════════════════ */
+#screen-game {
+  padding: 0;
+  justify-content: flex-start;
+  align-items: stretch;
+  flex-direction: column;
+}
+
+/* Top bar */
+.game-topbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.current-player-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.cp-icon {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+  border: 2px solid var(--gold);
+}
+.cp-name { font-size: 1rem; color: var(--gold); font-weight: bold; }
+.cp-turn { font-size: 0.75rem; color: var(--text2); }
+.wedges-bar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.wedge-dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  opacity: 0.3;
+}
+.wedge-dot.earned { opacity: 1; border-color: transparent; }
+
+/* Main game area */
+.game-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Scoreboard lateral */
+.game-layout {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* SVG tablero */
+.board-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  overflow: hidden;
+  min-height: 0;
+}
+#board-svg {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+}
+
+/* Panel lateral jugadores */
+.players-panel {
+  width: 170px;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  padding: 0.8rem 0.6rem;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.player-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem;
+  margin-bottom: 0.6rem;
+  transition: all 0.2s;
+}
+.player-card.active-player {
+  border-color: var(--gold);
+  box-shadow: 0 0 12px rgba(201,150,44,0.3);
+}
+.pc-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+.pc-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
+.pc-name { font-size: 0.8rem; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-wedges { display: flex; flex-wrap: wrap; gap: 3px; }
+.pc-wedge { width: 16px; height: 16px; border-radius: 50%; opacity: 0.25; }
+.pc-wedge.earned { opacity: 1; }
+
+/* Panel de acción (bottom) */
+.action-panel {
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  min-height: 90px;
+}
+
+/* Dado */
+.dice-display {
+  width: 60px; height: 60px;
+  background: var(--cream);
+  color: #1a1209;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem;
+  font-weight: bold;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+  user-select: none;
+  flex-shrink: 0;
+}
+.dice-display.rolling {
+  animation: diceRoll 0.4s ease-out;
+}
+@keyframes diceRoll {
+  0% { transform: rotate(0deg) scale(1); }
+  30% { transform: rotate(-15deg) scale(1.1); }
+  60% { transform: rotate(10deg) scale(0.95); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
+/* Celda destacada */
+.cell-info {
+  text-align: center;
+  flex: 1;
+  max-width: 250px;
+}
+.cell-info .cat-name { font-size: 0.85rem; color: var(--text2); }
+.cell-info .cell-type-label { font-size: 1.1rem; font-weight: bold; margin-bottom: 0.2rem; }
+
+/* ═══════════════════════════════════════════════════════
+   MODAL PREGUNTA
+═══════════════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.hidden { display: none; }
+
+.question-modal {
+  background: var(--bg2);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 560px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+  animation: modalIn 0.25s ease-out;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.94) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.q-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+.q-cat-badge {
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.q-movie {
+  font-size: 0.8rem;
+  color: var(--text2);
+  flex: 1;
+}
+.q-wedge-badge {
+  background: var(--gold);
+  color: #1a1209;
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+.q-text {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  margin-bottom: 1.2rem;
+  color: var(--cream);
+}
+
+.q-options { display: flex; flex-direction: column; gap: 0.6rem; }
+.q-option {
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  transition: all 0.15s;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.3;
+}
+.q-option:hover { border-color: var(--gold); background: rgba(201,150,44,0.08); }
+.q-option.correct { border-color: #4caf50; background: rgba(76,175,80,0.15); }
+.q-option.wrong   { border-color: var(--red); background: rgba(184,57,43,0.15); }
+.q-option .opt-letter {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.q-dato {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: rgba(201,150,44,0.08);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  font-size: 0.82rem;
+  color: var(--text2);
+  line-height: 1.4;
+  display: none;
+}
+.q-dato.visible { display: block; }
+
+.q-result {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: bold;
+  display: none;
+}
+.q-result.visible { display: block; }
+.q-result.correct { color: #4caf50; }
+.q-result.wrong   { color: var(--red); }
+
+.q-actions {
+  margin-top: 1.2rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.8rem;
+  display: none;
+}
+.q-actions.visible { display: flex; }
+
+/* Modal dirección */
+.dir-modal {
+  background: var(--bg2);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+  animation: modalIn 0.25s ease-out;
+}
+.dir-modal h3 { color: var(--gold); margin-bottom: 0.5rem; }
+.dir-modal p { color: var(--text2); margin-bottom: 1.2rem; font-size: 0.9rem; }
+.dir-buttons { display: flex; gap: 1rem; justify-content: center; }
+
+/* Modal salida del hub */
+.spoke-modal {
+  background: var(--bg2);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+  animation: modalIn 0.25s ease-out;
+}
+.spoke-modal h3 { color: var(--gold); margin-bottom: 0.5rem; }
+.spoke-modal p { color: var(--text2); margin-bottom: 1.2rem; font-size: 0.9rem; }
+.spoke-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+.spoke-btn {
+  padding: 0.8rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg3);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.spoke-btn:hover { transform: scale(1.03); }
+
+/* Modal final/victoria */
+.gameover-modal {
+  background: var(--bg2);
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+  animation: modalIn 0.3s ease-out;
+}
+.gameover-modal .trophy { font-size: 4rem; margin-bottom: 0.5rem; }
+.gameover-modal h2 { color: var(--gold); font-size: 1.8rem; margin-bottom: 0.3rem; }
+.gameover-modal p { color: var(--text2); margin-bottom: 1.5rem; }
+
+/* Roll again */
+.rollagain-modal {
+  background: var(--bg2);
+  border: 2px solid #4caf50;
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+  max-width: 340px;
+  width: 100%;
+  animation: modalIn 0.25s ease-out;
+}
+.rollagain-modal h3 { color: #4caf50; font-size: 1.4rem; margin-bottom: 0.5rem; }
+.rollagain-modal p { color: var(--text2); margin-bottom: 1.2rem; }
+
+/* ═══════════════════════════════════════════════════════
+   UTILIDADES
+═══════════════════════════════════════════════════════ */
+.hidden { display: none !important; }
+.text-gold { color: var(--gold); }
+.text-center { text-align: center; }
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+
+/* RESPONSIVE */
+@media (max-width: 600px) {
+  .players-panel { width: 130px; }
+  .filtros-grid { grid-template-columns: 1fr; }
+  .fichas-grid { grid-template-columns: repeat(3, 1fr); }
+  .q-text { font-size: 0.95rem; }
+}
+@media (max-width: 400px) {
+  .players-panel { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     PANTALLA 1: INICIO
+══════════════════════════════════════════════════ -->
+<div id="screen-inicio" class="screen active">
+  <div class="stars">🎬 ✨ 🎭</div>
+  <div>
+    <div class="logo-title">Trivial de Animación</div>
+    <div class="logo-sub">El juego de las películas más mágicas del cine</div>
+  </div>
+  <button class="btn btn-primary" onclick="irASetup()">🎮 Empezar partida</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     PANTALLA 2: CONFIGURACIÓN
+══════════════════════════════════════════════════ -->
+<div id="screen-setup" class="screen">
+  <div class="setup-header">
+    <h2>🎬 Nueva Partida</h2>
+    <p>Configura los jugadores y el banco de preguntas</p>
+  </div>
+
+  <!-- Número de jugadores -->
+  <div class="panel" id="panel-jugadores">
+    <h3>👥 Jugadores (2 a 6)</h3>
+    <div id="jugadores-list"></div>
+    <div style="display:flex;gap:0.6rem;justify-content:center;margin-top:0.5rem">
+      <button class="btn btn-secondary btn-sm" onclick="addJugador()">+ Añadir jugador</button>
+      <button class="btn btn-secondary btn-sm" onclick="removeJugador()">− Quitar</button>
+    </div>
+  </div>
+
+  <!-- Filtros de preguntas -->
+  <div class="panel">
+    <h3>🎯 Banco de preguntas</h3>
+    <div class="filtros-grid">
+      <div>
+        <div class="filtro-label">Estudio</div>
+        <select class="filtro-select" id="filtro-estudio" onchange="onFiltroChange()">
+          <option value="">Todos los estudios</option>
+          <option value="Walt Disney Animation Studios">Walt Disney Animation</option>
+          <option value="Pixar Animation Studios">Pixar</option>
+          <option value="DreamWorks Animation">DreamWorks</option>
+          <option value="Illumination Entertainment">Illumination</option>
+          <option value="Sony Pictures Animation">Sony Pictures</option>
+          <option value="Blue Sky Studios">Blue Sky Studios</option>
+          <option value="Laika">Laika</option>
+          <option value="Animal Logic">Animal Logic</option>
+          <option value="Industrial Light & Magic">ILM</option>
+        </select>
+      </div>
+      <div>
+        <div class="filtro-label">Dificultad</div>
+        <select class="filtro-select" id="filtro-dificultad">
+          <option value="">Todas</option>
+          <option value="facil">Fácil</option>
+          <option value="media">Media</option>
+          <option value="dificil">Difícil</option>
+        </select>
+      </div>
+    </div>
+    <div id="filtro-info" style="margin-top:0.7rem;font-size:0.8rem;color:var(--text2);text-align:center">
+      Cargando banco de preguntas...
+    </div>
+  </div>
+
+  <!-- Botones -->
+  <div style="display:flex;gap:1rem;justify-content:center;max-width:600px;width:100%;margin:0 auto;">
+    <button class="btn btn-secondary" onclick="mostrarScreen('screen-inicio')">← Volver</button>
+    <button class="btn btn-primary" id="btn-iniciar" onclick="iniciarJuego()">🎲 Iniciar juego</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     PANTALLA 3: CARGANDO
+══════════════════════════════════════════════════ -->
+<div id="screen-loading" class="screen">
+  <div class="spinner"></div>
+  <div style="color:var(--text2)">Cargando preguntas…</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     PANTALLA 4: JUEGO
+══════════════════════════════════════════════════ -->
+<div id="screen-game" class="screen">
+  <!-- Barra superior con jugador actual -->
+  <div class="game-topbar">
+    <div class="current-player-info">
+      <div class="cp-icon" id="cp-icon">?</div>
+      <div>
+        <div class="cp-name" id="cp-name">–</div>
+        <div class="cp-turn" id="cp-turn">–</div>
+      </div>
+    </div>
+    <div class="wedges-bar" id="cp-wedges"></div>
+    <button class="btn btn-secondary btn-sm" onclick="if(confirm('¿Abandonar la partida?'))location.reload()">✕ Salir</button>
+  </div>
+
+  <div class="game-layout">
+    <!-- TABLERO SVG -->
+    <div class="board-wrap">
+      <svg id="board-svg" viewBox="0 0 680 680" xmlns="http://www.w3.org/2000/svg">
+        <!-- Se rellena por JS -->
+      </svg>
+    </div>
+
+    <!-- Panel jugadores -->
+    <div class="players-panel" id="players-panel"></div>
+  </div>
+
+  <!-- Panel de acción inferior -->
+  <div class="action-panel" id="action-panel">
+    <div class="dice-display" id="dice-display">🎲</div>
+    <div class="cell-info" id="cell-info">
+      <div class="cell-type-label" style="color:var(--gold)">Tu turno</div>
+      <div class="cat-name">Pulsa el dado para lanzar</div>
+    </div>
+    <button class="btn btn-primary" id="btn-action" onclick="onActionBtn()">🎲 Lanzar</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL: PREGUNTA
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-pregunta">
+  <div class="question-modal">
+    <div class="q-header">
+      <span class="q-cat-badge" id="q-cat-badge">–</span>
+      <span class="q-movie" id="q-movie">–</span>
+      <span class="q-wedge-badge hidden" id="q-wedge-badge">🏅 Cuña</span>
+    </div>
+    <div class="q-text" id="q-text">–</div>
+    <div class="q-options" id="q-options"></div>
+    <div class="q-dato" id="q-dato"></div>
+    <div class="q-result" id="q-result"></div>
+    <div class="q-actions" id="q-actions">
+      <button class="btn btn-primary" id="q-continue-btn" onclick="onQuestionContinue()">Continuar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL: ELEGIR DIRECCIÓN
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-dir">
+  <div class="dir-modal">
+    <h3>🎲 Has sacado <span id="dir-dice">–</span></h3>
+    <p>¿En qué dirección quieres moverte?</p>
+    <div class="dir-buttons">
+      <button class="btn btn-secondary" onclick="onDir(1)">↻ Horario</button>
+      <button class="btn btn-secondary" onclick="onDir(-1)">↺ Antihorario</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL: ELEGIR SPOKE (salida del hub)
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-spoke">
+  <div class="spoke-modal">
+    <h3>🎯 ¡Empieza la aventura!</h3>
+    <p>Elige por qué categoría quieres salir del hub central:</p>
+    <div class="spoke-grid" id="spoke-grid"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL: ROLL AGAIN
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-rollagain">
+  <div class="rollagain-modal">
+    <h3>🎉 ¡Vuelves a lanzar!</h3>
+    <p>Has caído en una casilla de turno extra.</p>
+    <button class="btn btn-primary" onclick="onRollAgainContinue()">🎲 Lanzar de nuevo</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL: GAME OVER
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-gameover">
+  <div class="gameover-modal">
+    <div class="trophy">🏆</div>
+    <h2>¡Victoria!</h2>
+    <p id="gameover-text">–</p>
+    <button class="btn btn-primary" onclick="location.reload()">🎬 Nueva partida</button>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  CONSTANTES / CATEGORÍAS
+// ════════════════════════════════════════════════════════
+const CATS = ["heroes", "historia", "villanos", "secundarios", "lugares", "mundo"];
+const CATS_INFO = {
+  heroes:      { nombre: "Héroes y Heroínas",         color: "#1F3550" },
+  historia:    { nombre: "Una Vez en una Película",   color: "#7A4A8C" },
+  villanos:    { nombre: "Monstruos y Villanos",      color: "#5B2A1F" },
+  secundarios: { nombre: "Personajes Secundarios",    color: "#2C7A6E" },
+  lugares:     { nombre: "Lugares y Objetos",         color: "#B8392B" },
+  mundo:       { nombre: "El Maravilloso Mundo",      color: "#C9962C" },
+};
+const CATS_EMOJIS = { heroes:"⭐", historia:"🎬", villanos:"💀", secundarios:"🎭", lugares:"🗺️", mundo:"🌍" };
+const PLAYER_COLORS = ["#B8392B","#1F3550","#3F7A52","#C9962C","#7A4A8C","#2C7A6E"];
+const PLAYER_EMOJIS = ["🦁","🤠","🐉","🐧","🕸️","❄️"];
+
+// ════════════════════════════════════════════════════════
+//  SUPABASE
+// ════════════════════════════════════════════════════════
+const SUPABASE_URL = "https://zonsbegwclplvhiuuiss.supabase.co";
+const SUPABASE_KEY = "sb_publishable_3QA_LvTEHW5WFbtsL-M8Sw_h1PZPS5U";
+let sb = null;
+
+function initSupabase() {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+
+async function cargarPreguntas(filtros) {
+  let q = sb.from("preguntas").select("categoria,pelicula,estudio,dificultad,pregunta,opcion_0,opcion_1,opcion_2,opcion_3,correcta,dato");
+  if (filtros.estudio)    q = q.eq("estudio", filtros.estudio);
+  if (filtros.dificultad) q = q.eq("dificultad", filtros.dificultad);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data.map(r => ({
+    categoria:  r.categoria,
+    pelicula:   r.pelicula,
+    estudio:    r.estudio,
+    dificultad: r.dificultad,
+    pregunta:   r.pregunta,
+    opciones:   [r.opcion_0, r.opcion_1, r.opcion_2, r.opcion_3],
+    correcta:   r.correcta,
+    dato:       r.dato
+  }));
+}
+
+// ════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ════════════════════════════════════════════════════════
+let numJugadores = 2;
+let jugadores = []; // { name, color, emoji }
+let pool = [];
+let game = null;
+let questionAnswered = false;
+
+// ════════════════════════════════════════════════════════
+//  TABLERO (geometría)
+// ════════════════════════════════════════════════════════
+const BOARD_CX = 340, BOARD_CY = 340;
+const R_OUTER = 285;
+const R_HUB   = 68;
+const TOTAL_TRACK = 43;
+const N_HQ = 6;
+let BOARD = null;
+
+function buildTrack() {
+  const track = new Array(TOTAL_TRACK).fill(null);
+  const hqPositions = [];
+  for (let i = 0; i < N_HQ; i++) {
+    const pos = Math.round((i * TOTAL_TRACK) / N_HQ);
+    hqPositions.push(pos);
+    track[pos] = { type:"hq", categoria: CATS[i] };
+  }
+  for (let i = 0; i < N_HQ; i++) {
+    const a = hqPositions[i];
+    const b = i < N_HQ - 1 ? hqPositions[i + 1] : TOTAL_TRACK;
+    let mid = Math.round((a + b) / 2) % TOTAL_TRACK;
+    while (track[mid] !== null) mid = (mid + 1) % TOTAL_TRACK;
+    track[mid] = { type:"roll_again" };
+  }
+  let ci = 0;
+  for (let i = 0; i < TOTAL_TRACK; i++) {
+    if (track[i] === null) { track[i] = { type:"normal", categoria: CATS[ci % CATS.length] }; ci++; }
+  }
+  return { track, hqPositions };
+}
+
+function polar(deg, r) {
+  const a = deg * Math.PI / 180;
+  return { x: BOARD_CX + r * Math.cos(a), y: BOARD_CY + r * Math.sin(a) };
+}
+
+function buildBoard() {
+  const { track, hqPositions } = buildTrack();
+  const ring = track.map((cell, i) => {
+    const angle = (i / TOTAL_TRACK) * 360 - 90;
+    const { x, y } = polar(angle, R_OUTER);
+    return { id:i, x, y, angle, ...cell };
+  });
+  const spokes = hqPositions.map(pos => {
+    const angle = (pos / TOTAL_TRACK) * 360 - 90;
+    return { hqIndex:pos, angle, hubEdge: polar(angle, R_HUB), trackEdge: polar(angle, R_OUTER) };
+  });
+  return { ring, spokes, hqPositions };
+}
+
+// ════════════════════════════════════════════════════════
+//  LÓGICA DEL JUEGO
+// ════════════════════════════════════════════════════════
+function createGame(players, questionPool) {
+  return {
+    players: players.map((p, i) => ({
+      id: i, name: p.name, color: p.color, emoji: p.emoji,
+      position: null, wedges: [], readyForFinal: false,
+    })),
+    currentPlayerIndex: 0,
+    diceValue: null,
+    phase: "roll",
+    pendingQuestion: null,
+    pendingWedgeCategoria: null,
+    pool: questionPool,
+    usedIds: new Set(),
+    winner: null,
+  };
+}
+
+function currentPlayer() { return game.players[game.currentPlayerIndex]; }
+
+function pickQuestion(categoria) {
+  let c = game.pool.filter(q => q.categoria === categoria && !game.usedIds.has(q));
+  if (!c.length) c = game.pool.filter(q => q.categoria === categoria);
+  if (!c.length) c = game.pool;
+  const q = c[Math.floor(Math.random() * c.length)];
+  game.usedIds.add(q);
+  return q;
+}
+
+function rollDice() {
+  game.diceValue = 1 + Math.floor(Math.random() * 6);
+  return game.diceValue;
+}
+
+function resolveLanding(pos) {
+  const cell = BOARD.ring[pos];
+  const p = currentPlayer();
+  if (cell.type === "roll_again") { game.phase = "roll_again"; return cell; }
+  if (cell.type === "hq") {
+    const already = p.wedges.includes(cell.categoria);
+    game.pendingWedgeCategoria = already ? null : cell.categoria;
+    game.phase = already ? "question" : "wedge-question";
+    game.pendingQuestion = pickQuestion(cell.categoria);
+    return cell;
+  }
+  game.phase = "question";
+  game.pendingQuestion = pickQuestion(cell.categoria);
+  return cell;
+}
+
+function movePlayerTo(direction) {
+  const p = currentPlayer();
+  const ringSize = BOARD.ring.length;
+  const newPos = ((p.position + direction * game.diceValue) % ringSize + ringSize) % ringSize;
+  p.position = newPos;
+  return resolveLanding(newPos);
+}
+
+function exitHubViaSpoke(hqIndex) {
+  const p = currentPlayer();
+  p.position = hqIndex;
+  return resolveLanding(hqIndex);
+}
+
+function answerQuestion(correct) {
+  const p = currentPlayer();
+  if ((game.phase === "wedge-question" || game.phase === "finalQuestion") && correct && game.pendingWedgeCategoria) {
+    if (!p.wedges.includes(game.pendingWedgeCategoria)) p.wedges.push(game.pendingWedgeCategoria);
+  }
+  if (p.wedges.length === CATS.length) p.readyForFinal = true;
+
+  // Pregunta final del hub
+  if (game.phase === "finalQuestion") {
+    game.pendingQuestion = null;
+    if (correct) { game.winner = p; game.phase = "gameover"; return true; }
+    else { p.position = null; nextTurn(); return false; }
+  }
+
+  game.pendingQuestion = null;
+  game.pendingWedgeCategoria = null;
+  if (correct) { game.phase = "roll"; }
+  else { nextTurn(); }
+  return correct;
+}
+
+function nextTurn() {
+  game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+  game.phase = "roll";
+  game.diceValue = null;
+}
+
+function canGoFinal() {
+  const p = currentPlayer();
+  if (!p.readyForFinal || p.position === null) return false;
+  // ¿Está a diceValue casillas de algún hqPosition?
+  const ringSize = BOARD.ring.length;
+  for (const dir of [1, -1]) {
+    const target = ((p.position + dir * game.diceValue) % ringSize + ringSize) % ringSize;
+    if (BOARD.hqPositions.includes(target)) return { dir, target };
+  }
+  return false;
+}
+
+// ════════════════════════════════════════════════════════
+//  RENDER SVG TABLERO
+// ════════════════════════════════════════════════════════
+function renderBoard() {
+  const svg = document.getElementById("board-svg");
+  let s = "";
+
+  // Fondo
+  s += `<rect width="680" height="680" fill="#1a1209" rx="12"/>`;
+  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_OUTER+28}" fill="#241a0e" stroke="rgba(201,150,44,0.15)" stroke-width="2"/>`;
+
+  // Spokes
+  for (const sp of BOARD.spokes) {
+    const catColor = CATS_INFO[BOARD.ring[sp.hqIndex].categoria].color;
+    s += `<line x1="${sp.hubEdge.x}" y1="${sp.hubEdge.y}" x2="${sp.trackEdge.x}" y2="${sp.trackEdge.y}" stroke="${catColor}" stroke-width="2" opacity="0.4"/>`;
+  }
+
+  // Casillas
+  for (const cell of BOARD.ring) {
+    let fill, stroke, r = 14;
+    if (cell.type === "hq") { fill = CATS_INFO[cell.categoria].color; stroke = "#FBF5EA"; r = 18; }
+    else if (cell.type === "roll_again") { fill = "#A8A29A"; stroke = "#FBF5EA"; r = 12; }
+    else { fill = CATS_INFO[cell.categoria].color + "88"; stroke = CATS_INFO[cell.categoria].color; r = 13; }
+
+    s += `<circle cx="${cell.x.toFixed(1)}" cy="${cell.y.toFixed(1)}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1.5" class="board-cell" data-id="${cell.id}"/>`;
+
+    // Emoji en HQ
+    if (cell.type === "hq") {
+      const emoji = CATS_EMOJIS[cell.categoria];
+      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y + 5).toFixed(1)}" text-anchor="middle" font-size="13" fill="white" style="pointer-events:none">${emoji}</text>`;
+    }
+    // Símbolo roll again
+    if (cell.type === "roll_again") {
+      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y + 5).toFixed(1)}" text-anchor="middle" font-size="11" fill="white" style="pointer-events:none">★</text>`;
+    }
+  }
+
+  // Hub central
+  const hubPoly = BOARD.hqPositions.map(pos => {
+    const { x, y } = polar((pos / TOTAL_TRACK) * 360 - 90, R_HUB);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  s += `<polygon points="${hubPoly}" fill="#1a1209" stroke="rgba(201,150,44,0.5)" stroke-width="2"/>`;
+  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="40" fill="#241a0e" stroke="rgba(201,150,44,0.6)" stroke-width="2"/>`;
+  s += `<text x="${BOARD_CX}" y="${BOARD_CY + 8}" text-anchor="middle" font-size="22" fill="#C9962C">🎬</text>`;
+
+  // Piezas jugadores
+  if (game) {
+    // Hub: agrupar los que están en null
+    const inHub = game.players.filter(p => p.position === null);
+    inHub.forEach((p, i) => {
+      const angle = (i / inHub.length) * 360;
+      const { x, y } = polar(angle, 22);
+      s += `<circle cx="${BOARD_CX + x - BOARD_CX}" cy="${BOARD_CY + y - BOARD_CY}" r="11" fill="${p.color}" stroke="white" stroke-width="1.5"/>`;
+      s += `<text x="${BOARD_CX + x - BOARD_CX}" y="${BOARD_CY + y - BOARD_CY + 5}" text-anchor="middle" font-size="10" fill="white" style="pointer-events:none">${p.emoji}</text>`;
+    });
+
+    // En el track
+    const byPos = {};
+    game.players.filter(p => p.position !== null).forEach(p => {
+      if (!byPos[p.position]) byPos[p.position] = [];
+      byPos[p.position].push(p);
+    });
+    for (const [pos, players] of Object.entries(byPos)) {
+      const cell = BOARD.ring[+pos];
+      players.forEach((p, i) => {
+        const offset = players.length > 1 ? (i - (players.length - 1) / 2) * 14 : 0;
+        const ox = Math.cos(((+pos / TOTAL_TRACK) * 360 - 90) * Math.PI / 180) * offset;
+        const oy = Math.sin(((+pos / TOTAL_TRACK) * 360 - 90) * Math.PI / 180) * offset;
+        const isActive = game.players[game.currentPlayerIndex] === p;
+        s += `<circle cx="${(+cell.x + ox).toFixed(1)}" cy="${(+cell.y + oy).toFixed(1)}" r="12" fill="${p.color}" stroke="${isActive ? '#FFD700' : 'white'}" stroke-width="${isActive ? 2.5 : 1.5}"/>`;
+        s += `<text x="${(+cell.x + ox).toFixed(1)}" y="${(+cell.y + oy + 5).toFixed(1)}" text-anchor="middle" font-size="10" fill="white" style="pointer-events:none">${p.emoji}</text>`;
+      });
+    }
+  }
+
+  svg.innerHTML = s;
+}
+
+// ════════════════════════════════════════════════════════
+//  UI – PANEL JUGADORES LATERAL
+// ════════════════════════════════════════════════════════
+function renderPlayersPanel() {
+  const panel = document.getElementById("players-panel");
+  let s = "";
+  game.players.forEach((p, i) => {
+    const active = i === game.currentPlayerIndex;
+    s += `<div class="player-card ${active ? 'active-player' : ''}">
+      <div class="pc-head">
+        <div class="pc-icon" style="background:${p.color}">${p.emoji}</div>
+        <div class="pc-name">${p.name}</div>
+      </div>
+      <div class="pc-wedges">`;
+    CATS.forEach(cat => {
+      const earned = p.wedges.includes(cat);
+      s += `<div class="pc-wedge ${earned ? 'earned' : ''}" style="${earned ? 'background:'+CATS_INFO[cat].color : 'background:rgba(255,255,255,0.1)'}" title="${CATS_INFO[cat].nombre}"></div>`;
+    });
+    s += `</div></div>`;
+  });
+  panel.innerHTML = s;
+}
+
+// ════════════════════════════════════════════════════════
+//  UI – TOPBAR JUGADOR ACTUAL
+// ════════════════════════════════════════════════════════
+function renderTopbar() {
+  const p = currentPlayer();
+  document.getElementById("cp-icon").textContent = p.emoji;
+  document.getElementById("cp-icon").style.background = p.color;
+  document.getElementById("cp-name").textContent = p.name;
+
+  const phaseLabels = {
+    roll: "Lanza el dado",
+    "choose-direction": "Elige dirección",
+    question: "Responde la pregunta",
+    "wedge-question": "¡Pregunta de cuña!",
+    finalQuestion: "¡PREGUNTA FINAL!",
+    roll_again: "¡Vuelves a lanzar!",
+    gameover: "¡Fin del juego!"
+  };
+  document.getElementById("cp-turn").textContent = phaseLabels[game.phase] || "–";
+
+  // Cuñas
+  let whtml = "";
+  CATS.forEach(cat => {
+    const earned = p.wedges.includes(cat);
+    whtml += `<div class="wedge-dot ${earned ? 'earned' : ''}" style="${earned ? 'background:'+CATS_INFO[cat].color : ''}" title="${CATS_INFO[cat].nombre}"></div>`;
+  });
+  document.getElementById("cp-wedges").innerHTML = whtml;
+}
+
+// ════════════════════════════════════════════════════════
+//  UI – PANEL ACCIÓN
+// ════════════════════════════════════════════════════════
+function updateActionPanel() {
+  const dice = document.getElementById("dice-display");
+  const info = document.getElementById("cell-info");
+  const btn = document.getElementById("btn-action");
+
+  const nums = ["⚀","⚁","⚂","⚃","⚄","⚅"];
+  if (game.diceValue) {
+    dice.textContent = nums[game.diceValue - 1];
+  } else {
+    dice.textContent = "🎲";
+  }
+
+  switch (game.phase) {
+    case "roll":
+      info.innerHTML = `<div class="cell-type-label" style="color:var(--gold)">Turno de ${currentPlayer().name}</div><div class="cat-name">Lanza el dado para mover</div>`;
+      btn.textContent = "🎲 Lanzar";
+      btn.style.display = "";
+      break;
+    case "choose-direction":
+      info.innerHTML = `<div class="cell-type-label" style="color:var(--gold)">Has sacado ${game.diceValue}</div><div class="cat-name">Elige dirección</div>`;
+      btn.style.display = "none";
+      break;
+    case "question":
+    case "wedge-question":
+    case "finalQuestion":
+      info.innerHTML = `<div class="cell-type-label" style="color:var(--gold)">Responde la pregunta</div>`;
+      btn.style.display = "none";
+      break;
+    case "roll_again":
+      info.innerHTML = `<div class="cell-type-label" style="color:#4caf50">¡Casilla especial!</div><div class="cat-name">Vuelves a lanzar</div>`;
+      btn.style.display = "none";
+      break;
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  BOTÓN ACCIÓN PRINCIPAL
+// ════════════════════════════════════════════════════════
+function onActionBtn() {
+  if (game.phase !== "roll") return;
+  const p = currentPlayer();
+
+  // Lanzar dado
+  const v = rollDice();
+  const dice = document.getElementById("dice-display");
+  dice.classList.add("rolling");
+  setTimeout(() => dice.classList.remove("rolling"), 400);
+
+  const nums = ["⚀","⚁","⚂","⚃","⚄","⚅"];
+  dice.textContent = nums[v - 1];
+  game.phase = "choose-direction";
+  updateActionPanel();
+  renderTopbar();
+
+  // ¿Jugador en hub → elegir spoke?
+  if (p.position === null) {
+    showSpokeModal();
+    return;
+  }
+
+  // ¿readyForFinal y puede llegar al hub?
+  const finalCheck = canGoFinal();
+  if (finalCheck) {
+    // Mover y pregunta final
+    const p2 = currentPlayer();
+    p2.position = finalCheck.target;
+    game.phase = "finalQuestion";
+    game.pendingWedgeCategoria = BOARD.ring[finalCheck.target].categoria;
+    game.pendingQuestion = pickQuestion(BOARD.ring[finalCheck.target].categoria);
+    renderBoard();
+    renderPlayersPanel();
+    renderTopbar();
+    showQuestionModal(true);
+    return;
+  }
+
+  // Mostrar modal dirección
+  document.getElementById("dir-dice").textContent = v;
+  showModal("modal-dir");
+}
+
+function onDir(dir) {
+  hideModal("modal-dir");
+  const cell = movePlayerTo(dir);
+  renderBoard();
+  renderPlayersPanel();
+  updateActionPanel();
+  renderTopbar();
+
+  if (game.phase === "roll_again") {
+    showModal("modal-rollagain");
+    return;
+  }
+  if (game.phase === "question" || game.phase === "wedge-question") {
+    showQuestionModal(false);
+  }
+}
+
+function onRollAgainContinue() {
+  hideModal("modal-rollagain");
+  game.phase = "roll";
+  game.diceValue = null;
+  updateActionPanel();
+  renderTopbar();
+}
+
+// ════════════════════════════════════════════════════════
+//  MODAL SPOKE
+// ════════════════════════════════════════════════════════
+function showSpokeModal() {
+  hideModal("modal-dir");
+  const grid = document.getElementById("spoke-grid");
+  let s = "";
+  BOARD.spokes.forEach(sp => {
+    const cat = BOARD.ring[sp.hqIndex].categoria;
+    const info = CATS_INFO[cat];
+    s += `<button class="spoke-btn" style="border-color:${info.color}" onclick="onSpokeChoice(${sp.hqIndex})">
+      <div style="font-size:1.4rem">${CATS_EMOJIS[cat]}</div>
+      <div style="font-size:0.75rem;margin-top:0.3rem;color:var(--text2)">${info.nombre}</div>
+    </button>`;
+  });
+  grid.innerHTML = s;
+  showModal("modal-spoke");
+}
+
+function onSpokeChoice(hqIndex) {
+  hideModal("modal-spoke");
+  exitHubViaSpoke(hqIndex);
+  renderBoard();
+  renderPlayersPanel();
+  updateActionPanel();
+  renderTopbar();
+  if (game.phase === "question" || game.phase === "wedge-question") {
+    showQuestionModal(false);
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  MODAL PREGUNTA
+// ════════════════════════════════════════════════════════
+function showQuestionModal(isFinal) {
+  const q = game.pendingQuestion;
+  if (!q) return;
+  questionAnswered = false;
+
+  const catInfo = CATS_INFO[q.categoria];
+  const badge = document.getElementById("q-cat-badge");
+  badge.textContent = `${CATS_EMOJIS[q.categoria]} ${catInfo.nombre}`;
+  badge.style.background = catInfo.color;
+  badge.style.color = "#FBF5EA";
+
+  document.getElementById("q-movie").textContent = q.pelicula;
+  document.getElementById("q-text").textContent = q.pregunta;
+
+  const wedgeBadge = document.getElementById("q-wedge-badge");
+  if (game.phase === "wedge-question") wedgeBadge.classList.remove("hidden");
+  else wedgeBadge.classList.add("hidden");
+
+  if (isFinal) {
+    wedgeBadge.classList.remove("hidden");
+    wedgeBadge.textContent = "🏆 FINAL";
+    wedgeBadge.style.background = "#C9962C";
+  }
+
+  const opts = document.getElementById("q-options");
+  const letters = ["A","B","C","D"];
+  let s = "";
+  q.opciones.forEach((op, i) => {
+    s += `<button class="q-option" onclick="onOptionClick(${i})" id="q-opt-${i}">
+      <span class="opt-letter">${letters[i]}</span>
+      <span>${op}</span>
+    </button>`;
+  });
+  opts.innerHTML = s;
+
+  document.getElementById("q-dato").classList.remove("visible");
+  document.getElementById("q-dato").textContent = "";
+  document.getElementById("q-result").classList.remove("visible","correct","wrong");
+  document.getElementById("q-result").textContent = "";
+  document.getElementById("q-actions").classList.remove("visible");
+
+  showModal("modal-pregunta");
+}
+
+function onOptionClick(idx) {
+  if (questionAnswered) return;
+  questionAnswered = true;
+
+  const q = game.pendingQuestion;
+  const correct = idx === q.correcta;
+
+  // Colorear opciones
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById(`q-opt-${i}`);
+    el.style.pointerEvents = "none";
+    if (i === q.correcta) el.classList.add("correct");
+    else if (i === idx && !correct) el.classList.add("wrong");
+  }
+
+  // Dato curioso
+  if (q.dato) {
+    const d = document.getElementById("q-dato");
+    d.textContent = "💡 " + q.dato;
+    d.classList.add("visible");
+  }
+
+  // Resultado
+  const r = document.getElementById("q-result");
+  r.textContent = correct ? "✅ ¡Correcto!" : "❌ Incorrecto";
+  r.classList.add("visible", correct ? "correct" : "wrong");
+  document.getElementById("q-actions").classList.add("visible");
+}
+
+function onQuestionContinue() {
+  const q = game.pendingQuestion;
+  const correct = document.getElementById("q-result").classList.contains("correct");
+  hideModal("modal-pregunta");
+
+  answerQuestion(correct);
+
+  if (game.phase === "gameover") {
+    document.getElementById("gameover-text").textContent = `¡${game.winner.name} ha ganado el Trivial de Animación!`;
+    showModal("modal-gameover");
+    return;
+  }
+
+  renderBoard();
+  renderPlayersPanel();
+  updateActionPanel();
+  renderTopbar();
+}
+
+// ════════════════════════════════════════════════════════
+//  MODALES
+// ════════════════════════════════════════════════════════
+function showModal(id) { document.getElementById(id).classList.remove("hidden"); }
+function hideModal(id) { document.getElementById(id).classList.add("hidden"); }
+
+// ════════════════════════════════════════════════════════
+//  SETUP UI
+// ════════════════════════════════════════════════════════
+function renderJugadores() {
+  const list = document.getElementById("jugadores-list");
+  let s = "";
+  for (let i = 0; i < numJugadores; i++) {
+    const color = PLAYER_COLORS[i];
+    const emoji = PLAYER_EMOJIS[i];
+    const defaultName = `Jugador ${i + 1}`;
+    s += `<div class="jugador-row">
+      <div class="jugador-num" style="background:${color};color:white">${i+1}</div>
+      <span style="font-size:1.4rem">${emoji}</span>
+      <input type="text" id="jname-${i}" value="${defaultName}" maxlength="20" placeholder="Nombre jugador ${i+1}"/>
+    </div>`;
+  }
+  list.innerHTML = s;
+}
+
+function addJugador() {
+  if (numJugadores >= 6) return;
+  numJugadores++;
+  renderJugadores();
+}
+
+function removeJugador() {
+  if (numJugadores <= 2) return;
+  numJugadores--;
+  renderJugadores();
+}
+
+async function onFiltroChange() {
+  const estudio = document.getElementById("filtro-estudio").value;
+  const info = document.getElementById("filtro-info");
+  info.textContent = "Calculando…";
+  try {
+    let q = sb.from("preguntas").select("id", { count: "exact", head: true });
+    if (estudio) q = q.eq("estudio", estudio);
+    const { count } = await q;
+    info.textContent = `${count} preguntas disponibles con este filtro`;
+  } catch(e) {
+    info.textContent = "Error al consultar";
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  INICIAR JUEGO
+// ════════════════════════════════════════════════════════
+async function iniciarJuego() {
+  // Recoger nombres
+  jugadores = [];
+  for (let i = 0; i < numJugadores; i++) {
+    const name = document.getElementById(`jname-${i}`).value.trim() || `Jugador ${i+1}`;
+    jugadores.push({ name, color: PLAYER_COLORS[i], emoji: PLAYER_EMOJIS[i] });
+  }
+
+  mostrarScreen("screen-loading");
+
+  try {
+    const estudio    = document.getElementById("filtro-estudio").value;
+    const dificultad = document.getElementById("filtro-dificultad").value;
+    pool = await cargarPreguntas({ estudio, dificultad });
+
+    if (pool.length < 20) {
+      alert(`Solo hay ${pool.length} preguntas con esos filtros. Por favor amplía el filtro.`);
+      mostrarScreen("screen-setup");
+      return;
+    }
+
+    BOARD = buildBoard();
+    game = createGame(jugadores, pool);
+
+    mostrarScreen("screen-game");
+    renderBoard();
+    renderPlayersPanel();
+    renderTopbar();
+    updateActionPanel();
+
+  } catch(e) {
+    console.error(e);
+    alert("Error al cargar preguntas: " + e.message);
+    mostrarScreen("screen-setup");
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  NAVEGACIÓN
+// ════════════════════════════════════════════════════════
+function mostrarScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+async function irASetup() {
+  mostrarScreen("screen-setup");
+  renderJugadores();
+  // Contar preguntas totales
+  try {
+    const { count } = await sb.from("preguntas").select("id", { count: "exact", head: true });
+    document.getElementById("filtro-info").textContent = `${count} preguntas disponibles`;
+  } catch(e) {
+    document.getElementById("filtro-info").textContent = "No se pudo conectar a la base de datos";
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════
+window.addEventListener("DOMContentLoaded", () => {
+  initSupabase();
+});
+</script>
+</body>
+</html>
+HTMLEOF
