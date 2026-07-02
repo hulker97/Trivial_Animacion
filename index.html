@@ -1206,19 +1206,15 @@ function nextTurn() {
 // ════════════════════════════════════════════════════════
 function renderBoard() {
   const svg = document.getElementById("board-svg");
-  const validIds = new Set((game ? game.validTargets : []).map(t => t.id));
-  const finalIds = new Set((game ? game.validTargets : []).filter(t => t.label==="final").map(t => t.id));
+  const validIds  = new Set((game ? game.validTargets : []).map(t => t.id));
+  const finalIds  = new Set((game ? game.validTargets : []).filter(t => t.label==="final").map(t => t.id));
   let s = "";
 
   // ── DEFS
   s += `<defs>
-    <radialGradient id="bgGrad" cx="50%" cy="40%" r="65%">
-      <stop offset="0%" stop-color="#1e2880"/>
-      <stop offset="100%" stop-color="#050920"/>
-    </radialGradient>
-    <radialGradient id="hubGrad" cx="40%" cy="35%" r="65%">
-      <stop offset="0%" stop-color="#3545c0"/>
-      <stop offset="100%" stop-color="#0d1240"/>
+    <radialGradient id="bgG" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#1e2fa0"/>
+      <stop offset="100%" stop-color="#040820"/>
     </radialGradient>
     <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
       <feGaussianBlur stdDeviation="3" result="b"/>
@@ -1226,177 +1222,296 @@ function renderBoard() {
     </filter>
     <filter id="glowGold" x="-60%" y="-60%" width="220%" height="220%">
       <feGaussianBlur stdDeviation="5" result="b"/>
-      <feFlood flood-color="#FFD700" flood-opacity="0.6" result="c"/>
+      <feFlood flood-color="#FFD700" flood-opacity="0.5" result="c"/>
       <feComposite in="c" in2="b" operator="in" result="d"/>
       <feMerge><feMergeNode in="d"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
     <filter id="sh">
-      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.7)"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.8)"/>
     </filter>
-    <filter id="pulsate">
-      <feGaussianBlur stdDeviation="4" result="b"/>
+    <filter id="pulse" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+    <clipPath id="filmHole">
+      <circle r="3"/>
+    </clipPath>
   </defs>`;
 
-  // ── FONDO
-  s += `<rect width="680" height="680" fill="url(#bgGrad)" rx="20"/>`;
-
-  // Estrellas
-  [[55,45,1.5],[130,28,1],[198,65,2],[305,38,1.5],[425,22,1],[538,55,2],[618,38,1.5],
-   [652,145,1],[658,295,1.5],[638,455,1],[598,575,2],[480,638,1],[340,648,1.5],
-   [202,638,1],[88,588,2],[42,440,1],[28,278,1.5],[58,128,1],[162,108,2],
-   [390,52,1],[498,128,1.5],[578,198,1],[300,98,2],[158,498,1],[478,538,1.5],
-   [220,200,1],[450,180,1.5],[80,360,1]].forEach(([sx,sy,sz],i) => {
-    const col = i%4===0 ? '#FFD700' : '#fff';
-    s += `<circle cx="${sx}" cy="${sy}" r="${sz}" fill="${col}" opacity="${0.25+i%5*0.1}"/>`;
+  // ── FONDO azul noche con estrellas
+  s += `<rect width="680" height="680" fill="url(#bgG)" rx="0"/>`;
+  [[55,45,1.5,0.8],[130,28,1,0.5],[198,65,2,0.9],[305,38,1.5,0.7],[425,22,1,0.6],
+   [538,55,2,0.8],[618,38,1.5,0.9],[652,145,1,0.5],[658,295,1.5,0.7],[638,455,1,0.8],
+   [598,575,2,0.6],[480,638,1,0.9],[340,648,1.5,0.5],[202,638,1,0.7],[88,588,2,0.8],
+   [42,440,1,0.6],[28,278,1.5,0.9],[58,128,1,0.5],[162,108,2,0.8],[390,52,1,0.7],
+   [498,128,1.5,0.6],[578,198,1,0.9],[300,98,2,0.5],[158,498,1,0.8],[478,538,1.5,0.7],
+   [220,200,1,0.6],[450,180,2,0.8],[80,360,1,0.5],[600,350,1.5,0.9],[340,200,1,0.6]
+  ].forEach(([sx,sy,sz,op]) => {
+    const col = Math.random() > 0.7 ? '#FFD700' : '#fff';
+    s += `<circle cx="${sx}" cy="${sy}" r="${sz}" fill="${col}" opacity="${op}"/>`;
   });
 
-  // Aro exterior decorativo
-  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_OUTER+32}" fill="none" stroke="rgba(255,215,0,0.18)" stroke-width="22"/>`;
-  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_OUTER+32}" fill="none" stroke="rgba(255,215,0,0.45)" stroke-width="2"/>`;
+  // ── TIRA DE PELÍCULA exterior (filmstrip border)
+  const RF = ${268+32}; // radio del filmstrip
+  const nHoles = 64;
+  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${RF+10}" fill="none" stroke="#111" stroke-width="22"/>`;
+  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${RF+10}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`;
+  // Perforaciones del filmstrip
+  for (let i=0;i<nHoles;i++){
+    const ang = (i/nHoles)*360-90;
+    const {x,y} = polar(ang, RF+10);
+    s += `<rect x="${(x-3).toFixed(1)}" y="${(y-4).toFixed(1)}" width="6" height="8" rx="1.5" fill="#333" stroke="#222" stroke-width="0.5" transform="rotate(${ang+90},${x.toFixed(1)},${y.toFixed(1)})"/>`;
+  }
+  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${RF+1}" fill="none" stroke="#555" stroke-width="1"/>`;
+  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${RF+20}" fill="none" stroke="#555" stroke-width="1"/>`;
 
-  // ── SPOKES: franja + casillas
-  for (let si = 0; si < BOARD.spokes.length; si++) {
+  // ── SPOKES: franja + casillas tipo filmstrip
+  const SPOKE_FILLS = {
+    heroes:['#1565C0','#0D47A1','#1976D2'],
+    historia:['#6A1B9A','#7B1FA2','#8E24AA'],
+    villanos:['#B71C1C','#C62828','#D32F2F'],
+    secundarios:['#1B5E20','#2E7D32','#388E3C'],
+    lugares:['#E65100','#EF6C00','#F57C00'],
+    mundo:['#0277BD','#0288D1','#039BE5'],
+  };
+  const SPOKE_EMOJIS = {
+    heroes:['🦁','🤠','🧜'],
+    historia:['❄️','🌹','💫'],
+    villanos:['💀','🐙','🐉'],
+    secundarios:['🐠','🐧','🤖'],
+    lugares:['🏝️','🌋','🏜️'],
+    mundo:['🌍','🎭','🌟'],
+  };
+
+  for (let si=0; si<BOARD.spokes.length; si++){
     const sp  = BOARD.spokes[si];
     const col = CATS_INFO[sp.categoria].color;
-    // Franja coloreada del spoke
+    // Franja de fondo del spoke
     s += `<line x1="${sp.hubEdge.x.toFixed(1)}" y1="${sp.hubEdge.y.toFixed(1)}"
                x2="${sp.trackEdge.x.toFixed(1)}" y2="${sp.trackEdge.y.toFixed(1)}"
-               stroke="${col}" stroke-width="18" opacity="0.15"/>`;
+               stroke="${col}" stroke-width="52" opacity="0.12"/>`;
     s += `<line x1="${sp.hubEdge.x.toFixed(1)}" y1="${sp.hubEdge.y.toFixed(1)}"
                x2="${sp.trackEdge.x.toFixed(1)}" y2="${sp.trackEdge.y.toFixed(1)}"
-               stroke="${col}" stroke-width="3.5" opacity="0.55"/>`;
+               stroke="rgba(0,0,0,0.4)" stroke-width="54" opacity="0.5"/>`;
+    s += `<line x1="${sp.hubEdge.x.toFixed(1)}" y1="${sp.hubEdge.y.toFixed(1)}"
+               x2="${sp.trackEdge.x.toFixed(1)}" y2="${sp.trackEdge.y.toFixed(1)}"
+               stroke="${col}" stroke-width="2" opacity="0.7"/>`;
 
-    // Casillas del spoke
-    for (const sc of sp.cells) {
-      const isValid   = validIds.has(sc.id);
-      const rotDeg    = sp.angle + 90;
-      const W = 20, H = 15;
-      // Halo si es destino válido
-      if (isValid) s += `<ellipse cx="${sc.x.toFixed(1)}" cy="${sc.y.toFixed(1)}" rx="22" ry="18"
-                          fill="white" opacity="0.25" filter="url(#pulsate)"
-                          onclick="onCellClick(${sc.id})" style="cursor:pointer"/>`;
+    // Casillas del spoke — rectangulares alineadas con el brazo
+    const fills  = SPOKE_FILLS[sp.categoria];
+    const emojis = SPOKE_EMOJIS[sp.categoria];
+    for (let ci=0; ci<sp.cells.length; ci++){
+      const sc      = sp.cells[ci];
+      const isValid = validIds.has(sc.id);
+      const rotDeg  = sp.angle + 90;
+      const W=22, H=17;
+      const bg = fills[ci % fills.length];
+
+      if (isValid){
+        s += `<ellipse cx="${sc.x.toFixed(1)}" cy="${sc.y.toFixed(1)}" rx="${W+10}" ry="${H+9}"
+               fill="white" opacity="0.35" filter="url(#pulse)"
+               onclick="onCellClick(${sc.id})" style="cursor:pointer"/>`;
+      }
       s += `<g transform="translate(${sc.x.toFixed(1)},${sc.y.toFixed(1)}) rotate(${rotDeg.toFixed(1)})"
                onclick="${isValid?'onCellClick('+sc.id+')':''}"
                style="${isValid?'cursor:pointer':''}">
-        <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}"
-              rx="5" fill="${col}" stroke="${isValid?'#fff':'rgba(255,255,255,0.5)'}"
-              stroke-width="${isValid?2.5:1.2}" filter="url(#sh)"/>
-        <rect x="${-W+3}" y="${-H+2}" width="${(W-3)*2}" height="${(H-2)*2}"
-              rx="3" fill="rgba(255,255,255,0.18)"/>
+        <!-- fondo negro filmstrip -->
+        <rect x="${-W-2}" y="${-H-2}" width="${(W+2)*2}" height="${(H+2)*2}" rx="4" fill="#111" filter="url(#sh)"/>
+        <!-- fondo color película -->
+        <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3" fill="${bg}"/>
+        <!-- brillo superior -->
+        <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*0.45}" rx="3" fill="rgba(255,255,255,0.25)"/>
+        <!-- borde color si válido -->
+        ${isValid?`<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3" fill="none" stroke="#FFD700" stroke-width="2.5"/>`:''}
+        <!-- perforaciones laterales filmstrip -->
+        <rect x="${-W-1.5}" y="-4" width="3" height="8" rx="1" fill="#333"/>
+        <rect x="${W-1.5}" y="-4" width="3" height="8" rx="1" fill="#333"/>
       </g>`;
-      if (isValid) {
-        s += `<text x="${sc.x.toFixed(1)}" y="${(+sc.y+4).toFixed(1)}" text-anchor="middle"
-               font-size="9" fill="white" font-weight="bold" style="pointer-events:none">${sc.cellIndex+1}</text>`;
-      }
+      // Emoji encima
+      s += `<text x="${sc.x.toFixed(1)}" y="${(+sc.y+6).toFixed(1)}" text-anchor="middle"
+               font-size="${isValid?15:12}" style="pointer-events:none">${emojis[ci]}</text>`;
     }
   }
 
-  // ── ANILLO EXTERIOR
-  // Tamaño de casilla: circunferencia / TOTAL_TRACK = 2π×R_OUTER / 54 ≈ 31px
-  // Usamos W=13 para que haya 5px de espacio entre casillas
-  for (const cell of BOARD.ring) {
+  // ── ANILLO EXTERIOR — casillas tipo fotograma de película
+  const RING_MOVIE_DATA = [
+    {emoji:'🦁',bg:'#1565C0'},{emoji:'🤠',bg:'#0D47A1'},{emoji:'🧜',bg:'#1976D2'},
+    {emoji:'🌹',bg:'#1E88E5'},{emoji:'🏰',bg:'#42A5F5'},{emoji:'🐟',bg:'#1565C0'},
+    {emoji:'❄️',bg:'#6A1B9A'},{emoji:'💫',bg:'#7B1FA2'},{emoji:'🧝',bg:'#8E24AA'},
+    {emoji:'🎭',bg:'#9C27B0'},{emoji:'🌟',bg:'#AB47BC'},{emoji:'🎪',bg:'#6A1B9A'},
+    {emoji:'💀',bg:'#B71C1C'},{emoji:'🐙',bg:'#C62828'},{emoji:'🐉',bg:'#D32F2F'},
+    {emoji:'👹',bg:'#E53935'},{emoji:'🦂',bg:'#EF5350'},{emoji:'🧛',bg:'#B71C1C'},
+    {emoji:'🐠',bg:'#1B5E20'},{emoji:'🐘',bg:'#2E7D32'},{emoji:'🤖',bg:'#388E3C'},
+    {emoji:'🐧',bg:'#43A047'},{emoji:'🦒',bg:'#66BB6A'},{emoji:'🐬',bg:'#1B5E20'},
+    {emoji:'🏝️',bg:'#E65100'},{emoji:'🌋',bg:'#EF6C00'},{emoji:'🏜️',bg:'#F57C00'},
+    {emoji:'🌊',bg:'#FB8C00'},{emoji:'🏰',bg:'#FFA726'},{emoji:'🗺️',bg:'#E65100'},
+    {emoji:'🌍',bg:'#0277BD'},{emoji:'🎠',bg:'#0288D1'},{emoji:'🎡',bg:'#039BE5'},
+    {emoji:'🌈',bg:'#03A9F4'},{emoji:'🎆',bg:'#29B6F6'},{emoji:'🎇',bg:'#0277BD'},
+    // repetir para 54 casillas
+    {emoji:'⭐',bg:'#1565C0'},{emoji:'🤩',bg:'#0D47A1'},{emoji:'👑',bg:'#1976D2'},
+    {emoji:'🎬',bg:'#6A1B9A'},{emoji:'📽️',bg:'#7B1FA2'},{emoji:'🎞️',bg:'#8E24AA'},
+    {emoji:'🦹',bg:'#B71C1C'},{emoji:'🧙',bg:'#C62828'},{emoji:'🐲',bg:'#D32F2F'},
+    {emoji:'🦊',bg:'#1B5E20'},{emoji:'🐻',bg:'#2E7D32'},{emoji:'🦁',bg:'#388E3C'},
+    {emoji:'🏔️',bg:'#E65100'},{emoji:'🌅',bg:'#EF6C00'},{emoji:'🌄',bg:'#F57C00'},
+    {emoji:'🪄',bg:'#0277BD'},{emoji:'✨',bg:'#0288D1'},{emoji:'🌙',bg:'#039BE5'},
+  ];
+
+  for (let i=0; i<BOARD.ring.length; i++){
+    const cell    = BOARD.ring[i];
     const isHQ    = cell.type === "hq";
     const isRA    = cell.type === "roll_again";
     const isValid = validIds.has(cell.id);
     const isFinal = finalIds.has(cell.id);
-    const col     = isRA ? "#FFD700" : CATS_INFO[cell.categoria].color;
-    const W = isHQ ? 16 : 12;
-    const H = isHQ ? 13 : 10;
     const rotDeg  = cell.angle + 90;
 
-    // Halo de destino válido
-    if (isValid) {
-      s += `<ellipse cx="${cell.x.toFixed(1)}" cy="${cell.y.toFixed(1)}" rx="${W+8}" ry="${H+7}"
-               fill="${isFinal?'#FFD700':'white'}" opacity="${isFinal?0.4:0.22}"
-               filter="url(#pulsate)" onclick="onCellClick(${cell.id})" style="cursor:pointer"/>`;
-    }
+    let W, H, bg, borderCol, borderW;
     if (isHQ) {
+      W=20; H=16;
+      bg = CATS_INFO[cell.categoria].color;
+      borderCol = "#FFFFFF"; borderW = 3;
+    } else if (isRA) {
+      W=16; H=12;
+      bg = "#111"; borderCol = "#FFD700"; borderW = 2;
+    } else {
+      W=16; H=12;
+      const md = RING_MOVIE_DATA[i % RING_MOVIE_DATA.length];
+      bg = md.bg; borderCol = "rgba(255,255,255,0.35)"; borderW = 1;
+    }
+    if (isValid) { borderCol = isFinal ? "#FFD700" : "#FFFFFF"; borderW = 3; }
+
+    // Halo si es destino válido
+    if (isValid){
+      s += `<ellipse cx="${cell.x.toFixed(1)}" cy="${cell.y.toFixed(1)}" rx="${W+10}" ry="${H+8}"
+               fill="${isFinal?'#FFD700':'white'}" opacity="${isFinal?0.5:0.3}"
+               filter="url(#pulse)" onclick="onCellClick(${cell.id})" style="cursor:pointer"/>`;
+    }
+    if (isHQ){
       s += `<circle cx="${cell.x.toFixed(1)}" cy="${cell.y.toFixed(1)}"
-               r="${W+10}" fill="${col}" opacity="0.2" filter="url(#pulsate)"/>`;
+               r="${W+8}" fill="${bg}" opacity="0.25" filter="url(#pulse)"/>`;
     }
 
-    // Casilla (rectángulo rotado tangencialmente)
+    // Casilla — rectángulo rotado tangencialmente, estilo fotograma
     s += `<g transform="translate(${cell.x.toFixed(1)},${cell.y.toFixed(1)}) rotate(${rotDeg.toFixed(1)})"
              onclick="${isValid?'onCellClick('+cell.id+')':''}"
              style="${isValid?'cursor:pointer':''}">
-      <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}"
-            rx="${isHQ?6:4}"
-            fill="${col}"
-            stroke="${isHQ?'#ffffff':isRA?'#fff9c4':isValid?'#fff':'rgba(255,255,255,0.4)'}"
-            stroke-width="${isHQ?2.5:isValid?2:1.2}"
-            filter="${isHQ?'url(#glow)':'url(#sh)'}"/>
-      <rect x="${-W+3}" y="${-H+2}" width="${(W-3)*2}" height="${(H-2)*2}"
-            rx="${isHQ?4:3}" fill="rgba(255,255,255,0.2)"/>
+      <!-- marco negro filmstrip -->
+      <rect x="${-W-2.5}" y="${-H-2.5}" width="${(W+2.5)*2}" height="${(H+2.5)*2}" rx="${isHQ?7:5}" fill="#111" filter="url(#sh)"/>
+      <!-- fondo color -->
+      <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="${isHQ?5:3}" fill="${bg}"/>
+      <!-- brillo interior -->
+      <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*0.4}" rx="${isHQ?5:3}" fill="rgba(255,255,255,0.22)"/>
+      <!-- borde -->
+      <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="${isHQ?5:3}"
+            fill="none" stroke="${borderCol}" stroke-width="${borderW}"/>
+      <!-- perforaciones filmstrip (solo anillo, no HQ) -->
+      ${!isHQ && !isRA ? `<rect x="${-W-2}" y="-3" width="4" height="6" rx="1" fill="#222"/>
+      <rect x="${W-2}" y="-3" width="4" height="6" rx="1" fill="#222"/>` : ''}
+      ${isHQ ? `<!-- triángulos de esquina para HQ -->
+      <polygon points="${-W},${-H} ${-W+6},${-H} ${-W},${-H+6}" fill="rgba(255,255,255,0.3)"/>
+      <polygon points="${W},${H} ${W-6},${H} ${W},${H-6}" fill="rgba(255,255,255,0.15)"/>` : ''}
     </g>`;
 
-    // Iconos/texto encima
+    // Emoji / texto encima
     if (isHQ) {
       const emojis = {heroes:"⭐",historia:"🎬",villanos:"💀",secundarios:"🎭",lugares:"🗺️",mundo:"🌍"};
-      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+5).toFixed(1)}"
-               text-anchor="middle" font-size="${isValid?15:13}"
-               style="pointer-events:none${isValid?';filter:drop-shadow(0 0 4px white)':''}">${emojis[cell.categoria]}</text>`;
+      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+6).toFixed(1)}"
+               text-anchor="middle" font-size="${isValid?17:14}"
+               filter="${isValid?'url(#glowGold)':'url(#glow)'}"
+               style="pointer-events:none">${emojis[cell.categoria]}</text>`;
     } else if (isRA) {
-      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+4).toFixed(1)}"
-               text-anchor="middle" font-size="10" style="pointer-events:none">🎲</text>`;
+      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y-2).toFixed(1)}"
+               text-anchor="middle" font-size="7" fill="#FFD700" font-weight="bold"
+               style="pointer-events:none">ROLL</text>`;
+      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+6).toFixed(1)}"
+               text-anchor="middle" font-size="7" fill="#FFD700" font-weight="bold"
+               style="pointer-events:none">AGAIN</text>`;
+    } else {
+      const md = RING_MOVIE_DATA[i % RING_MOVIE_DATA.length];
+      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+5).toFixed(1)}"
+               text-anchor="middle" font-size="${isValid?13:10}"
+               style="pointer-events:none">${md.emoji}</text>`;
     }
   }
 
-  // ── HUB CENTRAL
+  // ── HUB CENTRAL — hexágono azul como el Disney 2002
   const pts = BOARD.hqPositions.map(pos => {
-    const {x,y} = polar((pos/TOTAL_TRACK)*360-90, R_HUB+16);
+    const {x,y} = polar((pos/TOTAL_TRACK)*360-90, R_HUB+18);
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
-  s += `<polygon points="${pts}" fill="rgba(0,0,0,0.35)" transform="translate(3,3)"/>`;
-  s += `<polygon points="${pts}" fill="url(#hubGrad)" stroke="#FFD700" stroke-width="3"/>`;
-  s += `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>`;
-  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_HUB+2}" fill="rgba(255,215,0,0.1)" filter="url(#glowGold)"/>`;
-  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_HUB}" fill="#080c28" stroke="#FFD700" stroke-width="2.5"/>`;
-  s += `<text x="${BOARD_CX}" y="${BOARD_CY+8}" text-anchor="middle" font-size="28"
-          filter="url(#glow)" style="pointer-events:none">🎬</text>`;
-  s += `<text x="${BOARD_CX}" y="${BOARD_CY+22}" text-anchor="middle" font-size="7"
-          fill="rgba(255,215,0,0.7)" font-weight="bold" letter-spacing="1"
-          style="pointer-events:none">TRIVIAL</text>`;
 
-  // ── FICHAS
+  // Sombra hexagonal
+  s += `<polygon points="${pts}" fill="rgba(0,0,0,0.5)" transform="translate(4,4)"/>`;
+
+  // Radios desde el centro hacia cada vértice del hexágono (como el Disney 2002)
+  BOARD.hqPositions.forEach(pos => {
+    const {x,y} = polar((pos/TOTAL_TRACK)*360-90, R_HUB+18);
+    s += `<line x1="${BOARD_CX}" y1="${BOARD_CY}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"
+               stroke="rgba(100,150,255,0.4)" stroke-width="1.5"/>`;
+  });
+
+  s += `<polygon points="${pts}" fill="#0a1560" stroke="#4466FF" stroke-width="2.5"/>`;
+  s += `<polygon points="${pts}" fill="none" stroke="rgba(100,150,255,0.4)" stroke-width="1"/>`;
+
+  // Círculo interior del hub
+  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_HUB+2}" fill="rgba(100,150,255,0.1)" filter="url(#glowGold)"/>`;
+  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_HUB}" fill="#060d40" stroke="#4466FF" stroke-width="2"/>`;
+
+  // Logo central
+  s += `<text x="${BOARD_CX}" y="${BOARD_CY+5}" text-anchor="middle" font-size="26"
+          filter="url(#glow)" style="pointer-events:none">🎬</text>`;
+  s += `<text x="${BOARD_CX}" y="${BOARD_CY+20}" text-anchor="middle" font-size="7"
+          fill="rgba(100,180,255,0.8)" font-weight="bold"
+          style="pointer-events:none;letter-spacing:2px">TRIVIAL</text>`;
+
+  // Triángulos indicadores en el hub (como el Disney 2002 tiene flechas/triángulos)
+  BOARD.hqPositions.forEach((pos,si) => {
+    const ang = (pos/TOTAL_TRACK)*360-90;
+    const {x,y} = polar(ang, R_HUB-10);
+    const col = CATS_INFO[CATS[si]].color;
+    const a1 = ang+0, a2 = ang-12, a3 = ang+12;
+    const p1 = polar(a1, R_HUB-2);
+    const p2 = polar(a2, R_HUB-14);
+    const p3 = polar(a3, R_HUB-14);
+    s += `<polygon points="${p1.x.toFixed(1)},${p1.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)} ${p3.x.toFixed(1)},${p3.y.toFixed(1)}"
+               fill="${col}" opacity="0.8"/>`;
+  });
+
+  // ── FICHAS DE JUGADORES
   if (game) {
-    // En hub
     game.players.filter(p => p.position===null).forEach((p,i,arr) => {
-      const {x,y} = polar((i/Math.max(arr.length,1))*360, 24);
-      const px = (BOARD_CX+x-BOARD_CX).toFixed(1), py = (BOARD_CY+y-BOARD_CY).toFixed(1);
+      const {x,y} = polar((i/Math.max(arr.length,1))*360, 22);
+      const px=(BOARD_CX+x-BOARD_CX).toFixed(1), py=(BOARD_CY+y-BOARD_CY).toFixed(1);
       const active = game.players[game.currentPlayerIndex]===p;
-      if(active) s += `<circle cx="${px}" cy="${py}" r="19" fill="${p.color}" opacity="0.3" filter="url(#glowGold)"/>`;
-      s += `<circle cx="${px}" cy="${py}" r="13" fill="${p.color}" stroke="${active?'#FFD700':'rgba(255,255,255,0.9)'}" stroke-width="${active?3:2}" filter="url(#sh)"/>`;
-      s += `<text x="${px}" y="${(+py+5).toFixed(1)}" text-anchor="middle" font-size="11" style="pointer-events:none">${p.emoji}</text>`;
+      if(active) s+=`<circle cx="${px}" cy="${py}" r="18" fill="${p.color}" opacity="0.3" filter="url(#glowGold)"/>`;
+      s+=`<circle cx="${px}" cy="${py}" r="13" fill="${p.color}" stroke="${active?'#FFD700':'rgba(255,255,255,0.9)'}" stroke-width="${active?3:2}" filter="url(#sh)"/>`;
+      s+=`<text x="${px}" y="${(+py+5).toFixed(1)}" text-anchor="middle" font-size="11" style="pointer-events:none">${p.emoji}</text>`;
     });
 
-    // En anillo/spoke
-    const byPos = {};
-    game.players.filter(p => p.position!==null).forEach(p => {
+    const byPos={};
+    game.players.filter(p=>p.position!==null).forEach(p=>{
       if(!byPos[p.position]) byPos[p.position]=[];
       byPos[p.position].push(p);
     });
-    for (const [posKey, players] of Object.entries(byPos)) {
-      const pos = +posKey;
-      let cx, cy, angForOffset;
-      if (pos >= 1000) {
-        const si = Math.floor((pos-1000)/10), ci = (pos-1000)%10;
-        const sc = BOARD.spokes[si].cells[ci];
-        cx=sc.x; cy=sc.y; angForOffset=BOARD.spokes[si].angle;
+    for(const [posKey,players] of Object.entries(byPos)){
+      const pos=+posKey;
+      let cx,cy,angForOff;
+      if(pos>=1000){
+        const si=Math.floor((pos-1000)/10),ci=(pos-1000)%10;
+        const sc=BOARD.spokes[si].cells[ci];
+        cx=sc.x;cy=sc.y;angForOff=BOARD.spokes[si].angle;
       } else {
-        const cell = BOARD.ring[pos];
-        cx=cell.x; cy=cell.y; angForOffset=cell.angle;
+        const cell=BOARD.ring[pos];
+        cx=cell.x;cy=cell.y;angForOff=cell.angle;
       }
-      players.forEach((p,i) => {
-        const off = players.length>1 ? (i-(players.length-1)/2)*14 : 0;
-        const rad = angForOffset * Math.PI/180;
-        const px  = (cx + Math.cos(rad)*off).toFixed(1);
-        const py  = (cy + Math.sin(rad)*off).toFixed(1);
-        const active = game.players[game.currentPlayerIndex]===p;
-        if(active) s += `<circle cx="${px}" cy="${py}" r="19" fill="${p.color}" opacity="0.3" filter="url(#glowGold)"/>`;
-        s += `<circle cx="${px}" cy="${py}" r="13" fill="${p.color}" stroke="${active?'#FFD700':'rgba(255,255,255,0.9)'}" stroke-width="${active?3:2}" filter="url(#sh)"/>`;
-        s += `<text x="${px}" y="${(+py+5).toFixed(1)}" text-anchor="middle" font-size="11" style="pointer-events:none">${p.emoji}</text>`;
+      players.forEach((p,i)=>{
+        const off=players.length>1?(i-(players.length-1)/2)*14:0;
+        const rad=angForOff*Math.PI/180;
+        const px=(cx+Math.cos(rad)*off).toFixed(1);
+        const py=(cy+Math.sin(rad)*off).toFixed(1);
+        const active=game.players[game.currentPlayerIndex]===p;
+        if(active) s+=`<circle cx="${px}" cy="${py}" r="18" fill="${p.color}" opacity="0.3" filter="url(#glowGold)"/>`;
+        s+=`<circle cx="${px}" cy="${py}" r="13" fill="${p.color}" stroke="${active?'#FFD700':'rgba(255,255,255,0.9)'}" stroke-width="${active?3:2}" filter="url(#sh)"/>`;
+        s+=`<text x="${px}" y="${(+py+5).toFixed(1)}" text-anchor="middle" font-size="11" style="pointer-events:none">${p.emoji}</text>`;
       });
     }
   }
@@ -1905,4 +2020,3 @@ window.addEventListener("DOMContentLoaded", () => {
 </script>
 </body>
 </html>
-HTMLEOF
