@@ -956,15 +956,15 @@ let game = null;
 let questionAnswered = false;
 
 // ════════════════════════════════════════════════════════
-//  TABLERO — 54 casillas en anillo, 3 por spoke, clic directo
+//  TABLERO — 54 casillas en anillo, 6 por spoke, clic directo
 //  Estructura por sector (entre 2 HQ): HQ + N,RA,N,N,RA,N,N,N (8 casillas)
 //  6 sectores × 9 posiciones = 54 casillas totales
 // ════════════════════════════════════════════════════════
 const BOARD_CX = 340, BOARD_CY = 340;
-const R_OUTER  = 268;   // radio casillas del anillo
+const R_OUTER  = 278;   // radio casillas del anillo
 const R_HUB    = 48;    // radio del hub
 const N_HQ     = 6;
-const N_SPOKE_CELLS = 3;
+const N_SPOKE_CELLS = 6;
 const SECTOR_SIZE   = 9;       // casillas por sector
 const TOTAL_TRACK   = 54;      // N_HQ × SECTOR_SIZE
 let BOARD = null;
@@ -1002,12 +1002,12 @@ function buildBoard() {
     }
   }
 
-  // Spokes: 3 casillas jugables entre hub y anillo
+  // Spokes: 6 casillas jugables entre hub y anillo
   const spokes = hqPositions.map((hqPos, si) => {
     const angle  = (hqPos / TOTAL_TRACK) * 360 - 90;
     const cat    = CATS[si];
-    const rStart = R_HUB + 18;
-    const rEnd   = R_OUTER - 26;
+    const rStart = R_HUB + 16;
+    const rEnd   = R_OUTER - 22;
     const cells  = [];
     for (let ci = 0; ci < N_SPOKE_CELLS; ci++) {
       const t = ci / N_SPOKE_CELLS;
@@ -1267,20 +1267,20 @@ function renderBoard() {
 
   // ── SPOKES: franja + casillas tipo filmstrip
   const SPOKE_FILLS = {
-    heroes:['#1565C0','#0D47A1','#1976D2'],
-    historia:['#6A1B9A','#7B1FA2','#8E24AA'],
-    villanos:['#B71C1C','#C62828','#D32F2F'],
-    secundarios:['#1B5E20','#2E7D32','#388E3C'],
-    lugares:['#E65100','#EF6C00','#F57C00'],
-    mundo:['#0277BD','#0288D1','#039BE5'],
+    heroes:['#1565C0','#0D47A1','#1976D2','#1E88E5','#1565C0','#0D47A1'],
+    historia:['#6A1B9A','#7B1FA2','#8E24AA','#9C27B0','#6A1B9A','#7B1FA2'],
+    villanos:['#B71C1C','#C62828','#D32F2F','#E53935','#B71C1C','#C62828'],
+    secundarios:['#1B5E20','#2E7D32','#388E3C','#43A047','#1B5E20','#2E7D32'],
+    lugares:['#E65100','#EF6C00','#F57C00','#FB8C00','#E65100','#EF6C00'],
+    mundo:['#0277BD','#0288D1','#039BE5','#03A9F4','#0277BD','#0288D1'],
   };
   const SPOKE_EMOJIS = {
-    heroes:['🦁','🤠','🧜'],
-    historia:['❄️','🌹','💫'],
-    villanos:['💀','🐙','🐉'],
-    secundarios:['🐠','🐧','🤖'],
-    lugares:['🏝️','🌋','🏜️'],
-    mundo:['🌍','🎭','🌟'],
+    heroes:['🦁','⭐','🤠','👑','🧜','🏰'],
+    historia:['❄️','🌹','💫','🎬','🧝','🪄'],
+    villanos:['💀','🐙','🐉','👹','🦂','🧛'],
+    secundarios:['🐠','🐧','🤖','🐘','🦊','🐻'],
+    lugares:['🏝️','🌋','🏜️','🌊','🏔️','🗺️'],
+    mundo:['🌍','🎭','🌟','🎪','✨','🌙'],
   };
 
   for (let si=0; si<BOARD.spokes.length; si++){
@@ -1366,28 +1366,28 @@ function renderBoard() {
 
     let W, H, bg, borderCol, borderW;
     if (isHQ) {
-      W=20; H=16;
+      W=14; H=11;
       bg = CATS_INFO[cell.categoria].color;
-      borderCol = "#FFFFFF"; borderW = 3;
+      borderCol = "#FFFFFF"; borderW = 2.5;
     } else if (isRA) {
-      W=16; H=12;
+      W=11; H=9;
       bg = "#111"; borderCol = "#FFD700"; borderW = 2;
     } else {
-      W=16; H=12;
+      W=11; H=9;
       const md = RING_MOVIE_DATA[i % RING_MOVIE_DATA.length];
       bg = md.bg; borderCol = "rgba(255,255,255,0.35)"; borderW = 1;
     }
-    if (isValid) { borderCol = isFinal ? "#FFD700" : "#FFFFFF"; borderW = 3; }
+    if (isValid) { borderCol = isFinal ? "#FFD700" : "#FFFFFF"; borderW = 2.5; }
 
     // Halo si es destino válido
     if (isValid){
-      s += `<ellipse cx="${cell.x.toFixed(1)}" cy="${cell.y.toFixed(1)}" rx="${W+10}" ry="${H+8}"
+      s += `<ellipse cx="${cell.x.toFixed(1)}" cy="${cell.y.toFixed(1)}" rx="${W+7}" ry="${H+6}"
                fill="${isFinal?'#FFD700':'white'}" opacity="${isFinal?0.5:0.3}"
                filter="url(#pulse)" onclick="onCellClick(${cell.id})" style="cursor:pointer"/>`;
     }
     if (isHQ){
       s += `<circle cx="${cell.x.toFixed(1)}" cy="${cell.y.toFixed(1)}"
-               r="${W+8}" fill="${bg}" opacity="0.25" filter="url(#pulse)"/>`;
+               r="${W+6}" fill="${bg}" opacity="0.25" filter="url(#pulse)"/>`;
     }
 
     // Casilla — rectángulo rotado tangencialmente, estilo fotograma
@@ -1414,21 +1414,21 @@ function renderBoard() {
     // Emoji / texto encima
     if (isHQ) {
       const emojis = {heroes:"⭐",historia:"🎬",villanos:"💀",secundarios:"🎭",lugares:"🗺️",mundo:"🌍"};
-      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+6).toFixed(1)}"
-               text-anchor="middle" font-size="${isValid?17:14}"
+      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+5).toFixed(1)}"
+               text-anchor="middle" font-size="${isValid?13:11}"
                filter="${isValid?'url(#glowGold)':'url(#glow)'}"
                style="pointer-events:none">${emojis[cell.categoria]}</text>`;
     } else if (isRA) {
-      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y-2).toFixed(1)}"
-               text-anchor="middle" font-size="7" fill="#FFD700" font-weight="bold"
+      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y-1).toFixed(1)}"
+               text-anchor="middle" font-size="5.5" fill="#FFD700" font-weight="bold"
                style="pointer-events:none">ROLL</text>`;
-      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+6).toFixed(1)}"
-               text-anchor="middle" font-size="7" fill="#FFD700" font-weight="bold"
+      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+5).toFixed(1)}"
+               text-anchor="middle" font-size="5.5" fill="#FFD700" font-weight="bold"
                style="pointer-events:none">AGAIN</text>`;
     } else {
       const md = RING_MOVIE_DATA[i % RING_MOVIE_DATA.length];
-      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+5).toFixed(1)}"
-               text-anchor="middle" font-size="${isValid?13:10}"
+      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+4).toFixed(1)}"
+               text-anchor="middle" font-size="${isValid?11:8}"
                style="pointer-events:none">${md.emoji}</text>`;
     }
   }
