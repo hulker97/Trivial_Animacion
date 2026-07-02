@@ -1267,20 +1267,20 @@ function renderBoard() {
 
   // ── SPOKES: franja + casillas tipo filmstrip
   const SPOKE_FILLS = {
-    heroes:['#1565C0','#0D47A1','#1976D2','#1E88E5','#1565C0','#0D47A1'],
-    historia:['#6A1B9A','#7B1FA2','#8E24AA','#9C27B0','#6A1B9A','#7B1FA2'],
-    villanos:['#B71C1C','#C62828','#D32F2F','#E53935','#B71C1C','#C62828'],
-    secundarios:['#1B5E20','#2E7D32','#388E3C','#43A047','#1B5E20','#2E7D32'],
-    lugares:['#E65100','#EF6C00','#F57C00','#FB8C00','#E65100','#EF6C00'],
-    mundo:['#0277BD','#0288D1','#039BE5','#03A9F4','#0277BD','#0288D1'],
+    heroes:     ['#0D47A1','#1565C0','#1976D2','#0D47A1','#1565C0','#1976D2'],
+    historia:   ['#7B1FA2','#6A1B9A','#8E24AA','#7B1FA2','#6A1B9A','#8E24AA'],
+    villanos:   ['#C62828','#B71C1C','#D32F2F','#C62828','#B71C1C','#D32F2F'],
+    secundarios:['#2E7D32','#1B5E20','#388E3C','#2E7D32','#1B5E20','#388E3C'],
+    lugares:    ['#EF6C00','#E65100','#F57C00','#EF6C00','#E65100','#F57C00'],
+    mundo:      ['#0288D1','#0277BD','#039BE5','#0288D1','#0277BD','#039BE5'],
   };
   const SPOKE_EMOJIS = {
-    heroes:['🦁','⭐','🤠','👑','🧜','🏰'],
-    historia:['❄️','🌹','💫','🎬','🧝','🪄'],
-    villanos:['💀','🐙','🐉','👹','🦂','🧛'],
-    secundarios:['🐠','🐧','🤖','🐘','🦊','🐻'],
-    lugares:['🏝️','🌋','🏜️','🌊','🏔️','🗺️'],
-    mundo:['🌍','🎭','🌟','🎪','✨','🌙'],
+    heroes:     ['🦁','⭐','🤠','🧜','👸','🏰'],
+    historia:   ['🎬','🐠','🐉','🧁','🤖','🎈'],
+    villanos:   ['💀','🐸','🦁','🐧','🐉','🎭'],
+    secundarios:['🌹','👗','🍎','🧚','🦌','🐘'],
+    lugares:    ['🏺','🗿','🌴','🌊','🏔️','🏕️'],
+    mundo:      ['❄️','💃','🌺','🦁','🐭','🕷️'],
   };
 
   for (let si=0; si<BOARD.spokes.length; si++){
@@ -1329,27 +1329,68 @@ function renderBoard() {
   }
 
   // ── ANILLO EXTERIOR — casillas tipo fotograma de película
-  const RING_MOVIE_DATA = [
-    {emoji:'🦁',bg:'#1565C0'},{emoji:'🤠',bg:'#0D47A1'},{emoji:'🧜',bg:'#1976D2'},
-    {emoji:'🌹',bg:'#1E88E5'},{emoji:'🏰',bg:'#42A5F5'},{emoji:'🐟',bg:'#1565C0'},
-    {emoji:'❄️',bg:'#6A1B9A'},{emoji:'💫',bg:'#7B1FA2'},{emoji:'🧝',bg:'#8E24AA'},
-    {emoji:'🎭',bg:'#9C27B0'},{emoji:'🌟',bg:'#AB47BC'},{emoji:'🎪',bg:'#6A1B9A'},
-    {emoji:'💀',bg:'#B71C1C'},{emoji:'🐙',bg:'#C62828'},{emoji:'🐉',bg:'#D32F2F'},
-    {emoji:'👹',bg:'#E53935'},{emoji:'🦂',bg:'#EF5350'},{emoji:'🧛',bg:'#B71C1C'},
-    {emoji:'🐠',bg:'#1B5E20'},{emoji:'🐘',bg:'#2E7D32'},{emoji:'🤖',bg:'#388E3C'},
-    {emoji:'🐧',bg:'#43A047'},{emoji:'🦒',bg:'#66BB6A'},{emoji:'🐬',bg:'#1B5E20'},
-    {emoji:'🏝️',bg:'#E65100'},{emoji:'🌋',bg:'#EF6C00'},{emoji:'🏜️',bg:'#F57C00'},
-    {emoji:'🌊',bg:'#FB8C00'},{emoji:'🏰',bg:'#FFA726'},{emoji:'🗺️',bg:'#E65100'},
-    {emoji:'🌍',bg:'#0277BD'},{emoji:'🎠',bg:'#0288D1'},{emoji:'🎡',bg:'#039BE5'},
-    {emoji:'🌈',bg:'#03A9F4'},{emoji:'🎆',bg:'#29B6F6'},{emoji:'🎇',bg:'#0277BD'},
-    // repetir para 54 casillas
-    {emoji:'⭐',bg:'#1565C0'},{emoji:'🤩',bg:'#0D47A1'},{emoji:'👑',bg:'#1976D2'},
-    {emoji:'🎬',bg:'#6A1B9A'},{emoji:'📽️',bg:'#7B1FA2'},{emoji:'🎞️',bg:'#8E24AA'},
-    {emoji:'🦹',bg:'#B71C1C'},{emoji:'🧙',bg:'#C62828'},{emoji:'🐲',bg:'#D32F2F'},
-    {emoji:'🦊',bg:'#1B5E20'},{emoji:'🐻',bg:'#2E7D32'},{emoji:'🦁',bg:'#388E3C'},
-    {emoji:'🏔️',bg:'#E65100'},{emoji:'🌅',bg:'#EF6C00'},{emoji:'🌄',bg:'#F57C00'},
-    {emoji:'🪄',bg:'#0277BD'},{emoji:'✨',bg:'#0288D1'},{emoji:'🌙',bg:'#039BE5'},
-  ];
+const RING_MOVIE_DATA = [
+  // SECTOR 0: HÉROES (azul)
+  {emoji:'⭐', bg:'#1565C0', title:'HQ Héroes'},           // 0: HQ
+  {emoji:'🦁', bg:'#0D47A1', title:'El Rey León'},         // 1: normal
+  {emoji:'🎲', bg:'#FFD700', title:'ROLL AGAIN'},          // 2: roll_again
+  {emoji:'🤠', bg:'#1976D2', title:'Toy Story'},           // 3: normal
+  {emoji:'🧜', bg:'#1565C0', title:'La Sirenita'},         // 4: normal
+  {emoji:'🎲', bg:'#FFD700', title:'ROLL AGAIN'},          // 5: roll_again
+  {emoji:'👸', bg:'#0D47A1', title:'Frozen'},              // 6: normal
+  {emoji:'🏰', bg:'#1976D2', title:'Enredados'},           // 7: normal
+  {emoji:'🦸', bg:'#1565C0', title:'Los Increíbles'},     // 8: normal
+  // SECTOR 1: HISTORIA (púrpura)
+  {emoji:'🎬', bg:'#6A1B9A', title:'HQ Historia'},         // 9: HQ
+  {emoji:'🐠', bg:'#7B1FA2', title:'Buscando a Nemo'},     // 10: normal
+  {emoji:'🎲', bg:'#FFD700', title:'ROLL AGAIN'},          // 11: roll_again
+  {emoji:'🐉', bg:'#8E24AA', title:'Cómo Entrenar a tu Dragón'}, // 12: normal
+  {emoji:'🐟', bg:'#6A1B9A', title:'Buscando a Dory'},    // 13: normal
+  {emoji:'🎲', bg:'#FFD700', title:'ROLL AGAIN'},          // 14: roll_again
+  {emoji:'🧁', bg:'#7B1FA2', title:'Ratatouille'},         // 15: normal
+  {emoji:'🤖', bg:'#8E24AA', title:'WALL-E'},              // 16: normal
+  {emoji:'🎈', bg:'#6A1B9A', title:'Up'},                  // 17: normal
+  // SECTOR 2: VILLANOS (rojo)
+  {emoji:'💀', bg:'#B71C1C', title:'HQ Villanos'},         // 18: HQ
+  {emoji:'🐸', bg:'#C62828', title:'Shrek'},               // 19: normal
+  {emoji:'🎲', bg:'#FFD700', title:'ROLL AGAIN'},          // 20: roll_again
+  {emoji:'🧅', bg:'#D32F2F', title:'Shrek 2'},             // 21: normal
+  {emoji:'🦏', bg:'#B71C1C', title:'Madagascar'},          // 22: normal
+  {emoji:'🎲', bg:'#FFD700', title:'ROLL AGAIN'},          // 23: roll_again
+  {emoji:'🐧', bg:'#C62828', title:'Madagascar 2'},        // 24: normal
+  {emoji:'🦁', bg:'#D32F2F', title:'El Gato con Botas'},  // 25: normal
+  {emoji:'🐉', bg:'#B71C1C', title:'Kung Fu Panda'},       // 26: normal
+  // SECTOR 3: SECUNDARIOS (verde)
+  {emoji:'🎭', bg:'#1B5E20', title:'HQ Secundarios'},      // 27: HQ
+  {emoji:'👗', bg:'#2E7D32', title:'Cenicienta'},          // 28: normal
+  {emoji:'🎲', bg:'#FFD700', title:'ROLL AGAIN'},          // 29: roll_again
+  {emoji:'🌹', bg:'#388E3C', title:'La Bella y la Bestia'}, // 30: normal
+  {emoji:'🍎', bg:'#1B5E20', title:'Blancanieves'},        // 31: normal
+  {emoji:'🎲', bg:'#FFD700', title:'ROLL AGAIN'},          // 32: roll_again
+  {emoji:'🧚', bg:'#2E7D32', title:'Peter Pan'},           // 33: normal
+  {emoji:'🦌', bg:'#388E3C', title:'Bambi'},               // 34: normal
+  {emoji:'🐘', bg:'#1B5E20', title:'Dumbo'},               // 35: normal
+  // SECTOR 4: LUGARES (naranja)
+  {emoji:'🗺️', bg:'#E65100', title:'HQ Lugares'},          // 36: HQ
+  {emoji:'🏺', bg:'#EF6C00', title:'Aladdin'},             // 37: normal
+  {emoji:'🎲', bg:'#FFD700', title:'ROLL AGAIN'},          // 38: roll_again
+  {emoji:'🗿', bg:'#F57C00', title:'Mulán'},               // 39: normal
+  {emoji:'🌴', bg:'#E65100', title:'Lilo & Stitch'},       // 40: normal
+  {emoji:'🎲', bg:'#FFD700', title:'ROLL AGAIN'},          // 41: roll_again
+  {emoji:'🏔️', bg:'#EF6C00', title:'Tarzán'},              // 42: normal
+  {emoji:'🌊', bg:'#F57C00', title:'Moana/Vaiana'},        // 43: normal
+  {emoji:'🏕️', bg:'#E65100', title:'El Libro de la Selva'}, // 44: normal
+  // SECTOR 5: MUNDO (azul claro)
+  {emoji:'🌍', bg:'#0277BD', title:'HQ Mundo'},            // 45: HQ
+  {emoji:'❄️', bg:'#0288D1', title:'Frozen'},              // 46: normal
+  {emoji:'🎲', bg:'#FFD700', title:'ROLL AGAIN'},          // 47: roll_again
+  {emoji:'💃', bg:'#039BE5', title:'Coco'},                // 48: normal
+  {emoji:'🌺', bg:'#0277BD', title:'Encanto'},             // 49: normal
+  {emoji:'🎲', bg:'#FFD700', title:'ROLL AGAIN'},          // 50: roll_again
+  {emoji:'🦁', bg:'#0288D1', title:'Zootrópolis'},         // 51: normal
+  {emoji:'🐭', bg:'#039BE5', title:'Ratatouille'},         // 52: normal
+  {emoji:'🕷️', bg:'#0277BD', title:'Los Mitchell'},        // 53: normal
+];
 
   for (let i=0; i<BOARD.ring.length; i++){
     const cell    = BOARD.ring[i];
@@ -1359,6 +1400,7 @@ function renderBoard() {
     const isFinal = finalIds.has(cell.id);
     const rotDeg  = cell.angle + 90;
 
+    const md = RING_MOVIE_DATA[i];
     let W, H, bg, borderCol, borderW;
     if (isHQ) {
       W=14; H=11;
@@ -1366,11 +1408,11 @@ function renderBoard() {
       borderCol = "#FFFFFF"; borderW = 2.5;
     } else if (isRA) {
       W=11; H=9;
-      bg = "#111"; borderCol = "#FFD700"; borderW = 2;
+      bg = "#1a1a00"; borderCol = "#FFD700"; borderW = 2;
     } else {
       W=11; H=9;
-      const md = RING_MOVIE_DATA[i % RING_MOVIE_DATA.length];
-      bg = md.bg; borderCol = "rgba(255,255,255,0.35)"; borderW = 1;
+      bg = md ? md.bg : CATS_INFO[cell.categoria].color;
+      borderCol = "rgba(255,255,255,0.35)"; borderW = 1;
     }
     if (isValid) { borderCol = isFinal ? "#FFD700" : "#FFFFFF"; borderW = 2.5; }
 
@@ -1386,9 +1428,11 @@ function renderBoard() {
     }
 
     // Casilla — rectángulo rotado tangencialmente, estilo fotograma
+    const cellTitle = md ? md.title : '';
     s += `<g transform="translate(${cell.x.toFixed(1)},${cell.y.toFixed(1)}) rotate(${rotDeg.toFixed(1)})"
              onclick="${isValid?'onCellClick('+cell.id+')':''}"
-             style="${isValid?'cursor:pointer':''}">
+             style="${isValid?'cursor:pointer':''}"
+             title="${cellTitle}">
       <!-- marco negro filmstrip -->
       <rect x="${-W-2.5}" y="${-H-2.5}" width="${(W+2.5)*2}" height="${(H+2.5)*2}" rx="${isHQ?7:5}" fill="#111" filter="url(#sh)"/>
       <!-- fondo color -->
@@ -1421,10 +1465,10 @@ function renderBoard() {
                text-anchor="middle" font-size="5.5" fill="#FFD700" font-weight="bold"
                style="pointer-events:none">AGAIN</text>`;
     } else {
-      const md = RING_MOVIE_DATA[i % RING_MOVIE_DATA.length];
+      const cellEmoji = md ? md.emoji : '🎬';
       s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+4).toFixed(1)}"
                text-anchor="middle" font-size="${isValid?11:8}"
-               style="pointer-events:none">${md.emoji}</text>`;
+               style="pointer-events:none">${cellEmoji}</text>`;
     }
   }
 
