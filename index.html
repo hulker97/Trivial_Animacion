@@ -956,14 +956,17 @@ let game = null;
 let questionAnswered = false;
 
 // ════════════════════════════════════════════════════════
-//  TABLERO (geometría — spokes jugables como el Disney 2002)
+//  TABLERO — 54 casillas en anillo, 3 por spoke, clic directo
+//  Estructura por sector (entre 2 HQ): HQ + N,RA,N,N,RA,N,N,N (8 casillas)
+//  6 sectores × 9 posiciones = 54 casillas totales
 // ════════════════════════════════════════════════════════
 const BOARD_CX = 340, BOARD_CY = 340;
-const R_OUTER = 278;   // radio del anillo exterior
-const R_HUB   = 52;    // radio del hub central
-const TOTAL_TRACK = 42; // casillas en el anillo exterior
-const N_HQ = 6;
-const N_SPOKE_CELLS = 3; // casillas por brazo (jugables)
+const R_OUTER  = 268;   // radio casillas del anillo
+const R_HUB    = 48;    // radio del hub
+const N_HQ     = 6;
+const N_SPOKE_CELLS = 3;
+const SECTOR_SIZE   = 9;       // casillas por sector
+const TOTAL_TRACK   = 54;      // N_HQ × SECTOR_SIZE
 let BOARD = null;
 
 function polar(deg, r) {
@@ -972,76 +975,50 @@ function polar(deg, r) {
 }
 
 function buildBoard() {
-  // ── Anillo exterior: 42 casillas, 6 HQ, 6 roll_again, resto normal
-  const ring = new Array(TOTAL_TRACK).fill(null);
+  // Patrón por sector: posición 0 = HQ, 2 y 5 = roll_again, resto = normal
+  // Categoría normal: alterna entre todas las categorías
+  const PATTERN = ["hq","normal","roll_again","normal","normal","roll_again","normal","normal","normal"];
+  const ring = [];
   const hqPositions = [];
+  let normalCat = 0;
 
-  // HQ en posiciones equidistantes
-  for (let i = 0; i < N_HQ; i++) {
-    const pos = Math.round((i / N_HQ) * TOTAL_TRACK);
-    hqPositions.push(pos);
-    ring[pos] = { type:"hq", categoria: CATS[i] };
-  }
-
-  // Roll again: exactamente en el punto medio entre HQ consecutivos
-  for (let i = 0; i < N_HQ; i++) {
-    const a = hqPositions[i];
-    const b = i < N_HQ - 1 ? hqPositions[i+1] : TOTAL_TRACK;
-    let mid = Math.round((a + b) / 2) % TOTAL_TRACK;
-    while (ring[mid] !== null) mid = (mid + 1) % TOTAL_TRACK;
-    ring[mid] = { type:"roll_again" };
-  }
-
-  // Rellenar normales alternando categorías
-  let ci = 0;
-  for (let i = 0; i < TOTAL_TRACK; i++) {
-    if (ring[i] === null) {
-      ring[i] = { type:"normal", categoria: CATS[ci % CATS.length] };
-      ci++;
+  for (let s = 0; s < N_HQ; s++) {
+    for (let j = 0; j < SECTOR_SIZE; j++) {
+      const pos   = s * SECTOR_SIZE + j;
+      const angle = (pos / TOTAL_TRACK) * 360 - 90;
+      const {x, y} = polar(angle, R_OUTER);
+      const tipo  = PATTERN[j];
+      let cell;
+      if (tipo === "hq") {
+        cell = {id:pos, type:"hq", categoria:CATS[s], x, y, angle};
+        hqPositions.push(pos);
+      } else if (tipo === "roll_again") {
+        cell = {id:pos, type:"roll_again", categoria:CATS[s], x, y, angle};
+      } else {
+        cell = {id:pos, type:"normal", categoria:CATS[normalCat % CATS.length], x, y, angle};
+        normalCat++;
+      }
+      ring.push(cell);
     }
   }
 
-  // Añadir posición y coordenadas a cada casilla del anillo
-  const ringCells = ring.map((cell, i) => {
-    const angle = (i / TOTAL_TRACK) * 360 - 90;
-    const { x, y } = polar(angle, R_OUTER);
-    return { id:i, x, y, angle, isSpoke:false, ...cell };
-  });
-
-  // ── Spokes: 3 casillas jugables por brazo (entre hub y anillo)
-  // Estructura de movimiento: hub → spoke[0] → spoke[1] → spoke[2] → HQ en anillo
-  // Los spokes tienen IDs: 1000 + spokeIndex*10 + cellIndex
+  // Spokes: 3 casillas jugables entre hub y anillo
   const spokes = hqPositions.map((hqPos, si) => {
-    const angle = (hqPos / TOTAL_TRACK) * 360 - 90;
-    const cat = CATS[si];
-    const cells = [];
-    // 3 casillas distribuidas desde R_HUB+25 hasta R_OUTER-28
-    const rStart = R_HUB + 25;
-    const rEnd   = R_OUTER - 30;
-    for (let j = 0; j < N_SPOKE_CELLS; j++) {
-      const t = j / (N_SPOKE_CELLS - 1 + 1); // 0, 0.25, 0.5  → hacia el anillo
+    const angle  = (hqPos / TOTAL_TRACK) * 360 - 90;
+    const cat    = CATS[si];
+    const rStart = R_HUB + 18;
+    const rEnd   = R_OUTER - 26;
+    const cells  = [];
+    for (let ci = 0; ci < N_SPOKE_CELLS; ci++) {
+      const t = ci / N_SPOKE_CELLS;
       const r = rStart + t * (rEnd - rStart);
-      const { x, y } = polar(angle, r);
-      cells.push({
-        id: 1000 + si * 10 + j,
-        x, y,
-        categoria: cat,
-        type: j === 0 ? "spoke_start" : "spoke_normal",
-        spokeIndex: si,
-        cellIndex: j,
-      });
+      const {x, y} = polar(angle, r);
+      cells.push({id: 1000 + si*10 + ci, x, y, categoria:cat, type:"spoke_normal", spokeIndex:si, cellIndex:ci});
     }
-    return {
-      hqIndex: hqPos,
-      angle,
-      hubEdge:   polar(angle, R_HUB),
-      trackEdge: polar(angle, R_OUTER),
-      categoria: cat,
-      cells,
-    };
+    return {hqIndex:hqPos, angle, hubEdge:polar(angle,R_HUB), trackEdge:polar(angle,R_OUTER), categoria:cat, cells};
   });
 
-  return { ring: ringCells, spokes, hqPositions };
+  return {ring, spokes, hqPositions};
 }
 
 // ════════════════════════════════════════════════════════
@@ -1050,17 +1027,19 @@ function buildBoard() {
 function createGame(players, questionPool) {
   return {
     players: players.map((p, i) => ({
-      id: i, name: p.name, color: p.color, emoji: p.emoji,
-      position: null, wedges: [], readyForFinal: false,
+      id:i, name:p.name, color:p.color, emoji:p.emoji,
+      position:null, wedges:[], readyForFinal:false,
+      spokeIndex:undefined,
     })),
-    currentPlayerIndex: 0,
-    diceValue: null,
-    phase: "roll",
-    pendingQuestion: null,
-    pendingWedgeCategoria: null,
-    pool: questionPool,
-    usedIds: new Set(),
-    winner: null,
+    currentPlayerIndex:0,
+    diceValue:null,
+    phase:"roll",
+    pendingQuestion:null,
+    pendingWedgeCategoria:null,
+    pool:questionPool,
+    usedIds:new Set(),
+    winner:null,
+    validTargets:[], // casillas a las que puede moverse el jugador actual
   };
 }
 
@@ -1080,99 +1059,119 @@ function rollDice() {
   return game.diceValue;
 }
 
-// Obtener la casilla actual del jugador (anillo o spoke)
-function getPlayerCell(p) {
-  if (p.position === null) return null; // en hub
-  if (p.position >= 1000) {
-    // En un spoke
-    const si = Math.floor((p.position - 1000) / 10);
-    const ci = (p.position - 1000) % 10;
+function getCellById(id) {
+  if (id >= 1000) {
+    const si = Math.floor((id-1000)/10), ci = (id-1000)%10;
     return BOARD.spokes[si].cells[ci];
   }
-  return BOARD.ring[p.position];
+  return BOARD.ring[id];
 }
 
 function resolveLanding(cell) {
   const p = currentPlayer();
   if (!cell) return;
-  if (cell.type === "roll_again") { game.phase = "roll_again"; return cell; }
+  if (cell.type === "roll_again") { game.phase = "roll_again"; return; }
   if (cell.type === "hq") {
     const already = p.wedges.includes(cell.categoria);
     game.pendingWedgeCategoria = already ? null : cell.categoria;
     game.phase = already ? "question" : "wedge-question";
     game.pendingQuestion = pickQuestion(cell.categoria);
-    return cell;
+    return;
   }
-  // spoke o normal: pregunta de la categoría del spoke/casilla
   game.phase = "question";
   game.pendingQuestion = pickQuestion(cell.categoria);
-  return cell;
 }
 
-// Mover por el anillo exterior (cuando ya está en el anillo)
-function movePlayerOnRing(direction) {
-  const p = currentPlayer();
-  const ringSize = BOARD.ring.length;
-  const newPos = ((p.position + direction * game.diceValue) % ringSize + ringSize) % ringSize;
-  p.position = newPos;
-  return resolveLanding(BOARD.ring[newPos]);
-}
+// Calcular las casillas válidas a las que puede moverse el jugador
+function calcValidTargets() {
+  const p   = currentPlayer();
+  const d   = game.diceValue;
+  const targets = [];
 
-// Salir del hub: el jugador elige un spoke y se coloca en la primera casilla
-function exitHubViaSpoke(spokeIndex) {
-  const p = currentPlayer();
-  const spoke = BOARD.spokes[spokeIndex];
-  // Colocar en la primera casilla del spoke (la más cercana al hub)
-  p.position = spoke.cells[0].id; // 1000 + spokeIndex*10 + 0
-  p.spokeDiceLeft = game.diceValue - 1; // cuántos pasos quedan por moverse
-  p.spokeIndex = spokeIndex;
-  // Si con el dado restante puede avanzar más en el spoke o entrar al anillo
-  advanceInSpoke(p);
-}
-
-function advanceInSpoke(p) {
-  const spoke = BOARD.spokes[p.spokeIndex];
-  const ci = (p.position - 1000) % 10;
-  const stepsLeft = p.spokeDiceLeft || 0;
-
-  if (stepsLeft <= 0) {
-    // Parar aquí en el spoke
-    p.spokeDiceLeft = 0;
-    const cell = getPlayerCell(p);
-    resolveLanding(cell);
-    return;
+  if (p.position === null) {
+    // En hub: primera casilla de cada spoke
+    BOARD.spokes.forEach((sp, si) => {
+      targets.push({id: sp.cells[0].id, label:"spoke"});
+    });
+    return targets;
   }
 
-  // Avanzar por el spoke
-  const nextCi = ci + stepsLeft;
-  if (nextCi < N_SPOKE_CELLS) {
-    // Se queda en el spoke
-    p.position = 1000 + p.spokeIndex * 10 + nextCi;
-    p.spokeDiceLeft = 0;
-    resolveLanding(getPlayerCell(p));
-  } else {
-    // Llega al HQ del anillo (la casilla al final del spoke)
-    const hqPos = spoke.hqIndex;
-    p.position = hqPos;
-    p.spokeDiceLeft = 0;
-    p.spokeIndex = undefined;
-    resolveLanding(BOARD.ring[hqPos]);
-  }
-}
-
-// Mover al jugador: detecta si está en spoke, anillo o hub
-function movePlayerTo(direction) {
-  const p = currentPlayer();
-
-  // Si está en un spoke, continúa por el spoke hacia el anillo
   if (p.position >= 1000) {
-    p.spokeDiceLeft = game.diceValue;
-    advanceInSpoke(p);
+    // En spoke: avanzar d pasos hacia el anillo
+    const si  = Math.floor((p.position-1000)/10);
+    const ci  = (p.position-1000)%10;
+    const spoke = BOARD.spokes[si];
+    const nextCi = ci + d;
+    if (nextCi < N_SPOKE_CELLS) {
+      targets.push({id: 1000 + si*10 + nextCi, label:"spoke"});
+    } else {
+      targets.push({id: spoke.hqIndex, label:"ring"});
+    }
+    return targets;
+  }
+
+  // En anillo: dos destinos (horario y antihorario), distintos
+  const rs = BOARD.ring.length;
+  const t1 = ((p.position + d) % rs + rs) % rs;
+  const t2 = ((p.position - d) % rs + rs) % rs;
+
+  // Caso especial: readyForFinal y destino es un HQ → posible pregunta final
+  const addTarget = (t) => {
+    const isFinal = p.readyForFinal && BOARD.hqPositions.includes(t);
+    targets.push({id:t, label: isFinal ? "final" : "ring"});
+  };
+  addTarget(t1);
+  if (t2 !== t1) addTarget(t2);
+  return targets;
+}
+
+// Mover jugador a una casilla específica (por clic)
+function movePlayerToCell(cellId) {
+  const p = currentPlayer();
+  game.validTargets = [];
+
+  if (p.position === null) {
+    // Salir del hub: colocar en primera casilla del spoke elegido
+    const si = Math.floor((cellId-1000)/10);
+    p.spokeIndex = si;
+    p.position = cellId;
+    // ¿Con d>1 puede avanzar más en el spoke?
+    const stepsLeft = game.diceValue - 1;
+    if (stepsLeft > 0) {
+      const ci = (cellId-1000)%10;
+      const spoke = BOARD.spokes[si];
+      const nextCi = ci + stepsLeft;
+      if (nextCi < N_SPOKE_CELLS) {
+        p.position = 1000 + si*10 + nextCi;
+      } else {
+        p.position = spoke.hqIndex;
+        p.spokeIndex = undefined;
+      }
+    }
+    resolveLanding(getCellById(p.position));
     return;
   }
 
-  // Si está en el anillo, mueve normalmente
-  return movePlayerOnRing(direction);
+  // Mover a destino
+  p.position = cellId;
+  if (cellId >= 1000) {
+    const si = Math.floor((cellId-1000)/10);
+    p.spokeIndex = si;
+  } else {
+    p.spokeIndex = undefined;
+  }
+
+  // ¿Pregunta final?
+  const isFinal = p.readyForFinal && BOARD.hqPositions.includes(cellId) && cellId < 1000;
+  if (isFinal) {
+    const cat = BOARD.ring[cellId].categoria;
+    game.phase = "finalQuestion";
+    game.pendingWedgeCategoria = cat;
+    game.pendingQuestion = pickQuestion(cat);
+    return;
+  }
+
+  resolveLanding(getCellById(cellId));
 }
 
 function answerQuestion(correct) {
@@ -1185,7 +1184,7 @@ function answerQuestion(correct) {
   if (game.phase === "finalQuestion") {
     game.pendingQuestion = null;
     if (correct) { game.winner = p; game.phase = "gameover"; return true; }
-    else { p.position = null; nextTurn(); return false; }
+    else { p.position = null; p.spokeIndex = undefined; nextTurn(); return false; }
   }
 
   game.pendingQuestion = null;
@@ -1196,20 +1195,10 @@ function answerQuestion(correct) {
 }
 
 function nextTurn() {
-  game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
+  game.currentPlayerIndex = (game.currentPlayerIndex+1) % game.players.length;
   game.phase = "roll";
   game.diceValue = null;
-}
-
-function canGoFinal() {
-  const p = currentPlayer();
-  if (!p.readyForFinal || p.position === null || p.position >= 1000) return false;
-  const ringSize = BOARD.ring.length;
-  for (const dir of [1, -1]) {
-    const target = ((p.position + dir * game.diceValue) % ringSize + ringSize) % ringSize;
-    if (BOARD.hqPositions.includes(target)) return { dir, target };
-  }
-  return false;
+  game.validTargets = [];
 }
 
 // ════════════════════════════════════════════════════════
@@ -1217,227 +1206,276 @@ function canGoFinal() {
 // ════════════════════════════════════════════════════════
 function renderBoard() {
   const svg = document.getElementById("board-svg");
+  const validIds = new Set((game ? game.validTargets : []).map(t => t.id));
+  const finalIds = new Set((game ? game.validTargets : []).filter(t => t.label==="final").map(t => t.id));
   let s = "";
 
-  // ── Defs: gradientes y filtros
+  // ── DEFS
   s += `<defs>
-    <radialGradient id="bgGrad" cx="50%" cy="40%" r="60%">
+    <radialGradient id="bgGrad" cx="50%" cy="40%" r="65%">
       <stop offset="0%" stop-color="#1e2880"/>
-      <stop offset="100%" stop-color="#060b28"/>
+      <stop offset="100%" stop-color="#050920"/>
     </radialGradient>
-    <radialGradient id="hubGrad" cx="50%" cy="35%" r="60%">
-      <stop offset="0%" stop-color="#3040a0"/>
+    <radialGradient id="hubGrad" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#3545c0"/>
       <stop offset="100%" stop-color="#0d1240"/>
     </radialGradient>
-    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
-    <filter id="glowStrong" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="6" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    <filter id="glowGold" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feFlood flood-color="#FFD700" flood-opacity="0.6" result="c"/>
+      <feComposite in="c" in2="b" operator="in" result="d"/>
+      <feMerge><feMergeNode in="d"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
-    <filter id="shadow">
-      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.6)"/>
+    <filter id="sh">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.7)"/>
+    </filter>
+    <filter id="pulsate">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>`;
 
-  // ── Fondo azul noche
+  // ── FONDO
   s += `<rect width="680" height="680" fill="url(#bgGrad)" rx="20"/>`;
 
   // Estrellas
-  [[50,50],[130,30],[210,70],[310,40],[430,25],[540,60],[620,40],
-   [650,150],[660,300],[640,460],[600,580],[480,640],[340,650],
-   [200,640],[90,590],[40,440],[30,280],[60,130],[160,110],[390,55],
-   [500,130],[580,200],[300,100],[160,500],[480,540]].forEach(([sx,sy],i) => {
-    const sz = [1,1.5,2,1,1.5][i%5];
-    const col = i%4===0 ? '#FFD700' : '#ffffff';
-    s += `<circle cx="${sx}" cy="${sy}" r="${sz}" fill="${col}" opacity="${0.3+i%4*0.15}"/>`;
-    if(i%7===0) s += `<text x="${sx}" y="${sy+1}" text-anchor="middle" font-size="8" opacity="0.4" fill="#FFD700">✦</text>`;
+  [[55,45,1.5],[130,28,1],[198,65,2],[305,38,1.5],[425,22,1],[538,55,2],[618,38,1.5],
+   [652,145,1],[658,295,1.5],[638,455,1],[598,575,2],[480,638,1],[340,648,1.5],
+   [202,638,1],[88,588,2],[42,440,1],[28,278,1.5],[58,128,1],[162,108,2],
+   [390,52,1],[498,128,1.5],[578,198,1],[300,98,2],[158,498,1],[478,538,1.5],
+   [220,200,1],[450,180,1.5],[80,360,1]].forEach(([sx,sy,sz],i) => {
+    const col = i%4===0 ? '#FFD700' : '#fff';
+    s += `<circle cx="${sx}" cy="${sy}" r="${sz}" fill="${col}" opacity="${0.25+i%5*0.1}"/>`;
   });
 
-  // ── Decoración exterior (aro dorado)
-  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_OUTER+30}" fill="none" stroke="rgba(255,215,0,0.15)" stroke-width="18"/>`;
-  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_OUTER+30}" fill="none" stroke="rgba(255,215,0,0.4)" stroke-width="2"/>`;
-  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_OUTER+18}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`;
+  // Aro exterior decorativo
+  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_OUTER+32}" fill="none" stroke="rgba(255,215,0,0.18)" stroke-width="22"/>`;
+  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_OUTER+32}" fill="none" stroke="rgba(255,215,0,0.45)" stroke-width="2"/>`;
 
-  // ── Spokes: línea + casillas jugables
+  // ── SPOKES: franja + casillas
   for (let si = 0; si < BOARD.spokes.length; si++) {
-    const sp = BOARD.spokes[si];
+    const sp  = BOARD.spokes[si];
     const col = CATS_INFO[sp.categoria].color;
-
-    // Línea del spoke (franja coloreada)
+    // Franja coloreada del spoke
     s += `<line x1="${sp.hubEdge.x.toFixed(1)}" y1="${sp.hubEdge.y.toFixed(1)}"
                x2="${sp.trackEdge.x.toFixed(1)}" y2="${sp.trackEdge.y.toFixed(1)}"
-               stroke="${col}" stroke-width="14" opacity="0.18"/>`;
+               stroke="${col}" stroke-width="18" opacity="0.15"/>`;
     s += `<line x1="${sp.hubEdge.x.toFixed(1)}" y1="${sp.hubEdge.y.toFixed(1)}"
                x2="${sp.trackEdge.x.toFixed(1)}" y2="${sp.trackEdge.y.toFixed(1)}"
-               stroke="${col}" stroke-width="4" opacity="0.5"/>`;
-    s += `<line x1="${sp.hubEdge.x.toFixed(1)}" y1="${sp.hubEdge.y.toFixed(1)}"
-               x2="${sp.trackEdge.x.toFixed(1)}" y2="${sp.trackEdge.y.toFixed(1)}"
-               stroke="rgba(255,255,255,0.15)" stroke-width="1"/>`;
+               stroke="${col}" stroke-width="3.5" opacity="0.55"/>`;
 
-    // Casillas del spoke (cuadradas redondeadas, más grandes)
-    for (let ci = 0; ci < sp.cells.length; ci++) {
-      const sc = sp.cells[ci];
-      const isFirst = ci === 0;
-      const size = isFirst ? 17 : 15;
-      const angRad = sp.angle * Math.PI / 180;
-
-      // Rectángulo rotado alineado con el spoke
-      const rotDeg = sp.angle + 90;
-      s += `<g transform="translate(${sc.x.toFixed(1)},${sc.y.toFixed(1)}) rotate(${rotDeg.toFixed(1)})">
-        <rect x="${-size}" y="${-size*0.7}" width="${size*2}" height="${size*1.4}"
-              rx="5" fill="${col}" stroke="white" stroke-width="1.5"
-              filter="url(#shadow)"/>
-        <rect x="${-size+3}" y="${-size*0.7+2}" width="${(size-3)*2}" height="${(size*1.4)-4}"
-              rx="3" fill="rgba(255,255,255,0.15)"/>
+    // Casillas del spoke
+    for (const sc of sp.cells) {
+      const isValid   = validIds.has(sc.id);
+      const rotDeg    = sp.angle + 90;
+      const W = 20, H = 15;
+      // Halo si es destino válido
+      if (isValid) s += `<ellipse cx="${sc.x.toFixed(1)}" cy="${sc.y.toFixed(1)}" rx="22" ry="18"
+                          fill="white" opacity="0.25" filter="url(#pulsate)"
+                          onclick="onCellClick(${sc.id})" style="cursor:pointer"/>`;
+      s += `<g transform="translate(${sc.x.toFixed(1)},${sc.y.toFixed(1)}) rotate(${rotDeg.toFixed(1)})"
+               onclick="${isValid?'onCellClick('+sc.id+')':''}"
+               style="${isValid?'cursor:pointer':''}">
+        <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}"
+              rx="5" fill="${col}" stroke="${isValid?'#fff':'rgba(255,255,255,0.5)'}"
+              stroke-width="${isValid?2.5:1.2}" filter="url(#sh)"/>
+        <rect x="${-W+3}" y="${-H+2}" width="${(W-3)*2}" height="${(H-2)*2}"
+              rx="3" fill="rgba(255,255,255,0.18)"/>
       </g>`;
-
-      // Número de casilla del spoke
-      s += `<text x="${sc.x.toFixed(1)}" y="${(+sc.y+4).toFixed(1)}"
-             text-anchor="middle" font-size="9" fill="white" font-weight="bold"
-             style="pointer-events:none">${ci+1}</text>`;
+      if (isValid) {
+        s += `<text x="${sc.x.toFixed(1)}" y="${(+sc.y+4).toFixed(1)}" text-anchor="middle"
+               font-size="9" fill="white" font-weight="bold" style="pointer-events:none">${sc.cellIndex+1}</text>`;
+      }
     }
   }
 
-  // ── Anillo exterior: casillas tipo Disney 2002
+  // ── ANILLO EXTERIOR
+  // Tamaño de casilla: circunferencia / TOTAL_TRACK = 2π×R_OUTER / 54 ≈ 31px
+  // Usamos W=13 para que haya 5px de espacio entre casillas
   for (const cell of BOARD.ring) {
-    let col, size = 16;
-    const isHQ       = cell.type === "hq";
-    const isRollAgain = cell.type === "roll_again";
+    const isHQ    = cell.type === "hq";
+    const isRA    = cell.type === "roll_again";
+    const isValid = validIds.has(cell.id);
+    const isFinal = finalIds.has(cell.id);
+    const col     = isRA ? "#FFD700" : CATS_INFO[cell.categoria].color;
+    const W = isHQ ? 16 : 12;
+    const H = isHQ ? 13 : 10;
+    const rotDeg  = cell.angle + 90;
 
-    if (isHQ) { col = CATS_INFO[cell.categoria].color; size = 21; }
-    else if (isRollAgain) { col = "#FFD700"; size = 15; }
-    else { col = CATS_INFO[cell.categoria].color; size = 14; }
-
-    const angRad = cell.angle * Math.PI / 180;
-    const rotDeg = cell.angle + 90;
-    const w = size * 1.55;
-    const h = size * 1.3;
-
-    // Halo para HQ
+    // Halo de destino válido
+    if (isValid) {
+      s += `<ellipse cx="${cell.x.toFixed(1)}" cy="${cell.y.toFixed(1)}" rx="${W+8}" ry="${H+7}"
+               fill="${isFinal?'#FFD700':'white'}" opacity="${isFinal?0.4:0.22}"
+               filter="url(#pulsate)" onclick="onCellClick(${cell.id})" style="cursor:pointer"/>`;
+    }
     if (isHQ) {
       s += `<circle cx="${cell.x.toFixed(1)}" cy="${cell.y.toFixed(1)}"
-               r="${size+8}" fill="${col}" opacity="0.25" filter="url(#glowStrong)"/>`;
+               r="${W+10}" fill="${col}" opacity="0.2" filter="url(#pulsate)"/>`;
     }
 
-    // Casilla cuadrada/redondeada rotada tangencialmente
-    s += `<g transform="translate(${cell.x.toFixed(1)},${cell.y.toFixed(1)}) rotate(${rotDeg.toFixed(1)})">
-      <rect x="${-w}" y="${-h*0.5}" width="${w*2}" height="${h}"
-            rx="${isHQ?7:5}"
+    // Casilla (rectángulo rotado tangencialmente)
+    s += `<g transform="translate(${cell.x.toFixed(1)},${cell.y.toFixed(1)}) rotate(${rotDeg.toFixed(1)})"
+             onclick="${isValid?'onCellClick('+cell.id+')':''}"
+             style="${isValid?'cursor:pointer':''}">
+      <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}"
+            rx="${isHQ?6:4}"
             fill="${col}"
-            stroke="${isHQ?'white':isRollAgain?'#fff9c4':'rgba(255,255,255,0.5)'}"
-            stroke-width="${isHQ?2.5:1.5}"
-            filter="${isHQ?'url(#glow)':'url(#shadow)'}"/>
-      <rect x="${-w+3}" y="${-h*0.5+2}" width="${(w-3)*2}" height="${h-4}"
-            rx="${isHQ?5:3}" fill="rgba(255,255,255,0.18)"/>
+            stroke="${isHQ?'#ffffff':isRA?'#fff9c4':isValid?'#fff':'rgba(255,255,255,0.4)'}"
+            stroke-width="${isHQ?2.5:isValid?2:1.2}"
+            filter="${isHQ?'url(#glow)':'url(#sh)'}"/>
+      <rect x="${-W+3}" y="${-H+2}" width="${(W-3)*2}" height="${(H-2)*2}"
+            rx="${isHQ?4:3}" fill="rgba(255,255,255,0.2)"/>
     </g>`;
 
-    // Emoji/símbolo encima de la casilla
+    // Iconos/texto encima
     if (isHQ) {
       const emojis = {heroes:"⭐",historia:"🎬",villanos:"💀",secundarios:"🎭",lugares:"🗺️",mundo:"🌍"};
-      s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+5.5).toFixed(1)}"
-               text-anchor="middle" font-size="14"
-               filter="url(#glow)"
-               style="pointer-events:none">${emojis[cell.categoria]}</text>`;
-      // Borde punteado exterior
-      s += `<circle cx="${cell.x.toFixed(1)}" cy="${cell.y.toFixed(1)}"
-               r="${size+4}" fill="none" stroke="rgba(255,255,255,0.5)"
-               stroke-width="2" stroke-dasharray="5 3"/>`;
-    } else if (isRollAgain) {
       s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+5).toFixed(1)}"
-               text-anchor="middle" font-size="13"
-               style="pointer-events:none">🎲</text>`;
-    } else {
-      // Número pequeño en casillas normales
+               text-anchor="middle" font-size="${isValid?15:13}"
+               style="pointer-events:none${isValid?';filter:drop-shadow(0 0 4px white)':''}">${emojis[cell.categoria]}</text>`;
+    } else if (isRA) {
       s += `<text x="${cell.x.toFixed(1)}" y="${(+cell.y+4).toFixed(1)}"
-               text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.8)" font-weight="bold"
-               style="pointer-events:none">${cell.id}</text>`;
+               text-anchor="middle" font-size="10" style="pointer-events:none">🎲</text>`;
     }
   }
 
-  // ── Hub central (hexágono Disney)
-  const hubPoly = BOARD.hqPositions.map(pos => {
-    const { x, y } = polar((pos / TOTAL_TRACK) * 360 - 90, R_HUB + 14);
+  // ── HUB CENTRAL
+  const pts = BOARD.hqPositions.map(pos => {
+    const {x,y} = polar((pos/TOTAL_TRACK)*360-90, R_HUB+16);
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
-
-  // Sombra del hub
-  s += `<polygon points="${hubPoly}" fill="rgba(0,0,0,0.4)" transform="translate(3,3)"/>`;
-  // Fondo hexagonal
-  s += `<polygon points="${hubPoly}" fill="url(#hubGrad)" stroke="#FFD700" stroke-width="3"/>`;
-  s += `<polygon points="${hubPoly}" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>`;
-
-  // Círculo interior del hub con brillo
-  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_HUB-2}" fill="rgba(255,215,0,0.12)" filter="url(#glowStrong)"/>`;
-  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_HUB-4}" fill="#090d30" stroke="#FFD700" stroke-width="2.5"/>`;
-  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_HUB-4}" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>`;
-  s += `<circle cx="${BOARD_CX-10}" cy="${BOARD_CY-10}" r="12" fill="rgba(255,255,255,0.06)"/>`;
-
-  // Emoji central grande
-  s += `<text x="${BOARD_CX}" y="${BOARD_CY+6}" text-anchor="middle" font-size="30"
+  s += `<polygon points="${pts}" fill="rgba(0,0,0,0.35)" transform="translate(3,3)"/>`;
+  s += `<polygon points="${pts}" fill="url(#hubGrad)" stroke="#FFD700" stroke-width="3"/>`;
+  s += `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>`;
+  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_HUB+2}" fill="rgba(255,215,0,0.1)" filter="url(#glowGold)"/>`;
+  s += `<circle cx="${BOARD_CX}" cy="${BOARD_CY}" r="${R_HUB}" fill="#080c28" stroke="#FFD700" stroke-width="2.5"/>`;
+  s += `<text x="${BOARD_CX}" y="${BOARD_CY+8}" text-anchor="middle" font-size="28"
           filter="url(#glow)" style="pointer-events:none">🎬</text>`;
-  s += `<text x="${BOARD_CX}" y="${BOARD_CY+20}" text-anchor="middle" font-size="8"
-          fill="rgba(255,215,0,0.7)" style="pointer-events:none;font-weight:700;letter-spacing:1px">TRIVIAL</text>`;
+  s += `<text x="${BOARD_CX}" y="${BOARD_CY+22}" text-anchor="middle" font-size="7"
+          fill="rgba(255,215,0,0.7)" font-weight="bold" letter-spacing="1"
+          style="pointer-events:none">TRIVIAL</text>`;
 
-  // ── Fichas de jugadores
+  // ── FICHAS
   if (game) {
-    // En el hub
-    const inHub = game.players.filter(p => p.position === null);
-    inHub.forEach((p, i) => {
-      const ang = (i / Math.max(inHub.length, 1)) * 360;
-      const { x, y } = polar(ang, 26);
-      const px = BOARD_CX + x - BOARD_CX;
-      const py = BOARD_CY + y - BOARD_CY;
-      s += `<circle cx="${px}" cy="${py}" r="14" fill="${p.color}" stroke="#FFD700" stroke-width="2.5" filter="url(#glow)"/>`;
-      s += `<text x="${px}" y="${py+5}" text-anchor="middle" font-size="12" style="pointer-events:none">${p.emoji}</text>`;
+    // En hub
+    game.players.filter(p => p.position===null).forEach((p,i,arr) => {
+      const {x,y} = polar((i/Math.max(arr.length,1))*360, 24);
+      const px = (BOARD_CX+x-BOARD_CX).toFixed(1), py = (BOARD_CY+y-BOARD_CY).toFixed(1);
+      const active = game.players[game.currentPlayerIndex]===p;
+      if(active) s += `<circle cx="${px}" cy="${py}" r="19" fill="${p.color}" opacity="0.3" filter="url(#glowGold)"/>`;
+      s += `<circle cx="${px}" cy="${py}" r="13" fill="${p.color}" stroke="${active?'#FFD700':'rgba(255,255,255,0.9)'}" stroke-width="${active?3:2}" filter="url(#sh)"/>`;
+      s += `<text x="${px}" y="${(+py+5).toFixed(1)}" text-anchor="middle" font-size="11" style="pointer-events:none">${p.emoji}</text>`;
     });
 
-    // En el anillo o en spoke
+    // En anillo/spoke
     const byPos = {};
-    game.players.filter(p => p.position !== null).forEach(p => {
-      const key = p.position;
-      if (!byPos[key]) byPos[key] = [];
-      byPos[key].push(p);
+    game.players.filter(p => p.position!==null).forEach(p => {
+      if(!byPos[p.position]) byPos[p.position]=[];
+      byPos[p.position].push(p);
     });
-
     for (const [posKey, players] of Object.entries(byPos)) {
       const pos = +posKey;
-      let cx, cy;
-
+      let cx, cy, angForOffset;
       if (pos >= 1000) {
-        // En spoke
-        const si = Math.floor((pos - 1000) / 10);
-        const ci = (pos - 1000) % 10;
+        const si = Math.floor((pos-1000)/10), ci = (pos-1000)%10;
         const sc = BOARD.spokes[si].cells[ci];
-        cx = sc.x; cy = sc.y;
+        cx=sc.x; cy=sc.y; angForOffset=BOARD.spokes[si].angle;
       } else {
         const cell = BOARD.ring[pos];
-        cx = cell.x; cy = cell.y;
+        cx=cell.x; cy=cell.y; angForOffset=cell.angle;
       }
-
-      players.forEach((p, i) => {
-        const off = players.length > 1 ? (i - (players.length-1)/2) * 15 : 0;
-        const angP = (pos < 1000 ? ((pos / TOTAL_TRACK) * 360 - 90) : BOARD.spokes[Math.floor((pos-1000)/10)].angle) * Math.PI / 180;
-        const px = (cx + Math.cos(angP) * off).toFixed(1);
-        const py = (cy + Math.sin(angP) * off).toFixed(1);
-        const isActive = game.players[game.currentPlayerIndex] === p;
-
-        if (isActive) {
-          s += `<circle cx="${px}" cy="${py}" r="20" fill="${p.color}" opacity="0.25" filter="url(#glowStrong)"/>`;
-        }
-        s += `<circle cx="${px}" cy="${py}" r="13" fill="${p.color}"
-               stroke="${isActive?'#FFD700':'rgba(255,255,255,0.9)'}"
-               stroke-width="${isActive?3:2}"
-               filter="${isActive?'url(#glow)':'url(#shadow)'}"/>`;
-        s += `<text x="${px}" y="${(+py+5).toFixed(1)}" text-anchor="middle" font-size="11"
-               style="pointer-events:none">${p.emoji}</text>`;
+      players.forEach((p,i) => {
+        const off = players.length>1 ? (i-(players.length-1)/2)*14 : 0;
+        const rad = angForOffset * Math.PI/180;
+        const px  = (cx + Math.cos(rad)*off).toFixed(1);
+        const py  = (cy + Math.sin(rad)*off).toFixed(1);
+        const active = game.players[game.currentPlayerIndex]===p;
+        if(active) s += `<circle cx="${px}" cy="${py}" r="19" fill="${p.color}" opacity="0.3" filter="url(#glowGold)"/>`;
+        s += `<circle cx="${px}" cy="${py}" r="13" fill="${p.color}" stroke="${active?'#FFD700':'rgba(255,255,255,0.9)'}" stroke-width="${active?3:2}" filter="url(#sh)"/>`;
+        s += `<text x="${px}" y="${(+py+5).toFixed(1)}" text-anchor="middle" font-size="11" style="pointer-events:none">${p.emoji}</text>`;
       });
     }
   }
 
   svg.innerHTML = s;
+}
+
+// ── Calcular qué casillas son clickables en el turno actual
+function isClickable(cellId) {
+  if (!game || game.phase !== "choose-direction") return false;
+  const p = currentPlayer();
+  if (p.position === null) return false; // en hub, se usa el modal de spoke
+
+  // Si está en spoke, puede avanzar a la siguiente casilla del spoke o al HQ
+  if (p.position >= 1000) {
+    const si = Math.floor((p.position - 1000) / 10);
+    const ci = (p.position - 1000) % 10;
+    const nextCi = ci + game.diceValue;
+    if (nextCi < N_SPOKE_CELLS) {
+      return cellId === (1000 + si * 10 + nextCi);
+    } else {
+      return cellId === BOARD.spokes[si].hqIndex;
+    }
+  }
+
+  // En anillo: calcular las dos posibles posiciones (horario y antihorario)
+  const ring = BOARD.ring.length;
+  const cw  = ((p.position + game.diceValue) % ring + ring) % ring;
+  const ccw = ((p.position - game.diceValue) % ring + ring) % ring;
+
+  // Si readyForFinal y el target es un HQ → pregunta final
+  if (p.readyForFinal && BOARD.hqPositions.includes(cw) && cellId === cw) return true;
+  if (p.readyForFinal && BOARD.hqPositions.includes(ccw) && cellId === ccw) return true;
+
+  return cellId === cw || cellId === ccw;
+}
+
+// ── Handler de click en casilla
+function onCellClick(type, a, b) {
+  if (!game || game.phase !== "choose-direction") return;
+  const p = currentPlayer();
+
+  if (type === "spoke") {
+    // Avanzar en el spoke
+    const si = a, targetCi = b;
+    p.position = 1000 + si * 10 + targetCi;
+    p.spokeIndex = si;
+  } else {
+    // Anillo
+    const targetPos = a;
+    if (p.position >= 1000) {
+      // Venía del spoke, llega al HQ
+      p.position = targetPos;
+      p.spokeIndex = undefined;
+    } else {
+      p.position = targetPos;
+    }
+  }
+
+  const cell = type === "spoke"
+    ? BOARD.spokes[a].cells[b]
+    : BOARD.ring[a];
+
+  resolveLanding(cell);
+  renderBoard();
+  renderPlayersPanel();
+  updateActionPanel();
+  renderTopbar();
+
+  if (game.phase === "question" || game.phase === "wedge-question") {
+    showQuestionModal(false);
+  } else if (game.phase === "roll_again") {
+    showModal("modal-rollagain");
+  } else if (game.phase === "finalQuestion") {
+    showQuestionModal(true);
+  } else if (game.phase === "gameover") {
+    document.getElementById("gameover-text").textContent = `¡${game.winner.name} ha ganado el Trivial de Animación!`;
+    showModal("modal-gameover");
+  }
 }
 
 // ════════════════════════════════════════════════════════
@@ -1514,7 +1552,7 @@ function updateActionPanel() {
       btn.style.display = "";
       break;
     case "choose-direction":
-      info.innerHTML = `<div class="cell-type-label" style="color:var(--gold)">Has sacado ${game.diceValue}</div><div class="cat-name">Elige dirección</div>`;
+      info.innerHTML = `<div class="cell-type-label" style="color:var(--gold)">Has sacado ${game.diceValue}</div><div class="cat-name">✨ Pulsa tu casilla destino</div>`;
       btn.style.display = "none";
       break;
     case "question":
@@ -1535,74 +1573,78 @@ function updateActionPanel() {
 // ════════════════════════════════════════════════════════
 function onActionBtn() {
   if (game.phase !== "roll") return;
-  const p = currentPlayer();
 
-  // Lanzar dado
   const v = rollDice();
+  const nums = ["⚀","⚁","⚂","⚃","⚄","⚅"];
   const dice = document.getElementById("dice-display");
   dice.classList.add("rolling");
-  setTimeout(() => dice.classList.remove("rolling"), 400);
+  setTimeout(() => dice.classList.remove("rolling"), 450);
+  dice.textContent = nums[v-1];
 
-  const nums = ["⚀","⚁","⚂","⚃","⚄","⚅"];
-  dice.textContent = nums[v - 1];
   game.phase = "choose-direction";
-  updateActionPanel();
-  renderTopbar();
 
-  // ¿Jugador en hub → elegir spoke?
-  if (p.position === null) {
-    showSpokeModal();
-    return;
-  }
+  // Calcular casillas válidas
+  game.validTargets = calcValidTargets();
 
-  // Si está en un spoke, avanza directamente (sin elegir dirección)
-  if (p.position >= 1000) {
-    game.phase = "choose-direction";
-    movePlayerTo(1); // dirección irrelevante en spoke, avanza hacia el anillo
+  // Si solo hay una opción (spoke desde hub, o en spoke), mover automático
+  if (game.validTargets.length === 1 && currentPlayer().position !== null) {
+    // Solo una casilla posible → mover directo
+    movePlayerToCell(game.validTargets[0].id);
+    game.validTargets = [];
     renderBoard();
     renderPlayersPanel();
     updateActionPanel();
     renderTopbar();
-    if (game.phase === "question" || game.phase === "wedge-question") showQuestionModal(false);
-    else if (game.phase === "roll_again") showModal("modal-rollagain");
+    if (game.phase === "question" || game.phase === "wedge-question" || game.phase === "finalQuestion") {
+      showQuestionModal(game.phase === "finalQuestion");
+    } else if (game.phase === "roll_again") {
+      showModal("modal-rollagain");
+    }
     return;
   }
 
-  // ¿readyForFinal y puede llegar al hub?
-  const finalCheck = canGoFinal();
-  if (finalCheck) {
-    const p2 = currentPlayer();
-    p2.position = finalCheck.target;
-    game.phase = "finalQuestion";
-    game.pendingWedgeCategoria = BOARD.ring[finalCheck.target].categoria;
-    game.pendingQuestion = pickQuestion(BOARD.ring[finalCheck.target].categoria);
-    renderBoard();
-    renderPlayersPanel();
-    renderTopbar();
-    showQuestionModal(true);
+  // Hub: mostrar modal de spoke con las opciones
+  if (currentPlayer().position === null) {
+    showSpokeModal();
     return;
   }
 
-  // Mostrar modal dirección (solo en anillo exterior)
-  document.getElementById("dir-dice").textContent = v;
-  showModal("modal-dir");
+  // Anillo con 2 opciones: resaltar casillas en el tablero para que el jugador haga clic
+  renderBoard(); // muestra las casillas resaltadas
+  updateActionPanel();
+  renderTopbar();
+
+  const info = document.getElementById("cell-info");
+  info.innerHTML = `<div class="cell-type-label" style="color:#FFD700">Elige dónde moverte</div>
+    <div class="cat-name" style="color:#B8C8F0">Pulsa una casilla resaltada</div>`;
+  document.getElementById("btn-action").style.display = "none";
 }
 
-function onDir(dir) {
-  hideModal("modal-dir");
-  const cell = movePlayerTo(dir);
+function onCellClick(cellId) {
+  if (game.phase !== "choose-direction") return;
+  const isValid = game.validTargets.some(t => t.id === cellId);
+  if (!isValid) return;
+
+  movePlayerToCell(cellId);
+  game.validTargets = [];
   renderBoard();
   renderPlayersPanel();
   updateActionPanel();
   renderTopbar();
 
-  if (game.phase === "roll_again") {
+  if (game.phase === "question" || game.phase === "wedge-question" || game.phase === "finalQuestion") {
+    showQuestionModal(game.phase === "finalQuestion");
+  } else if (game.phase === "roll_again") {
     showModal("modal-rollagain");
-    return;
+  } else if (game.phase === "gameover") {
+    document.getElementById("gameover-text").textContent = `¡${game.winner.name} ha ganado el Trivial de Animación!`;
+    showModal("modal-gameover");
   }
-  if (game.phase === "question" || game.phase === "wedge-question") {
-    showQuestionModal(false);
-  }
+}
+
+
+function onDir(dir) {
+  // Ya no se usa — el movimiento es por clic en casilla
 }
 
 function onRollAgainContinue() {
@@ -1634,7 +1676,10 @@ function showSpokeModal() {
 
 function onSpokeChoice(spokeIndex) {
   hideModal("modal-spoke");
-  exitHubViaSpoke(spokeIndex);
+  // Mover a la primera casilla del spoke elegido
+  const firstCellId = BOARD.spokes[spokeIndex].cells[0].id;
+  movePlayerToCell(firstCellId);
+  game.validTargets = [];
   renderBoard();
   renderPlayersPanel();
   updateActionPanel();
