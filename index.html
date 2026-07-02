@@ -1006,8 +1006,8 @@ function buildBoard() {
   const spokes = hqPositions.map((hqPos, si) => {
     const angle  = (hqPos / TOTAL_TRACK) * 360 - 90;
     const cat    = CATS[si];
-    const rStart = R_HUB + 16;
-    const rEnd   = R_OUTER - 22;
+    const rStart = R_HUB + 38;
+    const rEnd   = R_OUTER - 20;
     const cells  = [];
     for (let ci = 0; ci < N_SPOKE_CELLS; ci++) {
       const t = N_SPOKE_CELLS > 1 ? ci / (N_SPOKE_CELLS - 1) : 0;
