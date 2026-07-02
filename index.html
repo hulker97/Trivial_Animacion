@@ -2135,18 +2135,7 @@ function renderBoard() {
                fill="white" opacity="0.35" filter="url(#pulse)"
                onclick="onCellClick(${sc.id})" style="cursor:pointer"/>`;
       }
-      s += `<g transform="translate(${sc.x.toFixed(1)},${sc.y.toFixed(1)}) rotate(${rotDeg.toFixed(1)})"
-               onclick="${isValid?'onCellClick('+sc.id+')':''}"
-               style="${isValid?'cursor:pointer':''}">
-        <rect x="${-(W+2.5)}" y="${-(H+2.5)}" width="${(W+2.5)*2}" height="${(H+2.5)*2}" rx="5" fill="#111" filter="url(#sh)"/>
-        <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3" fill="${bg}"/>
-        <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*0.4}" rx="3" fill="rgba(255,255,255,0.22)"/>
-        <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3"
-              fill="none" stroke="${isValid?'#FFD700':'rgba(255,255,255,0.4)'}" stroke-width="${isValid?2.5:1.2}"/>
-        <rect x="${-(W+2)}" y="-3" width="4" height="6" rx="1" fill="#222"/>
-        <rect x="${W-2}" y="-3" width="4" height="6" rx="1" fill="#222"/>
-      </g>`;
-      // Ilustración SVG en casilla de spoke
+      // Título de película para este spoke/casilla
       const _stitles = {
         heroes:['El Rey León','Toy Story','La Sirenita','Frozen','Enredados','Los Increíbles'],
         historia:['Buscando a Nemo','Cómo Entrenar a tu Dragón','Ratatouille','WALL-E','Up','Buscando a Dory'],
@@ -2157,15 +2146,35 @@ function renderBoard() {
       };
       const _st = (_stitles[sp.categoria]||[])[ci]||null;
       const _scid = 'cps'+sc.id;
-      if (_st && MOVIE_ICONS[_st]) {
-        s += `<clipPath id="${_scid}"><rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3"/></clipPath>`;
-        s += `<g clip-path="url(#${_scid})">${MOVIE_ICONS[_st](0,0,1)}</g>`;
-        s += `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*0.35}" rx="3" fill="rgba(255,255,255,0.18)"/>`;
-        s += `<rect x="${-(W+2)}" y="-2.5" width="3.5" height="5" rx="1" fill="#111"/>`;
-        s += `<rect x="${W-1.5}" y="-2.5" width="3.5" height="5" rx="1" fill="#111"/>`;
-      } else {
-        s += `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3" fill="${bg}"/>`;
-      }
+      const _hasIcon = _st && MOVIE_ICONS[_st];
+
+      // Todo dentro del grupo rotado para que el clipPath funcione
+      s += `<g transform="translate(${sc.x.toFixed(1)},${sc.y.toFixed(1)}) rotate(${rotDeg.toFixed(1)})"
+               onclick="${isValid?'onCellClick('+sc.id+')':''}"
+               style="${isValid?'cursor:pointer':''}">
+        <!-- marco negro -->
+        <rect x="${-(W+2.5)}" y="${-(H+2.5)}" width="${(W+2.5)*2}" height="${(H+2.5)*2}" rx="5" fill="#111" filter="url(#sh)"/>
+        ${_hasIcon ? `
+        <!-- clipPath interno al grupo rotado -->
+        <clipPath id="${_scid}">
+          <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3"/>
+        </clipPath>
+        <!-- ilustración SVG de la película -->
+        <g clip-path="url(#${_scid})">
+          ${MOVIE_ICONS[_st](0, 0, 1)}
+        </g>` : `
+        <!-- fondo color si no hay icono -->
+        <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3" fill="${bg}"/>`}
+        <!-- brillo superior -->
+        <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*0.35}" rx="3" fill="rgba(255,255,255,0.2)"/>
+        <!-- borde -->
+        <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3"
+              fill="none" stroke="${isValid?'#FFD700':'rgba(255,255,255,0.45)'}" stroke-width="${isValid?2.5:1.2}"/>
+        <!-- perforaciones filmstrip -->
+        <rect x="${-(W+2)}" y="-2.5" width="3.5" height="5" rx="1" fill="#111"/>
+        <rect x="${W-1.5}" y="-2.5" width="3.5" height="5" rx="1" fill="#111"/>
+        ${isValid ? `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3" fill="rgba(255,255,255,0.1)"/>` : ''}
+      </g>`;
     }
   }
 
