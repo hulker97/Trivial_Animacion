@@ -8,7 +8,7 @@
 //   node scripts/upload_questions.js
 
 const { createClient } = require("@supabase/supabase-js");
-const questions = require("../src/questions_full.json");
+const questions = require("./questions_full.json");
 
 const SUPABASE_URL = "https://zonsbegwclplvhiuuiss.supabase.co";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
