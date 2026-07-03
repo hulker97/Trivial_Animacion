@@ -726,6 +726,9 @@ body > * { position: relative; z-index: 1; }
   color: #81C784;
   text-align: center;
   display: none;
+  word-break: break-word;
+  white-space: normal;
+  overflow: visible;
 }
 .q-respuesta-correcta.visible { display: block; }
 .q-judge-btns {
@@ -768,7 +771,7 @@ body > * { position: relative; z-index: 1; }
       🎲 Trivial con Tablero
       <div style="font-size:0.75rem;font-weight:600;opacity:0.85;margin-top:0.2rem">2-6 jugadores · Quesitos · Casillas HQ</div>
     </button>
-    <button class="btn btn-secondary" style="font-size:1.1rem;padding:1rem 1.5rem" onclick="modoJuego='infinito';modoSubtipo=2;irASetup()">
+    <button class="btn btn-secondary" style="font-size:1.1rem;padding:1rem 1.5rem" onclick="seleccionarModo('infinito')">
       ♾️ Preguntas Infinitas
       <div style="font-size:0.75rem;font-weight:600;opacity:0.85;margin-top:0.2rem">Sin tablero · Hasta que os canséis</div>
     </button>
@@ -872,7 +875,7 @@ body > * { position: relative; z-index: 1; }
 
   <!-- Botones -->
   <div style="display:flex;gap:1rem;justify-content:center;max-width:600px;width:100%;margin:0 auto;">
-    <button class="btn btn-secondary" onclick="mostrarScreen('screen-inicio')">← Volver</button>
+    <button class="btn btn-secondary" onclick="modoJuego==='infinito'?mostrarScreen('screen-inicio'):mostrarScreen('screen-modo')">← Volver</button>
     <button class="btn btn-primary" id="btn-iniciar" onclick="iniciarJuego()">🎲 Iniciar juego</button>
   </div>
 </div>
@@ -883,6 +886,97 @@ body > * { position: relative; z-index: 1; }
 <div id="screen-loading" class="screen">
   <div class="spinner"></div>
   <div style="color:var(--text2)">Cargando preguntas…</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     PANTALLA: SELECCIÓN SUBMODO INFINITO
+══════════════════════════════════════════════════ -->
+<div id="screen-submodo-infinito" class="screen">
+  <div class="logo-wrap" style="margin-bottom:1rem">
+    <div class="logo-icon" style="font-size:2.5rem">♾️</div>
+    <div class="logo-title" style="font-size:1.8rem">Preguntas Infinitas</div>
+    <div class="logo-sub">¿Cómo queréis jugar?</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:0.9rem;width:100%;max-width:440px;margin:0 auto">
+    <div class="modo-card" onclick="iniciarInfinito(2)">
+      <div class="modo-card-icon">🔢</div>
+      <div class="modo-card-body">
+        <div class="modo-card-title">Con 4 opciones</div>
+        <div class="modo-card-desc">Cada pregunta muestra 4 posibles respuestas para elegir.</div>
+      </div>
+    </div>
+    <div class="modo-card" onclick="iniciarInfinito(3)">
+      <div class="modo-card-icon">🗣️</div>
+      <div class="modo-card-body">
+        <div class="modo-card-title">Sin opciones · Respuesta de viva voz</div>
+        <div class="modo-card-desc">Solo la pregunta. Toca para revelar la respuesta y decidid entre todos.</div>
+      </div>
+    </div>
+  </div>
+  <button class="btn btn-secondary" style="margin-top:1.5rem" onclick="mostrarScreen('screen-setup')">← Volver</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     PANTALLA: JUEGO INFINITO
+══════════════════════════════════════════════════ -->
+<div id="screen-infinito" class="screen">
+  <div style="width:100%;max-width:560px;margin:0 auto;padding:1rem;display:flex;flex-direction:column;gap:1rem">
+
+    <!-- Cabecera con contador y botón salir -->
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-family:'Fredoka One',cursive;font-size:1.3rem;color:var(--gold)">
+        ♾️ Preguntas Infinitas
+      </div>
+      <div style="display:flex;align-items:center;gap:0.8rem">
+        <div style="font-size:0.85rem;color:var(--text2);font-weight:700">
+          Pregunta <span id="inf-contador">1</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="if(confirm('¿Salir de las preguntas?'))mostrarScreen('screen-inicio')">✕ Salir</button>
+      </div>
+    </div>
+
+    <!-- Tarjeta de pregunta -->
+    <div class="question-modal" style="position:relative;margin:0;max-height:none">
+
+      <div class="q-header">
+        <span class="q-cat-badge" id="inf-cat-badge">–</span>
+        <span class="q-movie" id="inf-movie">–</span>
+      </div>
+
+      <div class="q-text" id="inf-texto">–</div>
+
+      <!-- Opciones (submodo 2) -->
+      <div class="q-options" id="inf-options"></div>
+
+      <!-- Botón revelar (submodo 3) -->
+      <div id="inf-reveal-wrap" style="display:none;margin-bottom:0.5rem">
+        <button class="btn btn-secondary" style="width:100%;padding:1.1rem;font-size:1.05rem" onclick="infRevelar()">
+          👆 Toca para revelar la respuesta
+        </button>
+      </div>
+
+      <!-- Respuesta correcta (submodo 3) -->
+      <div class="q-respuesta-correcta" id="inf-respuesta-correcta"></div>
+
+      <!-- Botones juez (submodo 3) -->
+      <div class="q-judge-btns" id="inf-judge-btns">
+        <button class="btn btn-sm" style="background:#4CAF50;color:white;border:none;padding:0.8rem 1.5rem;font-size:1rem" onclick="infJuzgar(true)">✅ Correcto</button>
+        <button class="btn btn-sm" style="background:#F44336;color:white;border:none;padding:0.8rem 1.5rem;font-size:1rem" onclick="infJuzgar(false)">❌ Incorrecto</button>
+      </div>
+
+      <!-- Dato curioso -->
+      <div class="q-dato" id="inf-dato"></div>
+
+      <!-- Resultado (submodo 2) -->
+      <div class="q-result" id="inf-result"></div>
+
+      <!-- Botón siguiente -->
+      <div class="q-actions" id="inf-actions">
+        <button class="btn btn-primary" onclick="infSiguiente()">Siguiente pregunta →</button>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════
@@ -3429,17 +3523,31 @@ function mostrarScreen(id) {
 
 function seleccionarModo(modo) {
   modoJuego = modo;
-  // Actualizar título de pantalla de modo
-  const iconEl = document.getElementById("modo-icon");
-  const tituloEl = document.getElementById("modo-titulo");
-  if (modo === 'tablero') {
-    iconEl.textContent = "🎲";
-    tituloEl.textContent = "Trivial con Tablero";
+  if (modo === 'infinito') {
+    // Para infinito: ir directo a setup pero ocultando la sección de jugadores
+    irASetupInfinito();
   } else {
-    iconEl.textContent = "♾️";
-    tituloEl.textContent = "Preguntas Infinitas";
+    // Para tablero: mostrar selección de submodo
+    document.getElementById("modo-icon").textContent = "🎲";
+    document.getElementById("modo-titulo").textContent = "Trivial con Tablero";
+    mostrarScreen("screen-modo");
   }
-  mostrarScreen("screen-modo");
+}
+
+async function irASetupInfinito() {
+  // Adaptar la pantalla de setup para que no muestre jugadores
+  mostrarScreen("screen-setup");
+  document.getElementById("panel-jugadores").style.display = "none";
+  renderJugadores(); // por si acaso
+  try {
+    const count = await supabaseCount("preguntas", {});
+    document.getElementById("filtro-info").textContent = `${count} preguntas disponibles`;
+  } catch(e) {
+    document.getElementById("filtro-info").textContent = "No se pudo conectar a la base de datos";
+  }
+  // Cambiar el botón de iniciar para que vaya al submodo infinito
+  document.getElementById("btn-iniciar").textContent = "▶ Elegir modo →";
+  document.getElementById("btn-iniciar").onclick = irASubmodoInfinito;
 }
 
 function seleccionarSubmodo(subtipo) {
@@ -3448,15 +3556,172 @@ function seleccionarSubmodo(subtipo) {
 }
 
 async function irASetup() {
+  // Restaurar la pantalla de setup para modo tablero
+  document.getElementById("panel-jugadores").style.display = "";
+  document.getElementById("btn-iniciar").textContent = "🎲 Iniciar juego";
+  document.getElementById("btn-iniciar").onclick = iniciarJuego;
   mostrarScreen("screen-setup");
   renderJugadores();
-  // Contar preguntas totales
   try {
     const count = await supabaseCount("preguntas", {});
     document.getElementById("filtro-info").textContent = `${count} preguntas disponibles`;
   } catch(e) {
     document.getElementById("filtro-info").textContent = "No se pudo conectar a la base de datos";
   }
+}
+
+// ════════════════════════════════════════════════════════
+//  MODO PREGUNTAS INFINITAS
+// ════════════════════════════════════════════════════════
+let infPool = [];
+let infUsadas = new Set();
+let infContador = 0;
+let infSubmodo = 2; // 2 = con opciones, 3 = sin opciones
+let infRespondida = false;
+let infPreguntaActual = null;
+
+async function irASubmodoInfinito() {
+  // Cargar pool con los filtros seleccionados
+  const estudio    = document.getElementById("filtro-estudio").value;
+  const dificultad = document.getElementById("filtro-dificultad").value;
+  mostrarScreen("screen-loading");
+  try {
+    infPool = await cargarPreguntas({ estudio, dificultad });
+    if (infPool.length < 5) {
+      alert(`Solo hay ${infPool.length} preguntas con esos filtros. Amplía el filtro.`);
+      mostrarScreen("screen-setup");
+      return;
+    }
+    infUsadas = new Set();
+    infContador = 0;
+    mostrarScreen("screen-submodo-infinito");
+  } catch(e) {
+    alert("Error al cargar preguntas: " + e.message);
+    mostrarScreen("screen-setup");
+  }
+}
+
+function iniciarInfinito(submodo) {
+  infSubmodo = submodo;
+  infContador = 0;
+  infUsadas = new Set();
+  mostrarScreen("screen-infinito");
+  infMostrarPregunta();
+}
+
+function infPickQuestion() {
+  let disponibles = infPool.filter(q => !infUsadas.has(q));
+  if (!disponibles.length) {
+    // Reiniciar usadas si se han agotado
+    infUsadas = new Set();
+    disponibles = infPool;
+  }
+  const q = disponibles[Math.floor(Math.random() * disponibles.length)];
+  infUsadas.add(q);
+  return q;
+}
+
+function infMostrarPregunta() {
+  infRespondida = false;
+  infPreguntaActual = infPickQuestion();
+  infContador++;
+
+  const q = infPreguntaActual;
+  const catInfo = CATS_INFO[q.categoria];
+
+  // Cabecera
+  const badge = document.getElementById("inf-cat-badge");
+  badge.textContent = `${CATS_EMOJIS[q.categoria]} ${catInfo.nombre}`;
+  badge.style.background = catInfo.color;
+  badge.style.color = "#FBF5EA";
+  document.getElementById("inf-movie").textContent = q.pelicula;
+  document.getElementById("inf-texto").textContent = q.pregunta;
+  document.getElementById("inf-contador").textContent = infContador;
+
+  // Reset elementos
+  document.getElementById("inf-dato").classList.remove("visible");
+  document.getElementById("inf-dato").textContent = "";
+  document.getElementById("inf-result").classList.remove("visible","correct","wrong");
+  document.getElementById("inf-result").textContent = "";
+  document.getElementById("inf-actions").classList.remove("visible");
+  document.getElementById("inf-respuesta-correcta").classList.remove("visible");
+  document.getElementById("inf-judge-btns").classList.remove("visible");
+
+  if (infSubmodo === 2) {
+    // Con opciones
+    document.getElementById("inf-reveal-wrap").style.display = "none";
+    const opts = document.getElementById("inf-options");
+    const letters = ["A","B","C","D"];
+    opts.style.display = "";
+    opts.innerHTML = q.opciones.map((op, i) =>
+      `<button class="q-option" onclick="infOpcion(${i})" id="inf-opt-${i}">
+        <span class="opt-letter">${letters[i]}</span><span>${op}</span>
+      </button>`
+    ).join("");
+  } else {
+    // Sin opciones
+    document.getElementById("inf-options").style.display = "none";
+    document.getElementById("inf-options").innerHTML = "";
+    document.getElementById("inf-reveal-wrap").style.display = "block";
+  }
+}
+
+function infOpcion(idx) {
+  if (infRespondida) return;
+  infRespondida = true;
+  const q = infPreguntaActual;
+  const correct = idx === q.correcta;
+
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById(`inf-opt-${i}`);
+    if (!el) continue;
+    el.style.pointerEvents = "none";
+    if (i === q.correcta) el.classList.add("correct");
+    else if (i === idx && !correct) el.classList.add("wrong");
+  }
+
+  if (q.dato) {
+    const d = document.getElementById("inf-dato");
+    d.textContent = "💡 " + q.dato;
+    d.classList.add("visible");
+  }
+
+  const r = document.getElementById("inf-result");
+  r.textContent = correct ? "✅ ¡Correcto!" : "❌ Incorrecto";
+  r.classList.add("visible", correct ? "correct" : "wrong");
+  document.getElementById("inf-actions").classList.add("visible");
+}
+
+function infRevelar() {
+  if (infRespondida) return;
+  infRespondida = true;
+  const q = infPreguntaActual;
+
+  document.getElementById("inf-reveal-wrap").style.display = "none";
+
+  const respEl = document.getElementById("inf-respuesta-correcta");
+  respEl.textContent = "✅ Respuesta correcta: " + q.opciones[q.correcta];
+  respEl.classList.add("visible");
+
+  if (q.dato) {
+    const d = document.getElementById("inf-dato");
+    d.textContent = "💡 " + q.dato;
+    d.classList.add("visible");
+  }
+
+  document.getElementById("inf-judge-btns").classList.add("visible");
+}
+
+function infJuzgar(correcto) {
+  document.getElementById("inf-judge-btns").classList.remove("visible");
+  const r = document.getElementById("inf-result");
+  r.textContent = correcto ? "✅ ¡Correcto!" : "❌ Incorrecto";
+  r.classList.add("visible", correcto ? "correct" : "wrong");
+  document.getElementById("inf-actions").classList.add("visible");
+}
+
+function infSiguiente() {
+  infMostrarPregunta();
 }
 
 // ════════════════════════════════════════════════════════
