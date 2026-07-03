@@ -658,6 +658,85 @@ body > * { position: relative; z-index: 1; }
 .mt-1 { margin-top: 0.5rem; }
 .mt-2 { margin-top: 1rem; }
 
+/* ── Tarjetas de modo de juego ── */
+.modo-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: rgba(255,255,255,0.06);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+.modo-card:hover {
+  background: rgba(255,215,0,0.1);
+  border-color: var(--gold);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(255,215,0,0.2);
+}
+.modo-card-icon { font-size: 2rem; flex-shrink: 0; margin-top: 0.1rem; }
+.modo-card-title {
+  font-family: 'Fredoka One', cursive;
+  font-size: 1rem;
+  color: var(--gold);
+  margin-bottom: 0.3rem;
+}
+.modo-card-desc {
+  font-size: 0.82rem;
+  color: var(--text2);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* ── Modal de pregunta modos especiales ── */
+.q-reader-controls {
+  display: flex;
+  gap: 0.7rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+}
+.q-answer-input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  font-family: 'Nunito', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.q-answer-input:focus { border-color: var(--gold); }
+.q-answer-input::placeholder { color: var(--text2); opacity: 0.6; }
+.q-respuesta-correcta {
+  background: rgba(76,175,80,0.15);
+  border: 2px solid #4CAF50;
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.8rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #81C784;
+  text-align: center;
+  display: none;
+}
+.q-respuesta-correcta.visible { display: block; }
+.q-judge-btns {
+  display: flex;
+  gap: 0.7rem;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  display: none;
+}
+.q-judge-btns.visible { display: flex; }
+
 /* Responsive */
 @media (max-width: 600px) {
   .players-panel { width: 130px; }
@@ -682,7 +761,60 @@ body > * { position: relative; z-index: 1; }
     <div class="logo-sub">¿Cuánto sabes del cine de animación?</div>
   </div>
   <div class="logo-stars">✨ ⭐ 🌟 ⭐ ✨</div>
-  <button class="btn btn-primary" onclick="irASetup()">🎮 Empezar partida</button>
+
+  <!-- Selección de categoría de juego -->
+  <div style="display:flex;flex-direction:column;gap:1rem;width:100%;max-width:420px;margin:0.5rem auto 0">
+    <button class="btn btn-primary" style="font-size:1.1rem;padding:1rem 1.5rem" onclick="seleccionarModo('tablero')">
+      🎲 Trivial con Tablero
+      <div style="font-size:0.75rem;font-weight:600;opacity:0.85;margin-top:0.2rem">2-6 jugadores · Quesitos · Casillas HQ</div>
+    </button>
+    <button class="btn btn-secondary" style="font-size:1.1rem;padding:1rem 1.5rem" onclick="modoJuego='infinito';modoSubtipo=2;irASetup()">
+      ♾️ Preguntas Infinitas
+      <div style="font-size:0.75rem;font-weight:600;opacity:0.85;margin-top:0.2rem">Sin tablero · Hasta que os canséis</div>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     PANTALLA 1B: SELECCIÓN DE MODO LOCAL
+══════════════════════════════════════════════════ -->
+<div id="screen-modo" class="screen">
+  <div class="logo-wrap" style="margin-bottom:1rem">
+    <div class="logo-icon" style="font-size:2.5rem" id="modo-icon">🎬</div>
+    <div class="logo-title" style="font-size:1.8rem" id="modo-titulo">Trivial con Tablero</div>
+    <div class="logo-sub">¿Cómo vais a jugar?</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:0.9rem;width:100%;max-width:440px;margin:0 auto">
+    <!-- Modo 1: Un móvil, una persona lee -->
+    <div class="modo-card" onclick="seleccionarSubmodo(1)">
+      <div class="modo-card-icon">📱</div>
+      <div class="modo-card-body">
+        <div class="modo-card-title">Modo 1 · Un móvil, una persona lee</div>
+        <div class="modo-card-desc">Una persona tiene el móvil y lee la pregunta en voz alta. El resto responde de palabra. Puedes activar/ocultar las opciones.</div>
+      </div>
+    </div>
+
+    <!-- Modo 2: Pasan el móvil, con opciones -->
+    <div class="modo-card" onclick="seleccionarSubmodo(2)">
+      <div class="modo-card-icon">🔄</div>
+      <div class="modo-card-body">
+        <div class="modo-card-title">Modo 2 · Pasan el móvil · Con opciones</div>
+        <div class="modo-card-desc">Cada jugador coge el móvil en su turno y ve las 4 opciones para elegir.</div>
+      </div>
+    </div>
+
+    <!-- Modo 3: Pasan el móvil, sin opciones, respuesta de viva voz -->
+    <div class="modo-card" onclick="seleccionarSubmodo(3)">
+      <div class="modo-card-icon">🗣️</div>
+      <div class="modo-card-body">
+        <div class="modo-card-title">Modo 3 · Pasan el móvil · Sin opciones</div>
+        <div class="modo-card-desc">El jugador dice la respuesta en voz alta. Toca la pantalla para revelar la respuesta correcta y entre todos decidís si vale.</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-secondary" style="margin-top:1.5rem" onclick="mostrarScreen('screen-inicio')">← Volver</button>
 </div>
 
 <!-- ══════════════════════════════════════════════════
@@ -804,11 +936,35 @@ body > * { position: relative; z-index: 1; }
       <span class="q-wedge-badge hidden" id="q-wedge-badge">🏅 Cuña</span>
     </div>
     <div class="q-text" id="q-text">–</div>
+
+    <!-- Modo 1: botón toggle para mostrar/ocultar opciones (reader mode) -->
+    <div class="q-reader-controls" id="q-reader-controls" style="display:none">
+      <button class="btn btn-secondary btn-sm" onclick="toggleOpciones()">👁 Mostrar/ocultar opciones</button>
+    </div>
+
+    <!-- Opciones (se ocultan en modo 3) -->
     <div class="q-options" id="q-options"></div>
+
+    <!-- Respuesta correcta visible (modo 3) -->
+    <div class="q-respuesta-correcta" id="q-respuesta-correcta"></div>
+
+    <!-- Botones de juez (modo 3): ¿Acertó o no? -->
+    <div class="q-judge-btns" id="q-judge-btns">
+      <button class="btn btn-sm" style="background:#4CAF50;color:white;border:none;padding:0.8rem 1.5rem;font-size:1rem" onclick="juzgarRespuesta(true)">✅ Correcto</button>
+      <button class="btn btn-sm" style="background:#F44336;color:white;border:none;padding:0.8rem 1.5rem;font-size:1rem" onclick="juzgarRespuesta(false)">❌ Incorrecto</button>
+    </div>
+
     <div class="q-dato" id="q-dato"></div>
     <div class="q-result" id="q-result"></div>
     <div class="q-actions" id="q-actions">
       <button class="btn btn-primary" id="q-continue-btn" onclick="onQuestionContinue()">Continuar →</button>
+    </div>
+
+    <!-- Modo 3: botón táctil grande para revelar respuesta -->
+    <div id="q-reveal-actions" style="display:none;text-align:center;margin-top:0.8rem">
+      <button class="btn btn-secondary" style="width:100%;padding:1.1rem;font-size:1.05rem;letter-spacing:0.02em" onclick="verRespuestaCorrecta()">
+        👆 Toca para revelar la respuesta
+      </button>
     </div>
   </div>
 </div>
@@ -954,6 +1110,13 @@ let jugadores = []; // { name, color, emoji }
 let pool = [];
 let game = null;
 let questionAnswered = false;
+
+// Modo de juego: 'tablero' | 'infinito'
+let modoJuego = 'tablero';
+// Submodo local: 1 (lee una persona) | 2 (pasan, con opciones) | 3 (pasan, sin opciones)
+let modoSubtipo = 2;
+// En modo 1: si las opciones están visibles o no
+let opcionesVisibles = false;
 
 // ════════════════════════════════════════════════════════
 //  TABLERO — 54 casillas en anillo, 6 por spoke, clic directo
@@ -3005,6 +3168,7 @@ function showQuestionModal(isFinal) {
   const q = game.pendingQuestion;
   if (!q) return;
   questionAnswered = false;
+  opcionesVisibles = (modoSubtipo !== 1); // en modo 1 empiezan ocultas por defecto
 
   const catInfo = CATS_INFO[q.categoria];
   const badge = document.getElementById("q-cat-badge");
@@ -3016,7 +3180,7 @@ function showQuestionModal(isFinal) {
   document.getElementById("q-text").textContent = q.pregunta;
 
   const wedgeBadge = document.getElementById("q-wedge-badge");
-  if (game.phase === "wedge-question") wedgeBadge.classList.remove("hidden");
+  if (game && game.phase === "wedge-question") wedgeBadge.classList.remove("hidden");
   else wedgeBadge.classList.add("hidden");
 
   if (isFinal) {
@@ -3025,6 +3189,7 @@ function showQuestionModal(isFinal) {
     wedgeBadge.style.background = "#C9962C";
   }
 
+  // Renderizar opciones
   const opts = document.getElementById("q-options");
   const letters = ["A","B","C","D"];
   let s = "";
@@ -3036,17 +3201,83 @@ function showQuestionModal(isFinal) {
   });
   opts.innerHTML = s;
 
+  // Resetear elementos comunes
   document.getElementById("q-dato").classList.remove("visible");
   document.getElementById("q-dato").textContent = "";
   document.getElementById("q-result").classList.remove("visible","correct","wrong");
   document.getElementById("q-result").textContent = "";
   document.getElementById("q-actions").classList.remove("visible");
 
+  // Adaptar UI según modo
+  const readerControls = document.getElementById("q-reader-controls");
+  const revealActions  = document.getElementById("q-reveal-actions");
+  const respCorrecta   = document.getElementById("q-respuesta-correcta");
+  const judgeBtns      = document.getElementById("q-judge-btns");
+
+  // Reset todos los elementos especiales
+  readerControls.style.display = "none";
+  revealActions.style.display  = "none";
+  respCorrecta.classList.remove("visible");
+  judgeBtns.classList.remove("visible");
+  opts.style.display = "";
+
+  if (modoSubtipo === 1) {
+    // Modo 1: botón para toggle opciones, empiezan ocultas
+    readerControls.style.display = "flex";
+    opts.style.display = "none";
+    opcionesVisibles = false;
+  } else if (modoSubtipo === 2) {
+    // Modo 2: opciones visibles y clicables normalmente
+    opts.style.display = "";
+  } else if (modoSubtipo === 3) {
+    // Modo 3: ocultar opciones, mostrar botón táctil para revelar
+    opts.style.display = "none";
+    revealActions.style.display = "block";
+  }
+
   showModal("modal-pregunta");
+}
+
+function toggleOpciones() {
+  opcionesVisibles = !opcionesVisibles;
+  const opts = document.getElementById("q-options");
+  opts.style.display = opcionesVisibles ? "" : "none";
+}
+
+function verRespuestaCorrecta() {
+  if (questionAnswered) return;
+  questionAnswered = true;
+  const q = game.pendingQuestion;
+  const respEl = document.getElementById("q-respuesta-correcta");
+  respEl.textContent = "✅ Respuesta correcta: " + q.opciones[q.correcta];
+  respEl.classList.add("visible");
+
+  // Mostrar dato curioso
+  if (q.dato) {
+    const d = document.getElementById("q-dato");
+    d.textContent = "💡 " + q.dato;
+    d.classList.add("visible");
+  }
+
+  // Ocultar botón revelar, mostrar botones de juez
+  document.getElementById("q-reveal-actions").style.display = "none";
+  document.getElementById("q-judge-btns").classList.add("visible");
+}
+
+function juzgarRespuesta(correcto) {
+  document.getElementById("q-judge-btns").classList.remove("visible");
+  const r = document.getElementById("q-result");
+  r.textContent = correcto ? "✅ ¡Correcto!" : "❌ Incorrecto";
+  r.classList.add("visible", correcto ? "correct" : "wrong");
+  document.getElementById("q-actions").classList.add("visible");
+  // Guardamos el resultado para onQuestionContinue
+  document.getElementById("q-result").dataset.correcto = correcto ? "1" : "0";
 }
 
 function onOptionClick(idx) {
   if (questionAnswered) return;
+  // En modo 1, solo se puede clickar si las opciones están visibles
+  if (modoSubtipo === 1 && !opcionesVisibles) return;
   questionAnswered = true;
 
   const q = game.pendingQuestion;
@@ -3076,7 +3307,13 @@ function onOptionClick(idx) {
 
 function onQuestionContinue() {
   const q = game.pendingQuestion;
-  const correct = document.getElementById("q-result").classList.contains("correct");
+  let correct;
+  if (modoSubtipo === 3) {
+    // En modo 3 el resultado lo marca el juez
+    correct = document.getElementById("q-result").dataset.correcto === "1";
+  } else {
+    correct = document.getElementById("q-result").classList.contains("correct");
+  }
   hideModal("modal-pregunta");
 
   answerQuestion(correct);
@@ -3183,11 +3420,31 @@ async function iniciarJuego() {
 }
 
 // ════════════════════════════════════════════════════════
-//  NAVEGACIÓN
+//  NAVEGACIÓN Y SELECCIÓN DE MODO
 // ════════════════════════════════════════════════════════
 function mostrarScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
+}
+
+function seleccionarModo(modo) {
+  modoJuego = modo;
+  // Actualizar título de pantalla de modo
+  const iconEl = document.getElementById("modo-icon");
+  const tituloEl = document.getElementById("modo-titulo");
+  if (modo === 'tablero') {
+    iconEl.textContent = "🎲";
+    tituloEl.textContent = "Trivial con Tablero";
+  } else {
+    iconEl.textContent = "♾️";
+    tituloEl.textContent = "Preguntas Infinitas";
+  }
+  mostrarScreen("screen-modo");
+}
+
+function seleccionarSubmodo(subtipo) {
+  modoSubtipo = subtipo;
+  irASetup();
 }
 
 async function irASetup() {
