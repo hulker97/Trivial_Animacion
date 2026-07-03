@@ -1,7 +1,7 @@
 name: Subir preguntas a Supabase
 
 on:
-  workflow_dispatch: # Ejecutar manualmente desde GitHub
+  workflow_dispatch:
 
 jobs:
   upload:
@@ -11,10 +11,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Instalar dependencias
-        run: npm install @supabase/supabase-js
+        run: npm install @supabase/supabase-js ws
 
       - name: Subir preguntas
         env:
