@@ -912,6 +912,13 @@ body > * { position: relative; z-index: 1; }
         <div class="modo-card-desc">Solo la pregunta. Toca para revelar la respuesta y decidid entre todos.</div>
       </div>
     </div>
+    <div class="modo-card" onclick="iniciarInfinito(4)">
+      <div class="modo-card-icon">✍️</div>
+      <div class="modo-card-body">
+        <div class="modo-card-title">Escribir la respuesta · Modo solitario</div>
+        <div class="modo-card-desc">Escribe tu respuesta antes de ver la correcta. Ideal para jugar solo.</div>
+      </div>
+    </div>
   </div>
   <button class="btn btn-secondary" style="margin-top:1.5rem" onclick="mostrarScreen('screen-setup')">← Volver</button>
 </div>
@@ -953,6 +960,26 @@ body > * { position: relative; z-index: 1; }
         <button class="btn btn-secondary" style="width:100%;padding:1.1rem;font-size:1.05rem" onclick="infRevelar()">
           👆 Toca para revelar la respuesta
         </button>
+      </div>
+
+      <!-- Input de texto (submodo 4) -->
+      <div id="inf-write-wrap" style="display:none;margin-bottom:0.5rem">
+        <input type="text" class="q-answer-input" id="inf-write-input"
+          placeholder="Escribe tu respuesta..."
+          onkeydown="if(event.key==='Enter') infRevelarEscrito()"/>
+        <button class="btn btn-secondary" style="width:100%;padding:0.9rem;font-size:1rem;margin-top:0.5rem" onclick="infRevelarEscrito()">
+          🔍 Ver respuesta correcta
+        </button>
+      </div>
+
+      <!-- Comparativa respuesta escrita vs correcta (submodo 4) -->
+      <div id="inf-write-result" style="display:none;margin-bottom:0.8rem;border-radius:12px;overflow:hidden">
+        <div style="padding:0.7rem 1rem;background:rgba(255,255,255,0.06);font-size:0.88rem;color:var(--text2);font-weight:700">
+          Tu respuesta: <span id="inf-tu-respuesta" style="color:white"></span>
+        </div>
+        <div style="padding:0.7rem 1rem;background:rgba(76,175,80,0.15);border-top:1px solid rgba(76,175,80,0.3);font-size:0.88rem;color:#81C784;font-weight:700">
+          Respuesta correcta: <span id="inf-resp-correcta-texto"></span>
+        </div>
       </div>
 
       <!-- Respuesta correcta (submodo 3) -->
@@ -3638,7 +3665,7 @@ function infMostrarPregunta() {
   document.getElementById("inf-texto").textContent = q.pregunta;
   document.getElementById("inf-contador").textContent = infContador;
 
-  // Reset elementos
+  // Reset todos los elementos
   document.getElementById("inf-dato").classList.remove("visible");
   document.getElementById("inf-dato").textContent = "";
   document.getElementById("inf-result").classList.remove("visible","correct","wrong");
@@ -3646,10 +3673,18 @@ function infMostrarPregunta() {
   document.getElementById("inf-actions").classList.remove("visible");
   document.getElementById("inf-respuesta-correcta").classList.remove("visible");
   document.getElementById("inf-judge-btns").classList.remove("visible");
+  document.getElementById("inf-reveal-wrap").style.display = "none";
+  document.getElementById("inf-write-wrap").style.display = "none";
+  document.getElementById("inf-write-result").style.display = "none";
+  document.getElementById("inf-options").style.display = "none";
+  document.getElementById("inf-options").innerHTML = "";
+  if (document.getElementById("inf-write-input")) {
+    document.getElementById("inf-write-input").value = "";
+    document.getElementById("inf-write-input").disabled = false;
+  }
 
   if (infSubmodo === 2) {
     // Con opciones
-    document.getElementById("inf-reveal-wrap").style.display = "none";
     const opts = document.getElementById("inf-options");
     const letters = ["A","B","C","D"];
     opts.style.display = "";
@@ -3658,11 +3693,13 @@ function infMostrarPregunta() {
         <span class="opt-letter">${letters[i]}</span><span>${op}</span>
       </button>`
     ).join("");
-  } else {
-    // Sin opciones
-    document.getElementById("inf-options").style.display = "none";
-    document.getElementById("inf-options").innerHTML = "";
+  } else if (infSubmodo === 3) {
+    // Viva voz: botón revelar
     document.getElementById("inf-reveal-wrap").style.display = "block";
+  } else if (infSubmodo === 4) {
+    // Escribir: input + botón ver respuesta
+    document.getElementById("inf-write-wrap").style.display = "block";
+    setTimeout(() => document.getElementById("inf-write-input")?.focus(), 200);
   }
 }
 
@@ -3709,6 +3746,33 @@ function infRevelar() {
     d.classList.add("visible");
   }
 
+  document.getElementById("inf-judge-btns").classList.add("visible");
+}
+
+function infRevelarEscrito() {
+  if (infRespondida) return;
+  infRespondida = true;
+  const q = infPreguntaActual;
+  const input = document.getElementById("inf-write-input");
+  const tuRespuesta = input.value.trim() || "(sin respuesta)";
+  input.disabled = true;
+
+  // Ocultar botón revelar
+  document.getElementById("inf-write-wrap").style.display = "none";
+
+  // Mostrar comparativa
+  document.getElementById("inf-tu-respuesta").textContent = tuRespuesta;
+  document.getElementById("inf-resp-correcta-texto").textContent = q.opciones[q.correcta];
+  document.getElementById("inf-write-result").style.display = "block";
+
+  // Dato curioso
+  if (q.dato) {
+    const d = document.getElementById("inf-dato");
+    d.textContent = "💡 " + q.dato;
+    d.classList.add("visible");
+  }
+
+  // Botones juez para decidir si se autocorrector correctamente
   document.getElementById("inf-judge-btns").classList.add("visible");
 }
 
