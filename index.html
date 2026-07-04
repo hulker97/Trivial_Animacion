@@ -982,6 +982,7 @@ body > * { position: relative; z-index: 1; }
   .players-panel { display: none; }
 }
 </style>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
 
@@ -1006,12 +1007,119 @@ body > * { position: relative; z-index: 1; }
       ♾️ Preguntas Infinitas
       <div style="font-size:0.75rem;font-weight:600;opacity:0.85;margin-top:0.2rem">Sin tablero · Hasta que os canséis</div>
     </button>
+    <button class="btn btn-secondary" style="font-size:1.1rem;padding:1rem 1.5rem;border-color:#4CAF50;color:#69F0AE" onclick="mostrarScreen('screen-online-menu')">
+      🌐 Jugar Online
+      <div style="font-size:0.75rem;font-weight:600;opacity:0.85;margin-top:0.2rem">Un móvil de anfitrión · Los demás se unen desde el suyo</div>
+    </button>
   </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════
      PANTALLA 1B: SELECCIÓN DE MODO LOCAL
 ══════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════
+     ONLINE: MENÚ (crear / unirse)
+══════════════════════════════════════════════════ -->
+<div id="screen-online-menu" class="screen">
+  <div class="logo-wrap" style="margin-bottom:1rem">
+    <div class="logo-icon" style="font-size:2.5rem">🌐</div>
+    <div class="logo-title" style="font-size:1.8rem">Jugar Online</div>
+    <div class="logo-sub">Un móvil de anfitrión, los demás se unen desde el suyo</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:0.9rem;width:100%;max-width:440px;margin:0 auto">
+    <div class="modo-card" onclick="onlineCrearSala()">
+      <div class="modo-card-icon">🏠</div>
+      <div class="modo-card-body">
+        <div class="modo-card-title">Crear sala (soy el anfitrión)</div>
+        <div class="modo-card-desc">Este móvil elige las preguntas y muestra la partida. Los demás se unen con un código.</div>
+      </div>
+    </div>
+    <div class="modo-card" onclick="mostrarScreen('screen-online-join')">
+      <div class="modo-card-icon">🔗</div>
+      <div class="modo-card-body">
+        <div class="modo-card-title">Unirse a una sala</div>
+        <div class="modo-card-desc">Introduce el código de 5 letras que te ha dado el anfitrión.</div>
+      </div>
+    </div>
+  </div>
+  <button class="btn btn-secondary" style="margin-top:1.5rem" onclick="mostrarScreen('screen-inicio')">← Volver</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     ONLINE: LOBBY DEL ANFITRIÓN
+══════════════════════════════════════════════════ -->
+<div id="screen-online-host-lobby" class="screen" style="overflow-y:auto">
+  <div class="setup-header">
+    <h2>🏠 Sala creada</h2>
+    <p>Comparte el código o el enlace con el resto</p>
+  </div>
+  <div class="panel" style="text-align:center">
+    <div style="font-size:0.78rem;color:var(--text2);font-weight:700;margin-bottom:0.3rem">CÓDIGO DE SALA</div>
+    <div id="online-codigo-grande" style="font-family:'Fredoka One',cursive;font-size:2.8rem;letter-spacing:0.4rem;color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,0.5)">-----</div>
+    <button class="btn btn-secondary btn-sm" style="margin-top:0.6rem" onclick="onlineCopiarEnlace()">🔗 Copiar enlace para invitar</button>
+  </div>
+  <div class="panel">
+    <h3>👤 Tu nombre y ficha</h3>
+    <div class="jugador-row">
+      <button type="button" onclick="abrirSelectorFicha(-1)" title="Elegir ficha" style="width:36px;height:36px;border-radius:50%;border:2px solid var(--gold);background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;flex-shrink:0;overflow:hidden">
+        <span id="online-host-ficha-preview" style="font-size:1.3rem">🦁</span>
+      </button>
+      <input type="text" id="online-host-nombre" value="Anfitrión" maxlength="20" placeholder="Tu nombre"/>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>👥 Jugadores en la sala (<span id="online-num-jugadores">1</span>)</h3>
+    <div id="online-lista-jugadores"></div>
+  </div>
+  <div style="display:flex;gap:1rem;justify-content:center;max-width:600px;width:100%;margin:0.5rem auto;">
+    <button class="btn btn-secondary" onclick="onlineSalir()">✕ Cancelar sala</button>
+    <button class="btn btn-primary" id="online-btn-continuar-setup" onclick="onlineHostContinuarASetup()">Elegir preguntas →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     ONLINE: UNIRSE A SALA
+══════════════════════════════════════════════════ -->
+<div id="screen-online-join" class="screen">
+  <div class="logo-wrap" style="margin-bottom:1rem">
+    <div class="logo-icon" style="font-size:2.5rem">🔗</div>
+    <div class="logo-title" style="font-size:1.8rem">Unirse a una sala</div>
+  </div>
+  <div class="panel">
+    <div class="filtro-label">Código de la sala</div>
+    <input type="text" id="online-join-codigo" class="q-answer-input" maxlength="5" placeholder="Ej: AB3XZ" style="text-transform:uppercase;text-align:center;font-family:'Fredoka One',cursive;font-size:1.4rem;letter-spacing:0.3rem"/>
+    <div class="filtro-label" style="margin-top:0.8rem">Tu nombre</div>
+    <input type="text" id="online-join-nombre" class="q-answer-input" maxlength="20" placeholder="Tu nombre"/>
+    <div style="display:flex;align-items:center;gap:0.8rem;margin-top:0.8rem">
+      <button type="button" onclick="abrirSelectorFicha(-2)" title="Elegir ficha" style="width:44px;height:44px;border-radius:50%;border:2px solid var(--gold);background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;flex-shrink:0;overflow:hidden">
+        <span id="online-join-ficha-preview" style="font-size:1.5rem">🤠</span>
+      </button>
+      <div style="font-size:0.8rem;color:var(--text2)">Toca para elegir tu ficha</div>
+    </div>
+  </div>
+  <div id="online-join-error" style="color:#F44336;font-weight:700;font-size:0.85rem;display:none;margin-bottom:0.5rem"></div>
+  <div style="display:flex;gap:1rem;justify-content:center;max-width:600px;width:100%;margin:0.5rem auto;">
+    <button class="btn btn-secondary" onclick="mostrarScreen('screen-online-menu')">← Volver</button>
+    <button class="btn btn-primary" id="online-btn-unirse" onclick="onlineUnirseASala()">Unirse →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     ONLINE: SALA DE ESPERA (invitado)
+══════════════════════════════════════════════════ -->
+<div id="screen-online-wait" class="screen" style="overflow-y:auto">
+  <div class="logo-wrap" style="margin-bottom:1rem">
+    <div class="spinner" style="margin-bottom:0.5rem"></div>
+    <div class="logo-title" style="font-size:1.6rem">Esperando al anfitrión…</div>
+    <div class="logo-sub">La partida empezará en cuanto el anfitrión la inicie</div>
+  </div>
+  <div class="panel" style="max-width:440px">
+    <h3>👥 Jugadores en la sala</h3>
+    <div id="online-wait-lista-jugadores"></div>
+  </div>
+  <button class="btn btn-secondary" style="margin-top:1rem" onclick="onlineSalir()">✕ Salir de la sala</button>
+</div>
+
 <div id="screen-modo" class="screen">
   <div class="logo-wrap" style="margin-bottom:1rem">
     <div class="logo-icon" style="font-size:2.5rem" id="modo-icon">🎬</div>
@@ -1389,7 +1497,7 @@ body > * { position: relative; z-index: 1; }
     <!-- Botón girar -->
     <button id="pq-btn-girar" class="btn btn-primary"
       style="width:100%;max-width:300px;font-size:1.1rem;padding:0.9rem;margin-top:0.6rem"
-      onclick="pqGirar()">
+      onclick="pqGirarUI()">
       🎯 ¡Girar!
     </button>
 
@@ -1444,7 +1552,7 @@ body > * { position: relative; z-index: 1; }
       <div class="q-dato" id="pq-dato"></div>
       <div class="q-result" id="pq-result"></div>
       <div class="q-actions" id="pq-actions">
-        <button class="btn btn-primary" onclick="pqContinuar()">Continuar →</button>
+        <button class="btn btn-primary" onclick="pqContinuarUI()">Continuar →</button>
       </div>
     </div>
   </div>
@@ -1807,6 +1915,321 @@ async function cargarPreguntas(filtros) {
 // ════════════════════════════════════════════════════════
 //  ESTADO GLOBAL
 // ════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+//  MODO ONLINE — PeerJS (host = anfitrión autoritativo, invitados = espejo)
+// ════════════════════════════════════════════════════════
+let modoOnline = null;       // null | 'host' | 'guest'
+let onlinePeer = null;
+let onlineConexiones = {};   // host: peerId -> DataConnection
+let onlineConexionHost = null; // guest: DataConnection al host
+let onlineCodigoSala = null;
+let onlineJugadoresLobby = []; // host: [{peerId, nombre, fichaId}], sin contar al propio host
+let onlineMiPeerId = null;
+let onlineOrdenPeerIds = [];  // host: orden de peerId que determina el indice en pqGame.jugadores (index 0 = host)
+
+function onlineEsMiTurno() {
+  if (!modoOnline || !pqGame) return true; // partida local: siempre "tu turno" (se pasa el movil)
+  const jTurno = pqGame.jugadores[pqGame.turno];
+  if (modoOnline === 'host') return jTurno && jTurno._peerId === undefined; // el host no tiene _peerId
+  return jTurno && jTurno._peerId === onlineMiPeerId;
+}
+
+function generarCodigoSala() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 5; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
+function onlineCrearSala() {
+  modoOnline = 'host';
+  onlineJugadoresLobby = [];
+  onlineCodigoSala = generarCodigoSala();
+  mostrarScreen('screen-online-host-lobby');
+  document.getElementById('online-codigo-grande').textContent = onlineCodigoSala;
+  document.getElementById('online-host-nombre').value = 'Anfitrión';
+  renderOnlineHostLobby();
+
+  onlinePeer = new Peer('trivial-' + onlineCodigoSala, { debug: 0 });
+  onlinePeer.on('open', id => { onlineMiPeerId = id; });
+  onlinePeer.on('connection', conn => {
+    onlineConexiones[conn.peer] = conn;
+    conn.on('data', data => onlineHostRecibe(conn, data));
+    conn.on('close', () => {
+      delete onlineConexiones[conn.peer];
+      onlineJugadoresLobby = onlineJugadoresLobby.filter(j => j.peerId !== conn.peer);
+      renderOnlineHostLobby();
+      onlineBroadcast({ type: 'LOBBY_UPDATE', jugadores: onlineJugadoresLobby });
+    });
+  });
+  onlinePeer.on('error', err => {
+    console.error('Peer error (host):', err);
+    mostrarToast('Error de conexión. Intenta crear la sala de nuevo.');
+  });
+}
+
+function onlineHostRecibe(conn, data) {
+  if (data.type === 'JOIN') {
+    if (onlineJugadoresLobby.length >= 7 && !onlineJugadoresLobby.some(j => j.peerId === conn.peer)) {
+      conn.send({ type: 'SALA_LLENA' });
+      return;
+    }
+    onlineJugadoresLobby = onlineJugadoresLobby.filter(j => j.peerId !== conn.peer);
+    onlineJugadoresLobby.push({ peerId: conn.peer, nombre: data.nombre || 'Jugador', fichaId: data.fichaId || null });
+    renderOnlineHostLobby();
+    onlineBroadcast({ type: 'LOBBY_UPDATE', jugadores: onlineJugadoresLobby });
+  } else if (data.type === 'ACTION') {
+    onlineProcesarAccion(conn.peer, data.action, data.payload);
+  }
+}
+
+function onlineBroadcast(msg) {
+  Object.values(onlineConexiones).forEach(c => { try { c.send(msg); } catch(e) {} });
+}
+
+function renderOnlineHostLobby() {
+  document.getElementById('online-num-jugadores').textContent = 1 + onlineJugadoresLobby.length;
+  const list = document.getElementById('online-lista-jugadores');
+  let s = `<div class="jugador-row"><div class="jugador-num" style="background:${PLAYER_COLORS[0]};color:#fff">👑</div>
+    <span style="font-size:1.3rem">${fichaTag({fichaId: fichasElegidas[-1], emoji:'🦁'}, 30)}</span>
+    <div style="flex:1;font-weight:800">${(document.getElementById('online-host-nombre')?.value || 'Anfitrión')} (tú, anfitrión)</div></div>`;
+  onlineJugadoresLobby.forEach((j, i) => {
+    s += `<div class="jugador-row"><div class="jugador-num" style="background:${PLAYER_COLORS[i+1]};color:#fff">${i+2}</div>
+      <span style="font-size:1.3rem">${fichaTag({fichaId:j.fichaId, emoji:'🎮'}, 30)}</span>
+      <div style="flex:1;font-weight:800">${j.nombre}</div></div>`;
+  });
+  list.innerHTML = s;
+}
+
+function onlineCopiarEnlace() {
+  const url = location.origin + location.pathname + '?join=' + onlineCodigoSala;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(() => mostrarToast('¡Enlace copiado!'));
+  } else {
+    prompt('Copia este enlace:', url);
+  }
+}
+
+function onlineHostContinuarASetup() {
+  if (onlineJugadoresLobby.length < 1) {
+    alert('Espera a que se una al menos un jugador más.');
+    return;
+  }
+  // Construir jugadores[]: host primero (sin _peerId), luego invitados en el orden en que se unieron
+  onlineOrdenPeerIds = onlineJugadoresLobby.map(j => j.peerId);
+  jugadores = [];
+  const nombreHost = document.getElementById('online-host-nombre').value.trim() || 'Anfitrión';
+  jugadores.push({ name: nombreHost, color: PLAYER_COLORS[0], emoji: PLAYER_EMOJIS[0], fichaId: fichasElegidas[-1] || null });
+  onlineJugadoresLobby.forEach((j, i) => {
+    jugadores.push({ name: j.nombre, color: PLAYER_COLORS[i+1], emoji: PLAYER_EMOJIS[i+1], fichaId: j.fichaId || null, _peerId: j.peerId });
+  });
+  numJugadores = jugadores.length;
+  modoJuego = 'tablero';
+  modoSubtipo = 2; // cada jugador tiene su propio móvil: siempre con opciones visibles
+  setTipoTablero('preguntados');
+  document.getElementById('panel-jugadores').style.display = 'none';
+  document.getElementById('btn-iniciar').textContent = '🎲 Iniciar partida online';
+  document.getElementById('btn-iniciar').onclick = iniciarJuego;
+  mostrarScreen('screen-setup');
+  renderSelectPerfiles();
+  actualizarResumenFiltros();
+  cargarListaPeliculas().then(() => actualizarResumenFiltros()).catch(console.error);
+}
+
+// ── INVITADO ──
+function onlineUnirseASala() {
+  const codigo = document.getElementById('online-join-codigo').value.trim().toUpperCase();
+  const nombre = document.getElementById('online-join-nombre').value.trim() || 'Jugador';
+  if (codigo.length < 4) { onlineMostrarErrorJoin('Escribe el código de la sala (5 letras).'); return; }
+  document.getElementById('online-btn-unirse').disabled = true;
+  document.getElementById('online-btn-unirse').textContent = 'Conectando…';
+
+  modoOnline = 'guest';
+  onlinePeer = new Peer(undefined, { debug: 0 });
+  onlinePeer.on('open', id => {
+    onlineMiPeerId = id;
+    onlineConexionHost = onlinePeer.connect('trivial-' + codigo);
+    onlineConexionHost.on('open', () => {
+      onlineConexionHost.send({ type: 'JOIN', nombre, fichaId: fichasElegidas[-2] || null });
+      mostrarScreen('screen-online-wait');
+    });
+    onlineConexionHost.on('data', data => onlineGuestRecibe(data));
+    onlineConexionHost.on('close', () => {
+      mostrarToast('El anfitrión ha cerrado la sala.');
+      mostrarScreen('screen-inicio');
+    });
+    onlineConexionHost.on('error', () => onlineMostrarErrorJoin('No se pudo conectar. Comprueba el código.'));
+  });
+  onlinePeer.on('error', err => {
+    console.error('Peer error (guest):', err);
+    onlineMostrarErrorJoin('No se pudo conectar. Comprueba el código e inténtalo de nuevo.');
+  });
+}
+
+function onlineMostrarErrorJoin(msg) {
+  const el = document.getElementById('online-join-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('online-btn-unirse').disabled = false;
+  document.getElementById('online-btn-unirse').textContent = 'Unirse →';
+}
+
+function onlineGuestRecibe(data) {
+  if (data.type === 'SALA_LLENA') {
+    onlineMostrarErrorJoin('La sala ya está llena (máximo 8 jugadores).');
+    mostrarScreen('screen-online-join');
+    return;
+  } else if (data.type === 'LOBBY_UPDATE') {
+    const list = document.getElementById('online-wait-lista-jugadores');
+    if (list) {
+      list.innerHTML = data.jugadores.map((j,i) => `<div class="jugador-row">
+        <div class="jugador-num" style="background:${PLAYER_COLORS[i+1]};color:#fff">${i+2}</div>
+        <span style="font-size:1.3rem">${fichaTag({fichaId:j.fichaId, emoji:'🎮'}, 30)}</span>
+        <div style="flex:1;font-weight:800">${j.nombre}${j.peerId===onlineMiPeerId?' (tú)':''}</div></div>`).join('');
+    }
+  } else if (data.type === 'GAME_START') {
+    jugadores = data.jugadores;
+    modoSubtipo = 2;
+    pqGame = { jugadores: data.jugadores, turno: 0, pool: [], usadas: new Set() };
+    mostrarScreen('screen-preguntados');
+    pqRenderRuleta(-1);
+  } else if (data.type === 'STATE_UPDATE') {
+    onlineAplicarEstadoRemoto(data.estado);
+  }
+}
+
+function onlineSalir() {
+  try { if (onlinePeer) onlinePeer.destroy(); } catch(e) {}
+  onlinePeer = null; onlineConexiones = {}; onlineConexionHost = null;
+  modoOnline = null; onlineJugadoresLobby = []; onlineOrdenPeerIds = [];
+  mostrarScreen('screen-inicio');
+}
+
+// ── Enviar una acción del invitado al host ──
+function onlineEnviarAccion(action, payload) {
+  if (onlineConexionHost) onlineConexionHost.send({ type: 'ACTION', action, payload: payload || {} });
+}
+
+// ── El host recibe una acción de un invitado y la ejecuta con la MISMA lógica local ──
+function onlineProcesarAccion(peerId, action, payload) {
+  const jTurno = pqJugadorActual();
+  if (!jTurno || jTurno._peerId !== peerId) return; // no es su turno: ignorar
+  if (action === 'girar') pqGirar();
+  else if (action === 'elegirCat') pqElegirCat(payload.cat, payload.esCorona);
+  else if (action === 'elegirQuesito') pqElegirQuesito(payload.cat);
+  else if (action === 'continuar') pqContinuar(payload.correcto);
+}
+
+// ── Puentes: si es mi turno y soy invitado, la acción viaja por red al host;
+//    si soy el anfitrión o estoy jugando en local, se ejecuta tal cual siempre ──
+function pqGirarUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') {
+    document.getElementById('pq-btn-girar').disabled = true;
+    document.getElementById('pq-btn-girar').textContent = '⏳ Girando…';
+    onlineEnviarAccion('girar');
+    return;
+  }
+  pqGirar();
+}
+function pqElegirCatUI(cat, esCorona) {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('elegirCat', { cat, esCorona }); return; }
+  pqElegirCat(cat, esCorona);
+}
+function pqElegirQuesitoUI(cat) {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('elegirQuesito', { cat }); return; }
+  pqElegirQuesito(cat);
+}
+function pqContinuarUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') {
+    const correcto = document.getElementById('pq-actions').dataset.correcto === '1';
+    onlineEnviarAccion('continuar', { correcto });
+    return;
+  }
+  pqContinuar();
+}
+
+// ── El host emite el estado completo (sin el pool, solo lo necesario para pintar) ──
+function onlineBroadcastEstado(faseExtra) {
+  if (modoOnline !== 'host' || !pqGame) return;
+  const estado = {
+    turno: pqGame.turno,
+    jugadores: pqGame.jugadores.map(j => ({
+      name:j.name, color:j.color, emoji:j.emoji, fichaId:j.fichaId, _peerId:j._peerId,
+      quesitos:j.quesitos, aciertosAcumulados:j.aciertosAcumulados
+    })),
+    pregunta: pqGame._preguntaActual || null,
+    catElegida: pqCatElegida,
+    esCorona: pqEsCorona,
+    fase: faseExtra || 'ruleta', // 'ruleta' | 'pregunta' | 'corona' | 'selector-quesito'
+  };
+  onlineBroadcast({ type: 'STATE_UPDATE', estado });
+}
+
+// ── El invitado recibe el estado y renderiza con las MISMAS funciones que el local ──
+function onlineAplicarEstadoRemoto(estado) {
+  pqCatElegida = estado.catElegida;
+  pqEsCorona = estado.esCorona;
+  if (!pqGame) {
+    pqGame = { jugadores: estado.jugadores, turno: estado.turno, pool: [], usadas: new Set() };
+  } else {
+    pqGame.jugadores = estado.jugadores;
+    pqGame.turno = estado.turno;
+  }
+  pqGame._preguntaActual = estado.pregunta;
+
+  if (estado.fase === 'ruleta') {
+    pqRenderTurno();
+  } else if (estado.fase === 'corona') {
+    document.getElementById('pq-vista-ruleta').style.display = 'flex';
+    document.getElementById('pq-vista-pregunta').style.display = 'none';
+    pqRenderRuleta(-1);
+    pqMostrarSelectorCoronaUI();
+  } else if (estado.fase === 'selector-quesito') {
+    document.getElementById('pq-vista-ruleta').style.display = 'flex';
+    document.getElementById('pq-vista-pregunta').style.display = 'none';
+    pqRenderRuleta(-1);
+    pqMostrarSelectorQuesitoUI();
+  } else if (estado.fase === 'pregunta' && estado.pregunta) {
+    pqRenderPreguntaUI(estado.pregunta, pqCatElegida, pqEsCorona);
+  } else if (estado.fase === 'victoria') {
+    const ganador = pqGame.jugadores.find(j => Object.values(j.quesitos).every(Boolean));
+    if (ganador) pqMostrarVictoria(ganador);
+  }
+  onlineActualizarBloqueoTurno();
+}
+
+// ── Bloquear/permitir la interacción según si es mi turno ──
+function onlineActualizarBloqueoTurno() {
+  if (!modoOnline) return;
+  const esMio = onlineEsMiTurno();
+  const btnGirar = document.getElementById('pq-btn-girar');
+  if (btnGirar) btnGirar.style.display = esMio ? '' : 'none';
+  let aviso = document.getElementById('online-aviso-turno');
+  if (!aviso) {
+    aviso = document.createElement('div');
+    aviso.id = 'online-aviso-turno';
+    aviso.style.cssText = 'text-align:center;font-size:0.85rem;font-weight:800;color:var(--gold);margin-top:0.5rem';
+    document.getElementById('pq-vista-ruleta')?.appendChild(aviso);
+  }
+  if (!esMio && pqGame) {
+    const j = pqJugadorActual();
+    aviso.textContent = `⏳ Esperando a ${j ? j.name : '...'}`;
+    aviso.style.display = 'block';
+  } else if (aviso) {
+    aviso.style.display = 'none';
+  }
+  // Bloquear opciones/botones de la vista de pregunta si no es mi turno
+  ['pq-options','pq-reveal-actions','pq-judge-btns','pq-actions','pq-reader-controls'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.pointerEvents = esMio ? '' : 'none';
+    if (el) el.style.opacity = esMio ? '' : '0.5';
+  });
+}
+
 let numJugadores = 2;
 let jugadores = []; // { name, color, emoji }
 let pool = [];
@@ -4124,7 +4547,15 @@ function elegirFicha(fichaId) {
   if (_fichaSelectorIdx === null) return;
   fichasElegidas[_fichaSelectorIdx] = fichaId;
   hideModal('modal-ficha-selector');
-  renderJugadores();
+  if (_fichaSelectorIdx === -1) {
+    const el = document.getElementById('online-host-ficha-preview');
+    if (el) el.innerHTML = fichaTag(fichaId, 32);
+  } else if (_fichaSelectorIdx === -2) {
+    const el = document.getElementById('online-join-ficha-preview');
+    if (el) el.innerHTML = fichaTag(fichaId, 40);
+  } else {
+    renderJugadores();
+  }
 }
 
 function addJugador() {
@@ -4494,11 +4925,13 @@ function mostrarToast(msg) {
 //  INICIAR JUEGO
 // ════════════════════════════════════════════════════════
 async function iniciarJuego() {
-  // Recoger nombres
-  jugadores = [];
-  for (let i = 0; i < numJugadores; i++) {
-    const name = document.getElementById(`jname-${i}`).value.trim() || `Jugador ${i+1}`;
-    jugadores.push({ name, color: PLAYER_COLORS[i], emoji: PLAYER_EMOJIS[i], fichaId: fichasElegidas[i] || null });
+  // Recoger nombres (solo en partidas locales; en online los jugadores ya vienen del lobby)
+  if (!modoOnline) {
+    jugadores = [];
+    for (let i = 0; i < numJugadores; i++) {
+      const name = document.getElementById(`jname-${i}`).value.trim() || `Jugador ${i+1}`;
+      jugadores.push({ name, color: PLAYER_COLORS[i], emoji: PLAYER_EMOJIS[i], fichaId: fichasElegidas[i] || null });
+    }
   }
 
   mostrarScreen("screen-loading");
@@ -4797,6 +5230,12 @@ function iniciarPreguntados() {
     pool,
     usadas: new Set(),
   };
+  if (modoOnline === 'host') {
+    onlineBroadcast({ type: 'GAME_START', jugadores: pqGame.jugadores.map(j => ({
+      name:j.name, color:j.color, emoji:j.emoji, fichaId:j.fichaId, _peerId:j._peerId,
+      quesitos:j.quesitos, aciertosAcumulados:j.aciertosAcumulados
+    })) });
+  }
   mostrarScreen('screen-preguntados');
   pqRenderRuleta(-1);
   pqRenderTurno();
@@ -4987,31 +5426,35 @@ function pqResultadoGiro(sector, idx) {
   pqEsCorona = sector === 'corona';
 
   if (pqEsCorona) {
-    // Corona: ruleta se queda iluminada, mostrar selector debajo
-    document.getElementById('pq-btn-girar').style.display = 'none';
-    const j = pqJugadorActual();
-    const titulo = document.querySelector('#pq-corona-selector > div');
-    if (titulo) titulo.textContent = '👑 ¡Corona! Elige la categoría:';
-    const coronaCats = document.getElementById('pq-corona-cats');
-    coronaCats.innerHTML = PQ_CATS.map(cat => {
-      const info = CATS_INFO[cat];
-      const tieneQ = j.quesitos[cat];
-      return `<div onclick="${tieneQ ? '' : `pqElegirCat('${cat}', true)`}" style="
-        background:${info.color}${tieneQ?'22':'44'};border:2px solid ${info.color};border-radius:12px;
-        padding:0.7rem 0.5rem;text-align:center;cursor:${tieneQ?'default':'pointer'};
-        opacity:${tieneQ?'0.4':'1'};transition:transform 0.15s"
-        ${tieneQ?'':`onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform=''"` }>
-        <div>${mascotaTag(cat, 44)}</div>
-        <div style="font-size:0.72rem;font-weight:800;color:${info.color};line-height:1.2">${info.nombre}</div>
-        ${tieneQ ? '<div style="font-size:0.65rem;color:var(--text2)">✓ Ya tienes</div>' : ''}
-      </div>`;
-    }).join('');
-    document.getElementById('pq-corona-selector').style.display = 'block';
-
+    pqMostrarSelectorCoronaUI();
+    if (modoOnline === 'host') onlineBroadcastEstado('corona');
   } else {
     // Categoría normal: ir a pregunta directamente (sin botón intermedio)
     pqElegirCat(sector, false);
   }
+}
+
+function pqMostrarSelectorCoronaUI() {
+  document.getElementById('pq-btn-girar').style.display = 'none';
+  const j = pqJugadorActual();
+  const titulo = document.querySelector('#pq-corona-selector > div');
+  if (titulo) titulo.textContent = '👑 ¡Corona! Elige la categoría:';
+  const coronaCats = document.getElementById('pq-corona-cats');
+  coronaCats.innerHTML = PQ_CATS.map(cat => {
+    const info = CATS_INFO[cat];
+    const tieneQ = j.quesitos[cat];
+    return `<div onclick="${tieneQ ? '' : `pqElegirCatUI('${cat}', true)`}" style="
+      background:${info.color}${tieneQ?'22':'44'};border:2px solid ${info.color};border-radius:12px;
+      padding:0.7rem 0.5rem;text-align:center;cursor:${tieneQ?'default':'pointer'};
+      opacity:${tieneQ?'0.4':'1'};transition:transform 0.15s"
+      ${tieneQ?'':`onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform=''"` }>
+      <div>${mascotaTag(cat, 44)}</div>
+      <div style="font-size:0.72rem;font-weight:800;color:${info.color};line-height:1.2">${info.nombre}</div>
+      ${tieneQ ? '<div style="font-size:0.65rem;color:var(--text2)">✓ Ya tienes</div>' : ''}
+    </div>`;
+  }).join('');
+  document.getElementById('pq-corona-selector').style.display = 'block';
+  onlineActualizarBloqueoTurno();
 }
 
 // ── Mostrar pregunta ──
@@ -5025,6 +5468,16 @@ function pqElegirCat(cat, esCorona) {
   pqGame.usadas.add(q);
   pqGame._preguntaActual = q;
 
+  pqRenderPreguntaUI(q, cat, esCorona);
+  if (modoOnline === 'host') onlineBroadcastEstado('pregunta');
+}
+
+// ── Pinta la pregunta en pantalla (reutilizable: el host la llama tras elegir,
+//    el invitado la llama con la pregunta que le llega por red) ──
+function pqRenderPreguntaUI(q, cat, esCorona) {
+  pqCatElegida = cat;
+  pqEsCorona = esCorona;
+  pqRespondida = false;
   const catInfo = CATS_INFO[cat];
 
   // Indicador grande de categoría
@@ -5032,8 +5485,8 @@ function pqElegirCat(cat, esCorona) {
   catInd.style.background = `radial-gradient(ellipse at 50% 25%, ${catInfo.color}59, ${catInfo.color}22 65%, rgba(255,255,255,0.03) 100%)`;
   catInd.style.border = `2px solid ${catInfo.color}`;
   catInd.style.boxShadow = `0 0 28px ${catInfo.color}55, inset 0 1px 0 rgba(255,255,255,0.15)`;
-  document.getElementById('pq-cat-emoji-big').innerHTML = mascotaTag(pqEsCorona ? 'corona' : cat, 68, `filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5))`);
-  document.getElementById('pq-cat-nombre-big').textContent = pqEsCorona ? `👑 Corona · ${catInfo.nombre}` : catInfo.nombre;
+  document.getElementById('pq-cat-emoji-big').innerHTML = mascotaTag(esCorona ? 'corona' : cat, 68, `filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5))`);
+  document.getElementById('pq-cat-nombre-big').textContent = esCorona ? `👑 Corona · ${catInfo.nombre}` : catInfo.nombre;
 
   // Cabecera pregunta
   const badge = document.getElementById('pq-cat-badge');
@@ -5048,7 +5501,7 @@ function pqElegirCat(cat, esCorona) {
   const todasLlenas = Object.values(j.quesitos).every(v=>v);
   const wedge = document.getElementById('pq-wedge-badge');
   if (todasLlenas) { wedge.classList.remove('hidden'); wedge.textContent = '🏆 FINAL'; }
-  else if (pqEsCorona) { wedge.classList.remove('hidden'); wedge.textContent = '👑 Quesito directo'; }
+  else if (esCorona) { wedge.classList.remove('hidden'); wedge.textContent = '👑 Quesito directo'; }
   else {
     const acc = (j.aciertosAcumulados || 0) + 1;
     wedge.classList.remove('hidden');
@@ -5085,6 +5538,7 @@ function pqElegirCat(cat, esCorona) {
   // Cambiar a vista pregunta
   document.getElementById('pq-vista-ruleta').style.display = 'none';
   document.getElementById('pq-vista-pregunta').style.display = 'block';
+  onlineActualizarBloqueoTurno();
 }
 
 // ── Render del turno ──
@@ -5110,12 +5564,14 @@ function pqRenderTurno() {
 
   document.getElementById('pq-btn-girar').disabled = false;
   document.getElementById('pq-btn-girar').textContent = '🎯 ¡Girar!';
-  document.getElementById('pq-btn-girar').onclick = pqGirar;
+  document.getElementById('pq-btn-girar').onclick = pqGirarUI;
   document.getElementById('pq-btn-girar').style.display = '';
   document.getElementById('pq-corona-selector').style.display = 'none';
   document.getElementById('pq-vista-ruleta').style.display = 'flex';
   document.getElementById('pq-vista-pregunta').style.display = 'none';
   pqRenderAllPlayers();
+  onlineActualizarBloqueoTurno();
+  if (modoOnline === 'host') onlineBroadcastEstado('ruleta');
 }
 
 // ── Selector quesito tras 3 aciertos ──
@@ -5133,7 +5589,7 @@ function pqMostrarSelectorQuesito() {
   coronaCats.innerHTML = PQ_CATS.map(cat => {
     const info = CATS_INFO[cat];
     const tieneQ = j.quesitos[cat];
-    return `<div onclick="${tieneQ ? '' : `pqElegirQuesito('${cat}')`}" style="
+    return `<div onclick="${tieneQ ? '' : `pqElegirQuesitoUI('${cat}')`}" style="
       background:${info.color}${tieneQ?'22':'44'};border:2px solid ${info.color};border-radius:12px;
       padding:0.7rem 0.5rem;text-align:center;cursor:${tieneQ?'default':'pointer'};opacity:${tieneQ?'0.4':'1'}">
       <div>${mascotaTag(cat, 44)}</div>
@@ -5142,6 +5598,8 @@ function pqMostrarSelectorQuesito() {
     </div>`;
   }).join('');
   document.getElementById('pq-corona-selector').style.display = 'block';
+  onlineActualizarBloqueoTurno();
+  if (modoOnline === 'host') onlineBroadcastEstado('selector-quesito');
 }
 
 function pqElegirQuesito(cat) {
@@ -5195,8 +5653,8 @@ function pqJuzgar(correcto) {
   document.getElementById('pq-actions').dataset.correcto = correcto ? '1' : '0';
 }
 
-function pqContinuar() {
-  const correcto = document.getElementById('pq-actions').dataset.correcto === '1';
+function pqContinuar(correctoOverride) {
+  const correcto = typeof correctoOverride === 'boolean' ? correctoOverride : document.getElementById('pq-actions').dataset.correcto === '1';
   const j = pqJugadorActual();
   const cat = pqCatElegida;
   const todasLlenas = Object.values(j.quesitos).every(v => v);
@@ -5280,6 +5738,7 @@ function pqMostrarVictoria(j) {
   }
   lanzarConfetti();
   mostrarScreen('screen-fin');
+  if (modoOnline === 'host') onlineBroadcastEstado('victoria');
 }
 
 function volverASetup() {
@@ -5473,6 +5932,15 @@ function rectOnContinue() {
 window.addEventListener("DOMContentLoaded", () => {
   // Esperar a que el script de Supabase esté listo
   initSupabase();
+
+  // Si se abre desde un enlace de invitación (?join=CODIGO), ir directo a unirse
+  const params = new URLSearchParams(location.search);
+  const codigoInvitacion = params.get('join');
+  if (codigoInvitacion) {
+    mostrarScreen('screen-online-join');
+    const input = document.getElementById('online-join-codigo');
+    if (input) input.value = codigoInvitacion.toUpperCase();
+  }
 });
 </script>
 </body>
