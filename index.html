@@ -500,6 +500,8 @@ body > * { position: relative; z-index: 1; }
   border-bottom: 1px solid rgba(255,215,0,0.2);
 }
 .q-cat-badge {
+  display: inline-flex;
+  align-items: center;
   padding: 0.35rem 0.9rem;
   border-radius: 50px;
   font-family: 'Fredoka One', cursive;
@@ -1382,7 +1384,7 @@ body > * { position: relative; z-index: 1; }
 
     <!-- Indicador de categoría actual (grande) -->
     <div id="pq-cat-indicator" style="text-align:center;margin-bottom:0.6rem;padding:0.6rem;border-radius:12px">
-      <div id="pq-cat-emoji-big" style="font-size:2rem"></div>
+      <div id="pq-cat-emoji-big" style="font-size:2rem;display:flex;align-items:center;justify-content:center"></div>
       <div id="pq-cat-nombre-big" style="font-family:'Fredoka One',cursive;font-size:1.1rem;color:white"></div>
     </div>
 
@@ -1591,6 +1593,22 @@ const CATS_INFO = {
   mundo:       { nombre: "El Maravilloso Mundo",      color: "#2196F3" },
 };
 const CATS_EMOJIS = { heroes:"⭐", historia:"🎬", villanos:"💀", secundarios:"🎭", lugares:"🗺️", mundo:"🌍" };
+const MASCOTAS = {
+  heroes: "images/mascotas/heroes.png",
+  historia: "images/mascotas/historia.png",
+  villanos: "images/mascotas/villanos.png",
+  secundarios: "images/mascotas/secundarios.png",
+  lugares: "images/mascotas/lugares.png",
+  mundo: "images/mascotas/mundo.png",
+  corona: "images/mascotas/corona.png",
+};
+// Devuelve un <img> de la mascota de una categoría (o 'corona'), con emoji de respaldo si no carga
+function mascotaTag(cat, sizePx, extraStyle) {
+  const src = MASCOTAS[cat];
+  const emoji = cat === "corona" ? "👑" : CATS_EMOJIS[cat];
+  if (!src) return emoji;
+  return `<img src="${src}" alt="${emoji}" style="width:${sizePx}px;height:${sizePx}px;object-fit:contain;vertical-align:middle;${extraStyle||''}" onerror="this.replaceWith(document.createTextNode('${emoji}'))">`;
+}
 const PLAYER_COLORS = ["#FF4081","#40C4FF","#69F0AE","#FFD740","#E040FB","#FF6D00","#00BCD4","#F44336"];
 const PLAYER_EMOJIS = ["🦁","🤠","🐉","🐧","🕸️","❄️","🐯","🦊"];
 
@@ -3741,7 +3759,7 @@ function showSpokeModal() {
     const cat = sp.categoria;
     const info = CATS_INFO[cat];
     s += `<button class="spoke-btn" style="border-color:${info.color};background:${info.color}22" onclick="onSpokeChoice(${si})">
-      <div style="font-size:1.5rem">${CATS_EMOJIS[cat]}</div>
+      <div>${mascotaTag(cat, 48)}</div>
       <div style="font-size:0.73rem;margin-top:0.3rem;color:#fff;font-weight:700">${info.nombre}</div>
     </button>`;
   });
@@ -3777,7 +3795,7 @@ function showQuestionModal(isFinal) {
 
   const catInfo = CATS_INFO[q.categoria];
   const badge = document.getElementById("q-cat-badge");
-  badge.textContent = `${CATS_EMOJIS[q.categoria]} ${catInfo.nombre}`;
+  badge.innerHTML = `${mascotaTag(q.categoria, 20, 'border-radius:50%;margin-right:0.3rem')}${catInfo.nombre}`;
   badge.style.background = catInfo.color;
   badge.style.color = "#FBF5EA";
 
@@ -4474,7 +4492,7 @@ function infMostrarPregunta() {
 
   // Cabecera
   const badge = document.getElementById("inf-cat-badge");
-  badge.textContent = `${CATS_EMOJIS[q.categoria]} ${catInfo.nombre}`;
+  badge.innerHTML = `${mascotaTag(q.categoria, 20, 'border-radius:50%;margin-right:0.3rem')}${catInfo.nombre}`;
   badge.style.background = catInfo.color;
   badge.style.color = "#FBF5EA";
   document.getElementById("inf-movie").textContent = q.pelicula;
@@ -4778,7 +4796,7 @@ function pqResultadoGiro(sector, idx) {
         padding:0.7rem 0.5rem;text-align:center;cursor:${tieneQ?'default':'pointer'};
         opacity:${tieneQ?'0.4':'1'};transition:transform 0.15s"
         ${tieneQ?'':`onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform=''"` }>
-        <div style="font-size:1.4rem">${CATS_EMOJIS[cat]}</div>
+        <div>${mascotaTag(cat, 44)}</div>
         <div style="font-size:0.72rem;font-weight:800;color:${info.color};line-height:1.2">${info.nombre}</div>
         ${tieneQ ? '<div style="font-size:0.65rem;color:var(--text2)">✓ Ya tienes</div>' : ''}
       </div>`;
@@ -4808,12 +4826,12 @@ function pqElegirCat(cat, esCorona) {
   const catInd = document.getElementById('pq-cat-indicator');
   catInd.style.background = catInfo.color + '33';
   catInd.style.border = `2px solid ${catInfo.color}`;
-  document.getElementById('pq-cat-emoji-big').textContent = pqEsCorona ? '👑' : CATS_EMOJIS[cat];
+  document.getElementById('pq-cat-emoji-big').innerHTML = mascotaTag(pqEsCorona ? 'corona' : cat, 64);
   document.getElementById('pq-cat-nombre-big').textContent = pqEsCorona ? `👑 Corona · ${catInfo.nombre}` : catInfo.nombre;
 
   // Cabecera pregunta
   const badge = document.getElementById('pq-cat-badge');
-  badge.textContent = `${CATS_EMOJIS[cat]} ${catInfo.nombre}`;
+  badge.innerHTML = `${mascotaTag(cat, 20, 'border-radius:50%;margin-right:0.3rem')}${catInfo.nombre}`;
   badge.style.background = catInfo.color;
   document.getElementById('pq-movie').textContent = q.pelicula;
   document.getElementById('pq-text').textContent = q.pregunta;
@@ -5026,7 +5044,7 @@ function pqMostrarVictoria(j) {
   const qDiv = document.getElementById('fin-wedges');
   if (qDiv) {
     qDiv.innerHTML = Object.entries(CATS_INFO).map(([cat, info]) =>
-      `<div style="width:36px;height:36px;border-radius:50%;background:${info.color};display:inline-flex;align-items:center;justify-content:center;font-size:1.3rem;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${CATS_EMOJIS[cat]}</div>`
+      `<div style="width:36px;height:36px;border-radius:50%;background:${info.color};display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);overflow:hidden">${mascotaTag(cat, 30)}</div>`
     ).join('');
   }
   const clasiDiv = document.getElementById('fin-clasificacion');
