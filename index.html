@@ -902,6 +902,22 @@ body > * { position: relative; z-index: 1; }
 }
 .filtro-expand-btn.abierto { transform: rotate(180deg); }
 
+@keyframes bounce {
+  from { transform: translateY(0) scale(1); }
+  to   { transform: translateY(-12px) scale(1.1); }
+}
+@keyframes confetti-fall {
+  0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+.confetti-piece {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  animation: confetti-fall linear forwards;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .players-panel { width: 130px; }
@@ -1012,7 +1028,7 @@ body > * { position: relative; z-index: 1; }
 
   <!-- Número de jugadores -->
   <div class="panel" id="panel-jugadores">
-    <h3>👥 Jugadores (2 a 6)</h3>
+    <h3>👥 Jugadores (2 a 8)</h3>
     <div id="jugadores-list"></div>
     <div style="display:flex;gap:0.6rem;justify-content:center;margin-top:0.5rem">
       <button class="btn btn-secondary btn-sm" onclick="addJugador()">+ Añadir jugador</button>
@@ -1108,6 +1124,53 @@ body > * { position: relative; z-index: 1; }
 <div id="screen-loading" class="screen">
   <div class="spinner"></div>
   <div style="color:var(--text2)">Cargando preguntas…</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     PANTALLA: VICTORIA 🏆
+══════════════════════════════════════════════════ -->
+<div id="screen-fin" class="screen" style="overflow-y:auto">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:2rem 1rem;text-align:center">
+
+    <!-- Confetti animado -->
+    <div id="fin-confetti" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:0"></div>
+
+    <div style="position:relative;z-index:1;width:100%;max-width:480px">
+      <!-- Trofeo -->
+      <div style="font-size:5rem;margin-bottom:0.5rem;animation:bounce 0.8s ease infinite alternate">🏆</div>
+
+      <!-- Título -->
+      <div style="font-family:'Fredoka One',cursive;font-size:2rem;color:var(--gold);margin-bottom:0.3rem">
+        ¡GANADOR!
+      </div>
+
+      <!-- Nombre del ganador -->
+      <div id="fin-winner" style="font-family:'Fredoka One',cursive;font-size:2.5rem;color:white;margin-bottom:1rem;text-shadow:0 0 30px rgba(255,215,0,0.5)">
+        –
+      </div>
+
+      <!-- Quesitos ganados -->
+      <div id="fin-wedges" style="display:flex;justify-content:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem"></div>
+
+      <!-- Clasificación de todos los jugadores -->
+      <div class="panel" style="text-align:left;margin-bottom:1.5rem">
+        <div style="font-family:'Fredoka One',cursive;color:var(--gold);font-size:1rem;margin-bottom:0.8rem;text-align:center">
+          📊 Clasificación final
+        </div>
+        <div id="fin-clasificacion"></div>
+      </div>
+
+      <!-- Botones -->
+      <div style="display:flex;flex-direction:column;gap:0.7rem;width:100%">
+        <button class="btn btn-primary" style="font-size:1.1rem;padding:1rem" onclick="volverASetup()">
+          🔄 Revancha
+        </button>
+        <button class="btn btn-secondary" onclick="mostrarScreen('screen-inicio')">
+          🏠 Menú principal
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════
@@ -1491,8 +1554,8 @@ const CATS_INFO = {
   mundo:       { nombre: "El Maravilloso Mundo",      color: "#2196F3" },
 };
 const CATS_EMOJIS = { heroes:"⭐", historia:"🎬", villanos:"💀", secundarios:"🎭", lugares:"🗺️", mundo:"🌍" };
-const PLAYER_COLORS = ["#FF4081","#40C4FF","#69F0AE","#FFD740","#E040FB","#FF6D00"];
-const PLAYER_EMOJIS = ["🦁","🤠","🐉","🐧","🕸️","❄️"];
+const PLAYER_COLORS = ["#FF4081","#40C4FF","#69F0AE","#FFD740","#E040FB","#FF6D00","#00BCD4","#F44336"];
+const PLAYER_EMOJIS = ["🦁","🤠","🐉","🐧","🕸️","❄️","🐯","🦊"];
 
 // ════════════════════════════════════════════════════════
 //  SUPABASE
@@ -3438,8 +3501,16 @@ function onCellClick(type, a, b) {
   } else if (game.phase === "finalQuestion") {
     showQuestionModal(true);
   } else if (game.phase === "gameover") {
-    document.getElementById("gameover-text").textContent = `¡${game.winner.name} ha ganado el Trivial de Animación!`;
-    showModal("modal-gameover");
+    const ganador = game.winner;
+    const jObj = {
+      name: ganador.name, emoji: ganador.emoji, color: ganador.color,
+      quesitos: Object.fromEntries(CATS.map(c => [c, ganador.wedges.includes(c)]))
+    };
+    pqGame = { jugadores: game.players.map(p => ({
+      name: p.name, emoji: p.emoji, color: p.color,
+      quesitos: Object.fromEntries(CATS.map(c => [c, p.wedges.includes(c)]))
+    }))};
+    pqMostrarVictoria(jObj);
   }
 }
 
@@ -3596,8 +3667,16 @@ function onCellClick(cellId) {
   } else if (game.phase === "roll_again") {
     showModal("modal-rollagain");
   } else if (game.phase === "gameover") {
-    document.getElementById("gameover-text").textContent = `¡${game.winner.name} ha ganado el Trivial de Animación!`;
-    showModal("modal-gameover");
+    const ganador = game.winner;
+    const jObj = {
+      name: ganador.name, emoji: ganador.emoji, color: ganador.color,
+      quesitos: Object.fromEntries(CATS.map(c => [c, ganador.wedges.includes(c)]))
+    };
+    pqGame = { jugadores: game.players.map(p => ({
+      name: p.name, emoji: p.emoji, color: p.color,
+      quesitos: Object.fromEntries(CATS.map(c => [c, p.wedges.includes(c)]))
+    }))};
+    pqMostrarVictoria(jObj);
   }
 }
 
@@ -3845,7 +3924,7 @@ function renderJugadores() {
 }
 
 function addJugador() {
-  if (numJugadores >= 6) return;
+  if (numJugadores >= 8) return;
   numJugadores++;
   renderJugadores();
 }
@@ -4922,15 +5001,78 @@ function pqRenderAllPlayers() {
 }
 
 function pqMostrarVictoria(j) {
-  mostrarScreen('screen-fin');
+  // Rellenar nombre y emoji del ganador
   document.getElementById('fin-winner').textContent = `${j.emoji} ${j.name}`;
+  document.getElementById('fin-winner').style.color = j.color;
+
+  // Quesitos del ganador
   const qDiv = document.getElementById('fin-wedges');
-  if (qDiv) qDiv.innerHTML = Object.keys(CATS_INFO).map(cat =>
-    `<div style="width:30px;height:30px;border-radius:50%;background:${CATS_INFO[cat].color};display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem;margin:2px">${CATS_EMOJIS[cat]}</div>`
-  ).join('');
+  if (qDiv) {
+    qDiv.innerHTML = Object.entries(CATS_INFO).map(([cat, info]) =>
+      `<div style="width:36px;height:36px;border-radius:50%;background:${info.color};display:inline-flex;align-items:center;justify-content:center;font-size:1.3rem;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${CATS_EMOJIS[cat]}</div>`
+    ).join('');
+  }
+
+  // Clasificación de todos los jugadores
+  const jugadoresSrc = pqGame?.jugadores || rectGame?.jugadores || (game ? game.players : []);
+  const clasiDiv = document.getElementById('fin-clasificacion');
+  if (clasiDiv && jugadoresSrc?.length) {
+    // Ordenar por número de quesitos
+    const sorted = [...jugadoresSrc].sort((a, b) => {
+      const qa = Object.values(a.quesitos || {}).filter(Boolean).length;
+      const qb = Object.values(b.quesitos || {}).filter(Boolean).length;
+      return qb - qa;
+    });
+    clasiDiv.innerHTML = sorted.map((jug, i) => {
+      const nQ = Object.values(jug.quesitos || {}).filter(Boolean).length;
+      const esGanador = jug.name === j.name && jug.emoji === j.emoji;
+      return `<div style="display:flex;align-items:center;gap:0.7rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.06);${esGanador?'background:rgba(255,215,0,0.08);border-radius:8px;padding:0.5rem 0.5rem;':''}" >
+        <div style="font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--text2);min-width:24px;text-align:center">${i+1}º</div>
+        <div style="width:28px;height:28px;border-radius:50%;background:${jug.color};display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">${jug.emoji}</div>
+        <div style="font-size:0.9rem;font-weight:700;flex:1;color:${esGanador?'var(--gold)':'var(--text)'}">${jug.name}${esGanador?' 🏆':''}</div>
+        <div style="display:flex;gap:3px">
+          ${Object.entries(CATS_INFO).map(([cat, info]) => {
+            const tiene = (jug.quesitos || {})[cat];
+            return `<div style="width:14px;height:14px;border-radius:50%;background:${tiene?info.color:'rgba(255,255,255,0.08)'};border:1.5px solid ${info.color}"></div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Confetti
+  lanzarConfetti();
+
+  mostrarScreen('screen-fin');
 }
 
-// Alias para compatibilidad con tablero rect
+function lanzarConfetti() {
+  const container = document.getElementById('fin-confetti');
+  if (!container) return;
+  container.innerHTML = '';
+  const colors = ['#FFD700','#FF4081','#40C4FF','#69F0AE','#E040FB','#FF6D00'];
+  for (let i = 0; i < 80; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.left = Math.random() * 100 + 'vw';
+    el.style.top = '-20px';
+    el.style.background = colors[Math.floor(Math.random() * colors.length)];
+    el.style.width = (6 + Math.random() * 8) + 'px';
+    el.style.height = (6 + Math.random() * 8) + 'px';
+    el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    el.style.animationDuration = (2 + Math.random() * 3) + 's';
+    el.style.animationDelay = (Math.random() * 2) + 's';
+    container.appendChild(el);
+  }
+  // Limpiar después de 6s
+  setTimeout(() => { if (container) container.innerHTML = ''; }, 6000);
+}
+
+function volverASetup() {
+  if (modoJuego === 'infinito') irASetupInfinito();
+  else irASetup();
+}
+
 function mostrarVictoriaPQ(j) { pqMostrarVictoria(j); }
 
 // ════════════════════════════════════════════════════════
