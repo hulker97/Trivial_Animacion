@@ -811,6 +811,97 @@ body > * { position: relative; z-index: 1; }
   color: #000;
 }
 
+/* ── Pantalla dedicada de filtros ── */
+.filtro-estudio-bloque {
+  margin-bottom: 0.8rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.filtro-estudio-header {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0.9rem;
+  background: rgba(255,255,255,0.04);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.filtro-estudio-header:hover { background: rgba(255,255,255,0.07); }
+.filtro-estudio-nombre {
+  font-family: 'Fredoka One', cursive;
+  font-size: 0.95rem;
+  color: var(--gold);
+  flex: 1;
+}
+.filtro-estudio-count {
+  font-size: 0.72rem;
+  color: var(--text2);
+  font-weight: 700;
+}
+.filtro-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 2px solid var(--border);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+.filtro-checkbox.checked {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #000;
+}
+.filtro-checkbox.partial {
+  background: rgba(255,215,0,0.3);
+  border-color: var(--gold);
+  color: var(--gold);
+  font-size: 0.65rem;
+}
+.filtro-pelis-lista {
+  display: none;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+}
+.filtro-pelis-lista.abierta { display: flex; }
+.filtro-peli-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.9rem 0.5rem 2.2rem;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.filtro-peli-item:last-child { border-bottom: none; }
+.filtro-peli-item:hover { background: rgba(255,255,255,0.04); }
+.filtro-peli-nombre {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+  line-height: 1.3;
+}
+.filtro-peli-count {
+  font-size: 0.7rem;
+  color: var(--text2);
+  font-weight: 600;
+}
+.filtro-expand-btn {
+  font-size: 0.75rem;
+  color: var(--text2);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.filtro-expand-btn.abierto { transform: rotate(180deg); }
+
 /* Responsive */
 @media (max-width: 600px) {
   .players-panel { width: 130px; }
@@ -956,36 +1047,14 @@ body > * { position: relative; z-index: 1; }
       </select>
     </div>
 
-    <!-- Modo de selección de contenido -->
-    <div style="margin-bottom:0.8rem">
-      <div style="display:flex;gap:0.5rem">
-        <button class="filtro-tab active" id="tab-estudios" onclick="setFiltroTab('estudios')">Por estudio</button>
-        <button class="filtro-tab" id="tab-pelis" onclick="setFiltroTab('pelis')">Por películas</button>
+    <!-- Resumen de películas seleccionadas + botón para abrir pantalla de filtros -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:0.8rem">
+      <div id="filtro-info" style="font-size:0.82rem;color:var(--text2);font-weight:700">
+        Cargando banco de preguntas...
       </div>
-    </div>
-
-    <!-- Tab: Por estudio -->
-    <div id="filtro-panel-estudios">
-      <div class="filtro-label">Estudio</div>
-      <div class="estudios-grid" id="estudios-grid">
-        <!-- Se rellena por JS -->
-      </div>
-    </div>
-
-    <!-- Tab: Por películas individuales -->
-    <div id="filtro-panel-pelis" style="display:none">
-      <div style="display:flex;gap:0.5rem;margin-bottom:0.6rem">
-        <input type="text" id="peli-buscar" class="q-answer-input" placeholder="Buscar película..." style="margin-bottom:0;flex:1;font-size:0.85rem;padding:0.5rem 0.8rem" oninput="renderPeliculasList()"/>
-        <button class="btn btn-secondary btn-sm" onclick="seleccionarTodasPelis(true)">✓ Todo</button>
-        <button class="btn btn-secondary btn-sm" onclick="seleccionarTodasPelis(false)">✕ Nada</button>
-      </div>
-      <div id="pelis-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:0.3rem;padding-right:0.3rem">
-        <!-- Se rellena por JS -->
-      </div>
-    </div>
-
-    <div id="filtro-info" style="margin-top:0.8rem;font-size:0.82rem;color:var(--text2);text-align:center;font-weight:700">
-      Cargando banco de preguntas...
+      <button class="btn btn-secondary btn-sm" onclick="abrirPantallaFiltros()" style="flex-shrink:0;white-space:nowrap">
+        🎬 Elegir películas
+      </button>
     </div>
   </div>
 
@@ -997,8 +1066,45 @@ body > * { position: relative; z-index: 1; }
 </div>
 
 <!-- ══════════════════════════════════════════════════
-     PANTALLA 3: CARGANDO
+     PANTALLA: FILTROS DE PELÍCULAS
 ══════════════════════════════════════════════════ -->
+<div id="screen-filtros" class="screen" style="overflow-y:auto;padding:0">
+
+  <!-- Header fijo -->
+  <div style="position:sticky;top:0;z-index:10;background:var(--bg);padding:0.8rem 1rem;border-bottom:1px solid var(--border)">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:0.8rem;max-width:600px;margin:0 auto">
+      <button class="btn btn-secondary btn-sm" onclick="cerrarPantallaFiltros()">← Volver</button>
+      <div style="font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--gold)">🎬 Películas</div>
+      <div style="display:flex;gap:0.4rem">
+        <button class="btn btn-secondary btn-sm" onclick="filtroSelTodas(true)" title="Seleccionar todo">✓ Todo</button>
+        <button class="btn btn-secondary btn-sm" onclick="filtroSelTodas(false)" title="Deseleccionar todo">✕ Nada</button>
+      </div>
+    </div>
+
+    <!-- Buscador + contador -->
+    <div style="max-width:600px;margin:0.6rem auto 0;display:flex;gap:0.5rem;align-items:center">
+      <input type="text" id="filtro-buscar-peli" class="q-answer-input"
+        placeholder="🔍 Buscar película..."
+        style="margin:0;flex:1;font-size:0.85rem;padding:0.5rem 0.8rem"
+        oninput="renderFiltrosPantalla()"/>
+      <div id="filtro-contador-badge" style="font-size:0.75rem;color:var(--gold);font-weight:800;white-space:nowrap;flex-shrink:0"></div>
+    </div>
+
+    <!-- Perfiles -->
+    <div style="max-width:600px;margin:0.5rem auto 0;display:flex;gap:0.4rem;align-items:center">
+      <select class="filtro-select" id="filtro-perfil-2" onchange="cargarPerfil(this.value)" style="flex:1;font-size:0.8rem;padding:0.3rem 0.5rem">
+        <option value="">— Sin perfil —</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" onclick="guardarPerfil()" title="Guardar">💾</button>
+      <button class="btn btn-secondary btn-sm" onclick="borrarPerfil()" style="color:#F44336" title="Borrar">🗑️</button>
+    </div>
+  </div>
+
+  <!-- Lista de estudios + películas -->
+  <div id="filtros-estudios-lista" style="max-width:600px;margin:0 auto;padding:0.5rem 1rem 2rem">
+    <!-- Se rellena por JS -->
+  </div>
+</div>
 <div id="screen-loading" class="screen">
   <div class="spinner"></div>
   <div style="color:var(--text2)">Cargando preguntas…</div>
@@ -3739,165 +3845,235 @@ function removeJugador() {
 }
 
 // ════════════════════════════════════════════════════════
-//  SISTEMA DE FILTROS AVANZADO
+//  SISTEMA DE FILTROS — PANTALLA DEDICADA
 // ════════════════════════════════════════════════════════
 
-// Lista de estudios del banco
-const ESTUDIOS_LISTA = [
-  { val: "", label: "Todos" },
-  { val: "Walt Disney Animation Studios", label: "Walt Disney" },
-  { val: "Pixar Animation Studios", label: "Pixar" },
-  { val: "DreamWorks Animation", label: "DreamWorks" },
-  { val: "Illumination Entertainment", label: "Illumination" },
-  { val: "Sony Pictures Animation", label: "Sony" },
-  { val: "Blue Sky Studios", label: "Blue Sky" },
-  { val: "Laika", label: "Laika" },
-  { val: "Animal Logic", label: "Animal Logic" },
-  { val: "Industrial Light & Magic", label: "ILM" },
-];
-
 // Estado de filtros
-let filtroTab = 'estudios';          // 'estudios' | 'pelis'
-let filtroEstudioActivo = "";        // "" = todos
-let filtroPelisSeleccionadas = null; // null = todas, Set() = selección
-let todasLasPelis = [];              // lista completa de películas del banco
-let filtroEstadoCargando = false;
+let filtroPelisSeleccionadas = null; // null = todas, Set = selección personalizada
+let peliculasPorEstudio = {};        // { 'Pixar Animation Studios': ['Toy Story', ...], ... }
+let estudiosExpandidos = new Set();  // qué estudios están desplegados en la UI
+let _pantallaFiltrosOrigen = 'screen-setup'; // para saber a dónde volver
 
-function setFiltroTab(tab) {
-  filtroTab = tab;
-  document.getElementById('tab-estudios').classList.toggle('active', tab === 'estudios');
-  document.getElementById('tab-pelis').classList.toggle('active', tab === 'pelis');
-  document.getElementById('filtro-panel-estudios').style.display = tab === 'estudios' ? '' : 'none';
-  document.getElementById('filtro-panel-pelis').style.display = tab === 'pelis' ? '' : 'none';
-  onFiltroChange();
-}
+// Orden de estudios para mostrar
+const ESTUDIOS_ORDEN = [
+  'Walt Disney Animation Studios',
+  'Pixar Animation Studios',
+  'DreamWorks Animation',
+  'Illumination Entertainment',
+  'Sony Pictures Animation',
+  'Blue Sky Studios',
+  'Laika',
+  'Animal Logic',
+  'Industrial Light & Magic',
+];
+const ESTUDIOS_EMOJI = {
+  'Walt Disney Animation Studios': '🏰',
+  'Pixar Animation Studios': '💡',
+  'DreamWorks Animation': '🌙',
+  'Illumination Entertainment': '🍌',
+  'Sony Pictures Animation': '🕷️',
+  'Blue Sky Studios': '🦕',
+  'Laika': '🪆',
+  'Animal Logic': '🐧',
+  'Industrial Light & Magic': '⚡',
+};
 
-function renderEstudiosGrid() {
-  const grid = document.getElementById('estudios-grid');
-  if (!grid) return;
-  grid.innerHTML = ESTUDIOS_LISTA.map(e =>
-    `<div class="estudio-chip ${filtroEstudioActivo === e.val ? 'activo' : ''}"
-       onclick="seleccionarEstudio('${e.val}')">${e.label}</div>`
-  ).join('');
-}
-
-function seleccionarEstudio(val) {
-  filtroEstudioActivo = val;
-  renderEstudiosGrid();
-  onFiltroChange();
-}
-
-function renderPeliculasList() {
-  const listEl = document.getElementById('pelis-list');
-  if (!listEl) return;
-  const busq = (document.getElementById('peli-buscar')?.value || '').toLowerCase().trim();
-  const filtradas = busq
-    ? todasLasPelis.filter(p => p.toLowerCase().includes(busq))
-    : todasLasPelis;
-
-  listEl.innerHTML = filtradas.map(p => {
-    const activa = filtroPelisSeleccionadas === null || filtroPelisSeleccionadas.has(p);
-    return `<div class="peli-item ${activa ? 'activa' : ''}" onclick="togglePeli('${p.replace(/'/g, "\\'")}')">
-      <div class="peli-checkbox">${activa ? '✓' : ''}</div>
-      <span>${p}</span>
-    </div>`;
-  }).join('');
-
-  if (filtradas.length === 0) {
-    listEl.innerHTML = '<div style="color:var(--text2);font-size:0.8rem;text-align:center;padding:1rem">Sin resultados</div>';
+async function cargarListaPeliculas() {
+  try {
+    const data = await supabaseQuery('preguntas', 'pelicula,estudio', {});
+    peliculasPorEstudio = {};
+    const conteo = {};
+    data.forEach(r => {
+      const est = r.estudio || 'Otros';
+      const pel = r.pelicula;
+      if (!peliculasPorEstudio[est]) peliculasPorEstudio[est] = new Set();
+      peliculasPorEstudio[est].add(pel);
+      conteo[est] = (conteo[est] || 0) + 1;
+    });
+    // Convertir Sets a arrays ordenados
+    for (const est in peliculasPorEstudio) {
+      peliculasPorEstudio[est] = [...peliculasPorEstudio[est]].sort((a,b) => a.localeCompare(b,'es'));
+    }
+  } catch(e) {
+    console.error('Error cargando películas:', e);
   }
 }
 
-function togglePeli(nombre) {
+// ── Abrir / cerrar pantalla de filtros ──
+function abrirPantallaFiltros() {
+  _pantallaFiltrosOrigen = document.querySelector('.screen.active')?.id || 'screen-setup';
+  renderSelectPerfiles();
+  // Sincronizar el select de perfil secundario
+  const p1 = document.getElementById('filtro-perfil')?.value || '';
+  const p2 = document.getElementById('filtro-perfil-2');
+  if (p2) p2.value = p1;
+  renderFiltrosPantalla();
+  mostrarScreen('screen-filtros');
+}
+
+function cerrarPantallaFiltros() {
+  actualizarResumenFiltros();
+  mostrarScreen(_pantallaFiltrosOrigen);
+}
+
+// ── Render principal de la pantalla de filtros ──
+function renderFiltrosPantalla() {
+  const busq = (document.getElementById('filtro-buscar-peli')?.value || '').toLowerCase().trim();
+  const contenedor = document.getElementById('filtros-estudios-lista');
+  if (!contenedor) return;
+
+  const estudios = ESTUDIOS_ORDEN.filter(e => peliculasPorEstudio[e]);
+  // Añadir estudios no listados
+  const otros = Object.keys(peliculasPorEstudio).filter(e => !ESTUDIOS_ORDEN.includes(e)).sort();
+
+  let html = '';
+  const todosEstudios = [...estudios, ...otros];
+
+  for (const estudio of todosEstudios) {
+    const pelis = peliculasPorEstudio[estudio] || [];
+    // Filtrar por búsqueda
+    const pelisVisible = busq
+      ? pelis.filter(p => p.toLowerCase().includes(busq) || estudio.toLowerCase().includes(busq))
+      : pelis;
+    if (pelisVisible.length === 0) continue;
+
+    // Estado del estudio: todas, ninguna, parcial
+    const selEstado = getEstudioEstado(estudio, pelisVisible);
+    const expandido = estudiosExpandidos.has(estudio) || busq;
+    const emoji = ESTUDIOS_EMOJI[estudio] || '🎬';
+
+    html += `<div class="filtro-estudio-bloque">
+      <div class="filtro-estudio-header" onclick="toggleEstudio('${estudio.replace(/'/g,"\\'")}')">
+        <div class="filtro-checkbox ${selEstado}" onclick="event.stopPropagation();toggleEstudioCheck('${estudio.replace(/'/g,"\\'")}')">
+          ${selEstado === 'checked' ? '✓' : selEstado === 'partial' ? '—' : ''}
+        </div>
+        <div style="font-size:1.2rem">${emoji}</div>
+        <div class="filtro-estudio-nombre">${estudio}</div>
+        <div class="filtro-estudio-count">${pelisVisible.length} pelis</div>
+        <div class="filtro-expand-btn ${expandido ? 'abierto' : ''}">▼</div>
+      </div>
+      <div class="filtro-pelis-lista ${expandido ? 'abierta' : ''}">
+        ${pelisVisible.map(p => {
+          const activa = filtroPelisSeleccionadas === null || filtroPelisSeleccionadas.has(p);
+          return `<div class="filtro-peli-item" onclick="togglePeliFiltro('${p.replace(/'/g,"\\'")}')">
+            <div class="filtro-checkbox ${activa ? 'checked' : ''}">
+              ${activa ? '✓' : ''}
+            </div>
+            <div class="filtro-peli-nombre">${p}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  contenedor.innerHTML = html || '<div style="text-align:center;color:var(--text2);padding:2rem">Sin resultados</div>';
+
+  // Actualizar contador
+  const total = getTotalPelisSeleccionadas();
+  const totalPelis = Object.values(peliculasPorEstudio).reduce((s,a) => s + a.length, 0);
+  const badge = document.getElementById('filtro-contador-badge');
+  if (badge) badge.textContent = filtroPelisSeleccionadas === null
+    ? `✓ Todas (${totalPelis} pelis)`
+    : `${total}/${totalPelis} pelis`;
+}
+
+function getEstudioEstado(estudio, pelis) {
+  if (filtroPelisSeleccionadas === null) return 'checked';
+  const selInEstudio = pelis.filter(p => filtroPelisSeleccionadas.has(p)).length;
+  if (selInEstudio === 0) return '';
+  if (selInEstudio === pelis.length) return 'checked';
+  return 'partial';
+}
+
+function getTotalPelisSeleccionadas() {
+  if (filtroPelisSeleccionadas === null) return Object.values(peliculasPorEstudio).reduce((s,a) => s+a.length, 0);
+  return filtroPelisSeleccionadas.size;
+}
+
+function toggleEstudio(estudio) {
+  if (estudiosExpandidos.has(estudio)) estudiosExpandidos.delete(estudio);
+  else estudiosExpandidos.add(estudio);
+  renderFiltrosPantalla();
+}
+
+function toggleEstudioCheck(estudio) {
+  const pelis = peliculasPorEstudio[estudio] || [];
+  const estado = getEstudioEstado(estudio, pelis);
+
   if (filtroPelisSeleccionadas === null) {
-    // Estaban todas seleccionadas → deseleccionar solo esta
-    filtroPelisSeleccionadas = new Set(todasLasPelis.filter(p => p !== nombre));
+    // Estaban todas: deseleccionar este estudio
+    filtroPelisSeleccionadas = new Set();
+    Object.entries(peliculasPorEstudio).forEach(([est, ps]) => {
+      if (est !== estudio) ps.forEach(p => filtroPelisSeleccionadas.add(p));
+    });
+  } else if (estado === 'checked' || estado === 'partial') {
+    // Quitar todas las de este estudio
+    pelis.forEach(p => filtroPelisSeleccionadas.delete(p));
+    // Si quedan todas, volver a null
+    if (getTotalPelisSeleccionadas() === Object.values(peliculasPorEstudio).reduce((s,a)=>s+a.length,0)) {
+      filtroPelisSeleccionadas = null;
+    }
+  } else {
+    // Añadir todas las de este estudio
+    pelis.forEach(p => filtroPelisSeleccionadas.add(p));
+    if (getTotalPelisSeleccionadas() === Object.values(peliculasPorEstudio).reduce((s,a)=>s+a.length,0)) {
+      filtroPelisSeleccionadas = null;
+    }
+  }
+  renderFiltrosPantalla();
+}
+
+function togglePeliFiltro(nombre) {
+  const totalPelis = Object.values(peliculasPorEstudio).reduce((s,a)=>s+a.length,0);
+  if (filtroPelisSeleccionadas === null) {
+    filtroPelisSeleccionadas = new Set();
+    Object.values(peliculasPorEstudio).forEach(ps => ps.forEach(p => filtroPelisSeleccionadas.add(p)));
+    filtroPelisSeleccionadas.delete(nombre);
   } else {
     if (filtroPelisSeleccionadas.has(nombre)) {
       filtroPelisSeleccionadas.delete(nombre);
     } else {
       filtroPelisSeleccionadas.add(nombre);
-      // Si están todas, volver a null
-      if (filtroPelisSeleccionadas.size === todasLasPelis.length) {
-        filtroPelisSeleccionadas = null;
-      }
+      if (filtroPelisSeleccionadas.size >= totalPelis) filtroPelisSeleccionadas = null;
     }
   }
-  renderPeliculasList();
-  onFiltroChange();
+  renderFiltrosPantalla();
 }
 
-function seleccionarTodasPelis(todas) {
+function filtroSelTodas(todas) {
   filtroPelisSeleccionadas = todas ? null : new Set();
-  renderPeliculasList();
-  onFiltroChange();
+  renderFiltrosPantalla();
 }
 
-async function cargarListaPeliculas() {
-  // Carga los nombres únicos de películas del banco
-  try {
-    const data = await supabaseQuery("preguntas", "pelicula", {});
-    const set = new Set(data.map(r => r.pelicula).filter(Boolean));
-    todasLasPelis = [...set].sort((a, b) => a.localeCompare(b, 'es'));
-    renderPeliculasList();
-  } catch(e) {
-    console.error("Error cargando películas", e);
+function actualizarResumenFiltros() {
+  const total = getTotalPelisSeleccionadas();
+  const totalPelis = Object.values(peliculasPorEstudio).reduce((s,a)=>s+a.length,0);
+  const info = document.getElementById('filtro-info');
+  if (info) {
+    info.textContent = filtroPelisSeleccionadas === null
+      ? `Todas las películas (${totalPelis})`
+      : `${total} película${total !== 1 ? 's' : ''} seleccionada${total !== 1 ? 's' : ''}`;
+  }
+}
+
+// ── Cargar preguntas según filtro activo ──
+async function cargarPreguntasConFiltros() {
+  const dificultad = document.getElementById('filtro-dificultad')?.value || '';
+
+  if (filtroPelisSeleccionadas === null) {
+    // Todas las películas
+    return await cargarPreguntas({ dificultad });
+  } else if (filtroPelisSeleccionadas.size === 0) {
+    return [];
+  } else {
+    // Cargar todo y filtrar por películas seleccionadas
+    const data = await cargarPreguntas({ dificultad });
+    return data.filter(q => filtroPelisSeleccionadas.has(q.pelicula));
   }
 }
 
 async function onFiltroChange() {
-  const info = document.getElementById("filtro-info");
-  if (!info) return;
-  info.textContent = "Calculando…";
-  try {
-    const count = await contarConFiltrosActuales();
-    const suficiente = count >= (modoJuego === 'tablero' ? 20 : 5);
-    info.textContent = `${count} preguntas disponibles`;
-    info.style.color = suficiente ? 'var(--text2)' : '#F44336';
-  } catch(e) {
-    info.textContent = "Error al consultar";
-  }
-}
-
-async function contarConFiltrosActuales() {
-  if (filtroTab === 'estudios') {
-    return await supabaseCount("preguntas", { estudio: filtroEstudioActivo });
-  } else {
-    // Modo películas: contar las que están seleccionadas
-    if (filtroPelisSeleccionadas === null) {
-      return await supabaseCount("preguntas", {});
-    }
-    if (filtroPelisSeleccionadas.size === 0) return 0;
-    // Contar sumando (Supabase no soporta OR fácilmente en REST simple, así que hacemos estimación)
-    return filtroPelisSeleccionadas.size * 20; // estimación: ~20 por peli
-  }
-}
-
-function getFiltrosActuales() {
-  // Devuelve { estudio, dificultad, peliculas } para cargar preguntas
-  return {
-    estudio: filtroTab === 'estudios' ? filtroEstudioActivo : "",
-    dificultad: document.getElementById("filtro-dificultad")?.value || "",
-    peliculas: filtroTab === 'pelis' ? filtroPelisSeleccionadas : null,
-  };
-}
-
-async function cargarPreguntasConFiltros() {
-  const { estudio, dificultad, peliculas } = getFiltrosActuales();
-  let data;
-
-  if (filtroTab === 'estudios') {
-    data = await cargarPreguntas({ estudio, dificultad });
-  } else {
-    // Cargar todas y filtrar por películas seleccionadas
-    data = await cargarPreguntas({ dificultad });
-    if (peliculas !== null && peliculas.size > 0) {
-      data = data.filter(q => peliculas.has(q.pelicula));
-    } else if (peliculas !== null && peliculas.size === 0) {
-      data = [];
-    }
-  }
-  return data;
+  actualizarResumenFiltros();
 }
 
 // ════════════════════════════════════════════════════════
@@ -3906,9 +4082,8 @@ async function cargarPreguntasConFiltros() {
 const LS_KEY = 'trivial_perfiles_filtro';
 
 function cargarPerfiles() {
-  try {
-    return JSON.parse(localStorage.getItem(LS_KEY) || '{}');
-  } catch { return {}; }
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); }
+  catch { return {}; }
 }
 
 function guardarPerfiles(perfiles) {
@@ -3916,14 +4091,13 @@ function guardarPerfiles(perfiles) {
 }
 
 function renderSelectPerfiles() {
-  const sel = document.getElementById('filtro-perfil');
-  if (!sel) return;
   const perfiles = cargarPerfiles();
   const nombres = Object.keys(perfiles).sort();
-  const valorActual = sel.value;
-  sel.innerHTML = '<option value="">— Sin perfil —</option>' +
-    nombres.map(n => `<option value="${n}">${n}</option>`).join('');
-  if (nombres.includes(valorActual)) sel.value = valorActual;
+  const opts = '<option value="">— Sin perfil —</option>' + nombres.map(n => `<option value="${n}">${n}</option>`).join('');
+  ['filtro-perfil','filtro-perfil-2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { const v = el.value; el.innerHTML = opts; if (nombres.includes(v)) el.value = v; }
+  });
 }
 
 function cargarPerfil(nombre) {
@@ -3932,45 +4106,39 @@ function cargarPerfil(nombre) {
   const p = perfiles[nombre];
   if (!p) return;
 
-  // Restaurar estado
-  filtroTab = p.tab || 'estudios';
-  filtroEstudioActivo = p.estudio || '';
-  if (p.peliculas === null) {
-    filtroPelisSeleccionadas = null;
-  } else if (Array.isArray(p.peliculas)) {
-    filtroPelisSeleccionadas = new Set(p.peliculas);
-  }
-
-  // Actualizar UI
-  setFiltroTab(filtroTab);
-  renderEstudiosGrid();
-  renderPeliculasList();
-
+  filtroPelisSeleccionadas = p.peliculas === null ? null : new Set(p.peliculas || []);
   if (document.getElementById('filtro-dificultad')) {
     document.getElementById('filtro-dificultad').value = p.dificultad || '';
   }
-  onFiltroChange();
+  // Sincronizar ambos selects
+  ['filtro-perfil','filtro-perfil-2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = nombre;
+  });
+  renderFiltrosPantalla();
+  actualizarResumenFiltros();
+  mostrarToast(`Perfil "${nombre}" cargado`);
 }
 
 function guardarPerfil() {
-  const nombre = prompt('Nombre para este filtro:');
-  if (!nombre || !nombre.trim()) return;
+  const nombre = prompt('Nombre para este perfil:');
+  if (!nombre?.trim()) return;
   const perfiles = cargarPerfiles();
   perfiles[nombre.trim()] = {
-    tab: filtroTab,
-    estudio: filtroEstudioActivo,
     dificultad: document.getElementById('filtro-dificultad')?.value || '',
     peliculas: filtroPelisSeleccionadas === null ? null : [...filtroPelisSeleccionadas],
   };
   guardarPerfiles(perfiles);
   renderSelectPerfiles();
-  // Seleccionar el recién guardado
-  document.getElementById('filtro-perfil').value = nombre.trim();
+  ['filtro-perfil','filtro-perfil-2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = nombre.trim();
+  });
   mostrarToast(`Perfil "${nombre.trim()}" guardado ✓`);
 }
 
 function borrarPerfil() {
-  const sel = document.getElementById('filtro-perfil');
+  const sel = document.getElementById('filtro-perfil-2') || document.getElementById('filtro-perfil');
   const nombre = sel?.value;
   if (!nombre) return;
   if (!confirm(`¿Borrar el perfil "${nombre}"?`)) return;
@@ -3986,7 +4154,7 @@ function mostrarToast(msg) {
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'toast-msg';
-    toast.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:0.6rem 1.2rem;border-radius:20px;font-size:0.85rem;font-weight:700;z-index:9999;pointer-events:none;transition:opacity 0.3s';
+    toast.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a2a5e;border:1px solid var(--gold);color:#fff;padding:0.6rem 1.2rem;border-radius:20px;font-size:0.85rem;font-weight:700;z-index:9999;pointer-events:none;transition:opacity 0.3s';
     document.body.appendChild(toast);
   }
   toast.textContent = msg;
@@ -4065,15 +4233,9 @@ async function irASetupInfinito() {
   document.getElementById("btn-iniciar").textContent = "▶ Elegir modo →";
   document.getElementById("btn-iniciar").onclick = irASubmodoInfinito;
   mostrarScreen("screen-setup");
-  renderEstudiosGrid();
   renderSelectPerfiles();
   await cargarListaPeliculas();
-  try {
-    const count = await supabaseCount("preguntas", {});
-    document.getElementById("filtro-info").textContent = `${count} preguntas disponibles`;
-  } catch(e) {
-    document.getElementById("filtro-info").textContent = "No se pudo conectar a la base de datos";
-  }
+  actualizarResumenFiltros();
 }
 
 function seleccionarSubmodo(subtipo) {
@@ -4082,21 +4244,14 @@ function seleccionarSubmodo(subtipo) {
 }
 
 async function irASetup() {
-  // Restaurar la pantalla de setup para modo tablero
   document.getElementById("panel-jugadores").style.display = "";
   document.getElementById("btn-iniciar").textContent = "🎲 Iniciar juego";
   document.getElementById("btn-iniciar").onclick = iniciarJuego;
   mostrarScreen("screen-setup");
   renderJugadores();
-  renderEstudiosGrid();
   renderSelectPerfiles();
   await cargarListaPeliculas();
-  try {
-    const count = await supabaseCount("preguntas", {});
-    document.getElementById("filtro-info").textContent = `${count} preguntas disponibles`;
-  } catch(e) {
-    document.getElementById("filtro-info").textContent = "No se pudo conectar a la base de datos";
-  }
+  actualizarResumenFiltros();
 }
 
 // ════════════════════════════════════════════════════════
@@ -4110,12 +4265,9 @@ let infRespondida = false;
 let infPreguntaActual = null;
 
 async function irASubmodoInfinito() {
-  // Cargar pool con los filtros seleccionados
-  const estudio    = document.getElementById("filtro-estudio").value;
-  const dificultad = document.getElementById("filtro-dificultad").value;
   mostrarScreen("screen-loading");
   try {
-    infPool = await cargarPreguntas({ estudio, dificultad });
+    infPool = await cargarPreguntasConFiltros();
     if (infPool.length < 5) {
       alert(`Solo hay ${infPool.length} preguntas con esos filtros. Amplía el filtro.`);
       mostrarScreen("screen-setup");
