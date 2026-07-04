@@ -3376,7 +3376,7 @@ const RING_MOVIE_DATA = [
       s += `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*0.45}" rx="5" fill="rgba(255,255,255,0.3)"/>`;
       s += `<polygon points="${-W},${-H} ${-W+5},${-H} ${-W},${-H+5}" fill="rgba(255,255,255,0.4)"/>`;
       const hqEmojis = {heroes:"⭐",historia:"🎬",villanos:"💀",secundarios:"🎭",lugares:"🗺️",mundo:"🌍"};
-      s += `<text x="0" y="5" text-anchor="middle" font-size="${isValid?13:11}" filter="${isValid?'url(#glowGold)':'url(#glow)'}" style="pointer-events:none">${hqEmojis[cell.categoria]}</text>`;
+      s += `<g transform="rotate(${(-rotDeg).toFixed(1)})"><image href="images/mascotas/${cell.categoria}.png" x="-9" y="-9" width="18" height="18" style="filter:${isValid?'url(#glowGold)':'url(#glow)'}" onerror="this.replaceWith(document.createTextNode('${hqEmojis[cell.categoria]}'))"/></g>`;
     } else if (isRA) {
       // Roll Again: fondo dorado
       s += `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3" fill="#F9A825"/>`;
@@ -4707,16 +4707,21 @@ function pqRenderRuleta(sectorIlum) {
         fill="rgba(255,255,255,0.18)" stroke="none"/>`;
     }
 
-    // Texto/emoji
+    // Mascota / emoji
     const midDeg = startDeg + angPor / 2;
     const textR = (r + rInner) / 2;
     const tx = cx + textR * Math.cos(midDeg * Math.PI/180);
     const ty = cy + textR * Math.sin(midDeg * Math.PI/180);
-    const emojiShow = tieneQ ? '✅' : emoji;
-    html += `<text x="${tx}" y="${ty}" text-anchor="middle" dominant-baseline="middle"
-      font-size="${esCorona ? '22' : '18'}"
-      transform="rotate(${midDeg + 90},${tx},${ty})"
-      opacity="${opacity}">${emojiShow}</text>`;
+    if (tieneQ) {
+      html += `<text x="${tx}" y="${ty}" text-anchor="middle" dominant-baseline="middle"
+        font-size="18" opacity="${opacity}">✅</text>`;
+    } else {
+      const imgSize = esCorona ? 40 : 32;
+      const imgCat = esCorona ? 'corona' : sector;
+      html += `<image href="images/mascotas/${imgCat}.png" x="${tx - imgSize/2}" y="${ty - imgSize/2}"
+        width="${imgSize}" height="${imgSize}" opacity="${opacity}"
+        onerror="this.replaceWith(document.createTextNode('${emoji}'))"/>`;
+    }
 
     // Separador
     const lx1 = cx + rInner * Math.cos(startDeg * Math.PI/180);
@@ -4929,7 +4934,7 @@ function pqMostrarSelectorQuesito() {
     return `<div onclick="${tieneQ ? '' : `pqElegirQuesito('${cat}')`}" style="
       background:${info.color}${tieneQ?'22':'44'};border:2px solid ${info.color};border-radius:12px;
       padding:0.7rem 0.5rem;text-align:center;cursor:${tieneQ?'default':'pointer'};opacity:${tieneQ?'0.4':'1'}">
-      <div style="font-size:1.4rem">${CATS_EMOJIS[cat]}</div>
+      <div>${mascotaTag(cat, 44)}</div>
       <div style="font-size:0.72rem;font-weight:800;color:${info.color};line-height:1.2">${info.nombre}</div>
       ${tieneQ ? '<div style="font-size:0.65rem;color:var(--text2)">✓ Ya tienes</div>' : ''}
     </div>`;
@@ -5176,7 +5181,7 @@ function rectRenderBoard() {
         ${esResaltada?'transform:scale(1.05);box-shadow:0 0 8px #FFD700':''}
       ">
         <div style="font-size:0.6rem;font-weight:800;color:${info.color};text-align:center;line-height:1.2">
-          ${cas.tipo==='hq' ? '🏠' : cas.tipo==='roll_again' ? '🎲' : cas.tipo==='inicio' ? '🏁' : CATS_EMOJIS[cas.cat]}
+          ${cas.tipo==='hq' ? '🏠' : cas.tipo==='roll_again' ? '🎲' : cas.tipo==='inicio' ? '🏁' : mascotaTag(cas.cat, 20)}
         </div>
         <div style="font-size:0.55rem;color:rgba(255,255,255,0.6);text-align:center;line-height:1.1">
           ${cas.tipo==='hq' ? 'HQ' : cas.tipo==='roll_again' ? '¡Otra vez!' : cas.tipo==='inicio' ? 'Inicio' : ''}
