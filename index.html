@@ -493,11 +493,17 @@ body > * { position: relative; z-index: 1; }
 
 .q-header {
   display: flex;
-  align-items: center;
-  gap: 0.8rem;
+  flex-direction: column;
+  gap: 0.55rem;
   margin-bottom: 1rem;
-  padding-bottom: 0.8rem;
+  padding-bottom: 0.9rem;
   border-bottom: 1px solid rgba(255,215,0,0.2);
+}
+.q-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
 }
 .q-cat-badge {
   display: inline-flex;
@@ -510,7 +516,22 @@ body > * { position: relative; z-index: 1; }
   letter-spacing: 0.5px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.4);
 }
-.q-movie { font-size: 0.8rem; color: var(--text2); flex: 1; font-weight: 600; font-style: italic; }
+.q-movie {
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.2rem;
+  color: #FFF3B0;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.3;
+  letter-spacing: 0.2px;
+  padding: 0.55rem 1rem;
+  border-radius: 12px;
+  background: linear-gradient(120deg, rgba(255,215,0,0.16), rgba(255,215,0,0.02));
+  border-left: 3px solid var(--gold);
+  text-shadow: 0 2px 10px rgba(0,0,0,0.55);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.q-movie::before { content: "🎬  "; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
 .q-wedge-badge {
   background: linear-gradient(135deg, #FFD700, #FF8C00);
   color: #1a0050;
@@ -519,6 +540,7 @@ body > * { position: relative; z-index: 1; }
   font-family: 'Fredoka One', cursive;
   font-size: 0.72rem;
   box-shadow: 0 2px 8px rgba(255,215,0,0.4);
+  flex-shrink: 0;
 }
 
 .q-text {
@@ -1262,8 +1284,10 @@ body > * { position: relative; z-index: 1; }
     <div class="question-modal" style="position:relative;margin:0;max-height:none">
 
       <div class="q-header">
-        <span class="q-cat-badge" id="inf-cat-badge">–</span>
-        <span class="q-movie" id="inf-movie">–</span>
+        <div class="q-header-top">
+          <span class="q-cat-badge" id="inf-cat-badge">–</span>
+        </div>
+        <div class="q-movie" id="inf-movie">–</div>
       </div>
 
       <div class="q-text" id="inf-texto">–</div>
@@ -1392,9 +1416,11 @@ body > * { position: relative; z-index: 1; }
 
     <div class="question-modal" style="margin:0">
       <div class="q-header">
-        <span class="q-cat-badge" id="pq-cat-badge">–</span>
-        <span class="q-movie" id="pq-movie">–</span>
-        <span class="q-wedge-badge hidden" id="pq-wedge-badge">🏅</span>
+        <div class="q-header-top">
+          <span class="q-cat-badge" id="pq-cat-badge">–</span>
+          <span class="q-wedge-badge hidden" id="pq-wedge-badge">🏅</span>
+        </div>
+        <div class="q-movie" id="pq-movie">–</div>
       </div>
       <div class="q-text" id="pq-text">–</div>
 
@@ -1495,9 +1521,11 @@ body > * { position: relative; z-index: 1; }
 <div class="modal-overlay hidden" id="modal-pregunta">
   <div class="question-modal">
     <div class="q-header">
-      <span class="q-cat-badge" id="q-cat-badge">–</span>
-      <span class="q-movie" id="q-movie">–</span>
-      <span class="q-wedge-badge hidden" id="q-wedge-badge">🏅 Cuña</span>
+      <div class="q-header-top">
+        <span class="q-cat-badge" id="q-cat-badge">–</span>
+        <span class="q-wedge-badge hidden" id="q-wedge-badge">🏅 Cuña</span>
+      </div>
+      <div class="q-movie" id="q-movie">–</div>
     </div>
     <div class="q-text" id="q-text">–</div>
 
