@@ -1355,7 +1355,7 @@ body > * { position: relative; z-index: 1; }
 
     <!-- Ruleta SVG estática con sectores iluminables -->
     <div style="position:relative;width:min(300px,88vw);height:min(300px,88vw);margin:0 auto;flex-shrink:0">
-      <svg id="pq-ruleta-svg" viewBox="0 0 300 300" style="width:100%;height:100%">
+      <svg id="pq-ruleta-svg" viewBox="0 0 320 320" style="width:100%;height:100%">
         <!-- Sectores generados por JS -->
       </svg>
     </div>
@@ -4668,11 +4668,42 @@ function pqPickQuestion(cat) {
 function pqRenderRuleta(sectorIlum) {
   const svg = document.getElementById('pq-ruleta-svg');
   if (!svg) return;
-  const cx = 150, cy = 150, r = 142, rInner = 30;
+  const cx = 160, cy = 160, r = 132, rInner = 30;
   const n = PQ_SECTORES.length; // 7
   const angPor = 360 / n;
   const j = pqGame ? pqJugadorActual() : null;
-  let html = '';
+
+  // Aclara (percent>0) u oscurece (percent<0) un color hex
+  function shade(hex, percent) {
+    const num = parseInt(hex.replace('#',''), 16);
+    let rr = (num >> 16) + Math.round(255 * percent);
+    let gg = ((num >> 8) & 0xFF) + Math.round(255 * percent);
+    let bb = (num & 0xFF) + Math.round(255 * percent);
+    rr = Math.max(0, Math.min(255, rr));
+    gg = Math.max(0, Math.min(255, gg));
+    bb = Math.max(0, Math.min(255, bb));
+    return '#' + (0x1000000 + rr*0x10000 + gg*0x100 + bb).toString(16).slice(1);
+  }
+
+  let defs = `
+    <radialGradient id="pqHubGrad" cx="38%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#2c3f9c"/>
+      <stop offset="100%" stop-color="#050a30"/>
+    </radialGradient>
+    <linearGradient id="pqBezelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF9C4"/>
+      <stop offset="45%" stop-color="#FFD700"/>
+      <stop offset="60%" stop-color="#C9962C"/>
+      <stop offset="100%" stop-color="#7a5900"/>
+    </linearGradient>
+    <filter id="pqWedgeShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="1.4" stdDeviation="1.3" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    <filter id="pqImgShadow" x="-60%" y="-60%" width="220%" height="220%">
+      <feDropShadow dx="0" dy="1.2" stdDeviation="1" flood-color="#000" flood-opacity="0.55"/>
+    </filter>`;
+
+  let wedgesHtml = '', separatorsHtml = '', contentHtml = '';
 
   for (let i = 0; i < n; i++) {
     const sector = PQ_SECTORES[i];
@@ -4693,49 +4724,74 @@ function pqRenderRuleta(sectorIlum) {
     const xi2 = cx + rInner * Math.cos(endDeg * Math.PI/180);
     const yi2 = cy + rInner * Math.sin(endDeg * Math.PI/180);
 
-    // Opacidad: iluminado = 100%, con quesito = 80%, normal = 60%
-    const opacity = ilum ? 1 : (tieneQ ? 0.8 : 0.55);
-    const strokeW = ilum ? 4 : 1.5;
-    const strokeC = ilum ? '#FFFFFF' : '#0F1B4C';
+    // Opacidad: iluminado = 100%, con quesito = 82%, normal = 62%
+    const opacity = ilum ? 1 : (tieneQ ? 0.82 : 0.62);
+    const strokeC = ilum ? '#FFFFFF' : 'rgba(0,0,0,0.35)';
+    const strokeW = ilum ? 3.5 : 2;
 
-    html += `<path d="M ${xi1} ${yi1} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} L ${xi2} ${yi2} A ${rInner} ${rInner} 0 0 0 ${xi1} ${yi1} Z"
-      fill="${color}" stroke="${strokeC}" stroke-width="${strokeW}" opacity="${opacity}"/>`;
+    const gradId = `pqWedgeGrad${i}`;
+    defs += `<radialGradient id="${gradId}" cx="32%" cy="26%" r="80%">
+      <stop offset="0%" stop-color="${shade(color, 0.32)}"/>
+      <stop offset="55%" stop-color="${color}"/>
+      <stop offset="100%" stop-color="${shade(color, -0.22)}"/>
+    </radialGradient>`;
 
-    // Brillo blanco encima cuando iluminado
+    const path = `M ${xi1} ${yi1} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} L ${xi2} ${yi2} A ${rInner} ${rInner} 0 0 0 ${xi1} ${yi1} Z`;
+
+    wedgesHtml += `<path d="${path}" fill="url(#${gradId})" stroke="${strokeC}" stroke-width="${strokeW}" opacity="${opacity}" filter="url(#pqWedgeShadow)"/>`;
+    // Brillo tipo cristal, sutil, en todos los gajos
+    wedgesHtml += `<path d="${path}" fill="rgba(255,255,255,0.08)" stroke="none" opacity="${ilum ? 0.55 : 0.25}"/>`;
     if (ilum) {
-      html += `<path d="M ${xi1} ${yi1} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} L ${xi2} ${yi2} A ${rInner} ${rInner} 0 0 0 ${xi1} ${yi1} Z"
-        fill="rgba(255,255,255,0.18)" stroke="none"/>`;
+      wedgesHtml += `<path d="${path}" fill="rgba(255,255,255,0.2)" stroke="none"/>`;
     }
 
     // Mascota / emoji
     const midDeg = startDeg + angPor / 2;
-    const textR = (r + rInner) / 2;
+    const textR = (r + rInner) / 2 + 4;
     const tx = cx + textR * Math.cos(midDeg * Math.PI/180);
     const ty = cy + textR * Math.sin(midDeg * Math.PI/180);
     if (tieneQ) {
-      html += `<text x="${tx}" y="${ty}" text-anchor="middle" dominant-baseline="middle"
-        font-size="18" opacity="${opacity}">✅</text>`;
+      contentHtml += `<circle cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="15" fill="rgba(0,0,0,0.28)"/>
+        <text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="18" opacity="${opacity}">✅</text>`;
     } else {
-      const imgSize = esCorona ? 40 : 32;
+      const imgSize = esCorona ? 42 : 34;
       const imgCat = esCorona ? 'corona' : sector;
-      html += `<image href="images/mascotas/${imgCat}.png" x="${tx - imgSize/2}" y="${ty - imgSize/2}"
-        width="${imgSize}" height="${imgSize}" opacity="${opacity}"
+      contentHtml += `<image href="images/mascotas/${imgCat}.png" x="${(tx - imgSize/2).toFixed(1)}" y="${(ty - imgSize/2).toFixed(1)}"
+        width="${imgSize}" height="${imgSize}" opacity="${opacity}" filter="url(#pqImgShadow)"
         onerror="this.replaceWith(document.createTextNode('${emoji}'))"/>`;
     }
 
-    // Separador
+    // Separador con sombra sutil
     const lx1 = cx + rInner * Math.cos(startDeg * Math.PI/180);
     const ly1 = cy + rInner * Math.sin(startDeg * Math.PI/180);
     const lx2 = cx + r * Math.cos(startDeg * Math.PI/180);
     const ly2 = cy + r * Math.sin(startDeg * Math.PI/180);
-    html += `<line x1="${lx1}" y1="${ly1}" x2="${lx2}" y2="${ly2}" stroke="#0F1B4C" stroke-width="2"/>`;
+    separatorsHtml += `<line x1="${lx1.toFixed(1)}" y1="${ly1.toFixed(1)}" x2="${lx2.toFixed(1)}" y2="${ly2.toFixed(1)}" stroke="rgba(0,0,0,0.4)" stroke-width="2.5"/>`;
   }
 
-  // Centro
-  html += `<circle cx="${cx}" cy="${cy}" r="${rInner}" fill="#0F1B4C" stroke="#FFD700" stroke-width="3"/>`;
-  html += `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-size="16">🎬</text>`;
+  // Bisel metálico exterior + bombillas decorativas
+  let bezelHtml = `<circle cx="${cx}" cy="${cy}" r="${r+8}" fill="none" stroke="url(#pqBezelGrad)" stroke-width="7"/>`;
+  bezelHtml += `<circle cx="${cx}" cy="${cy}" r="${r+8}" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="1"/>`;
+  bezelHtml += `<circle cx="${cx}" cy="${cy}" r="${r+1.5}" fill="none" stroke="rgba(0,0,0,0.5)" stroke-width="2"/>`;
+  const nBulbs = 20;
+  for (let b = 0; b < nBulbs; b++) {
+    const bAng = (b / nBulbs) * 360 - 90;
+    const bx = cx + (r+8) * Math.cos(bAng * Math.PI/180);
+    const by = cy + (r+8) * Math.sin(bAng * Math.PI/180);
+    bezelHtml += `<circle cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="2.3" fill="#FFF9C4" opacity="0.92"/>`;
+  }
 
-  svg.innerHTML = html;
+  // Puntero superior fijo
+  const pointerHtml = `<polygon points="${cx-9},${cy-r-20} ${cx+9},${cy-r-20} ${cx},${cy-r+3}" fill="#FFD700" stroke="#7a5900" stroke-width="1.5" filter="url(#pqWedgeShadow)"/>`;
+
+  // Centro (hub) con gradiente y bisel dorado
+  const hubHtml = `
+    <circle cx="${cx}" cy="${cy}" r="${rInner+4}" fill="none" stroke="url(#pqBezelGrad)" stroke-width="3"/>
+    <circle cx="${cx}" cy="${cy}" r="${rInner}" fill="url(#pqHubGrad)" stroke="#FFD700" stroke-width="2.5"/>
+    <circle cx="${cx}" cy="${cy}" r="${rInner-6}" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+    <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-size="16">🎬</text>`;
+
+  svg.innerHTML = `<defs>${defs}</defs>${bezelHtml}${wedgesHtml}${separatorsHtml}${contentHtml}${hubHtml}${pointerHtml}`;
 }
 
 // ── Animación: iluminar sectores en secuencia frenando ──
