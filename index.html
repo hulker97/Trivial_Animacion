@@ -1356,8 +1356,6 @@ body > * { position: relative; z-index: 1; }
       <svg id="pq-ruleta-svg" viewBox="0 0 300 300" style="width:100%;height:100%">
         <!-- Sectores generados por JS -->
       </svg>
-      <!-- Indicador (triángulo apuntando al sector activo, arriba) -->
-      <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:1.6rem;line-height:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.7))">▼</div>
     </div>
 
     <!-- Botón girar -->
@@ -3829,8 +3827,9 @@ function showQuestionModal(isFinal) {
   opts.style.display = "";
 
   if (modoSubtipo === 1) {
-    // Modo 1: opciones visibles directamente, sin toggle
-    opts.style.display = '';
+    // Modo 1: opciones visibles por defecto, botón para ocultarlas
+    readerControls.style.display = "flex";
+    opts.style.display = "";
     opcionesVisibles = true;
   } else if (modoSubtipo === 2) {
     // Modo 2: opciones visibles y clicables normalmente
@@ -4740,10 +4739,11 @@ function pqGirar() {
     pqRenderRuleta(secuencia[paso]);
     paso++;
     if (paso >= secuencia.length) {
+      // Sector destino queda iluminado, esperar y luego procesar
       setTimeout(() => {
         pqGirando = false;
         pqResultadoGiro(PQ_SECTORES[destino]);
-      }, 450);
+      }, 600);
       return;
     }
     const prog = paso / secuencia.length;
@@ -4758,9 +4758,11 @@ function pqResultadoGiro(sector, idx) {
   pqEsCorona = sector === 'corona';
 
   if (pqEsCorona) {
-    // Corona: mostrar selector de categoría
+    // Corona: ruleta se queda iluminada, mostrar selector debajo
     document.getElementById('pq-btn-girar').style.display = 'none';
     const j = pqJugadorActual();
+    const titulo = document.querySelector('#pq-corona-selector > div');
+    if (titulo) titulo.textContent = '👑 ¡Corona! Elige la categoría:';
     const coronaCats = document.getElementById('pq-corona-cats');
     coronaCats.innerHTML = PQ_CATS.map(cat => {
       const info = CATS_INFO[cat];
@@ -4843,7 +4845,7 @@ function pqElegirCat(cat, esCorona) {
 
   if (modoSubtipo === 1) {
     document.getElementById('pq-reader-controls').style.display = 'flex';
-    opts.style.display = 'none'; pqGame._opcionesVisibles = false;
+    opts.style.display = ''; pqGame._opcionesVisibles = true;
   } else if (modoSubtipo === 3) {
     opts.style.display = 'none';
     document.getElementById('pq-reveal-actions').style.display = 'block';
