@@ -4725,14 +4725,20 @@ function pqGirar() {
   const destino = Math.floor(Math.random() * PQ_SECTORES.length);
   const totalPasos = 22 + Math.floor(Math.random() * 8);
 
-  // Construir secuencia que termina en destino
+  // Construir secuencia continua (+1 cada paso) que termine exactamente en destino
   const secuencia = [];
   let pos = Math.floor(Math.random() * PQ_SECTORES.length);
-  for (let i = 0; i < totalPasos - 1; i++) {
+  for (let i = 0; i < totalPasos; i++) {
     pos = (pos + 1) % PQ_SECTORES.length;
     secuencia.push(pos);
   }
-  secuencia.push(destino);
+  // Ajustar los últimos pasos para que el final sea el destino
+  // Calculamos cuántos pasos más necesitamos desde la posición actual para llegar al destino
+  const posActual = secuencia[secuencia.length - 1];
+  const distancia = (destino - posActual + PQ_SECTORES.length) % PQ_SECTORES.length;
+  for (let i = 0; i < distancia; i++) {
+    secuencia.push((posActual + i + 1) % PQ_SECTORES.length);
+  }
 
   let paso = 0;
   function animarPaso() {
