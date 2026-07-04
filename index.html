@@ -1348,31 +1348,35 @@ body > * { position: relative; z-index: 1; }
     </div>
   </div>
 
-  <!-- ZONA RULETA: sectores en grid que se iluminan -->
-  <div id="pq-vista-ruleta" style="flex:1;display:flex;flex-direction:column;align-items:center;padding:0.6rem 0.8rem">
+  <!-- ZONA RULETA -->
+  <div id="pq-vista-ruleta" style="flex:1;display:flex;flex-direction:column;align-items:center;padding:0.4rem 0.8rem 0.6rem">
 
-    <!-- Grid de 7 sectores (6 cats + corona) -->
-    <div id="pq-sectores-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;width:100%;max-width:400px;margin-bottom:0.6rem">
-      <!-- Se rellena por JS -->
+    <!-- Ruleta SVG estática con sectores iluminables -->
+    <div style="position:relative;width:min(300px,88vw);height:min(300px,88vw);margin:0 auto;flex-shrink:0">
+      <svg id="pq-ruleta-svg" viewBox="0 0 300 300" style="width:100%;height:100%">
+        <!-- Sectores generados por JS -->
+      </svg>
+      <!-- Indicador (triángulo apuntando al sector activo, arriba) -->
+      <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:1.6rem;line-height:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.7))">▼</div>
     </div>
 
-    <!-- Botón girar grande -->
+    <!-- Botón girar -->
     <button id="pq-btn-girar" class="btn btn-primary"
-      style="width:100%;max-width:400px;font-size:1.2rem;padding:1rem;margin-top:auto"
+      style="width:100%;max-width:300px;font-size:1.1rem;padding:0.9rem;margin-top:0.6rem"
       onclick="pqGirar()">
       🎯 ¡Girar!
     </button>
 
-    <!-- Si cayó en corona: selector -->
-    <div id="pq-corona-selector" style="display:none;width:100%;max-width:400px;margin-top:0.6rem">
-      <div style="font-size:0.88rem;color:var(--gold);font-weight:800;text-align:center;margin-bottom:0.5rem">
-        👑 ¡Corona! Elige la categoría para ganar el personaje:
+    <!-- Selector corona -->
+    <div id="pq-corona-selector" style="display:none;width:100%;max-width:300px;margin-top:0.6rem">
+      <div style="font-size:0.85rem;color:var(--gold);font-weight:800;text-align:center;margin-bottom:0.5rem">
+        👑 ¡Corona! Elige la categoría:
       </div>
       <div id="pq-corona-cats" style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem"></div>
     </div>
 
     <!-- Panel mini jugadores -->
-    <div id="pq-all-players" style="width:100%;max-width:400px;margin-top:0.6rem"></div>
+    <div id="pq-all-players" style="width:100%;max-width:300px;margin-top:0.5rem"></div>
   </div>
 
   <!-- VISTA PREGUNTA (ocupa toda la pantalla cuando está activa) -->
@@ -3825,10 +3829,9 @@ function showQuestionModal(isFinal) {
   opts.style.display = "";
 
   if (modoSubtipo === 1) {
-    // Modo 1: botón para toggle opciones, empiezan ocultas
-    readerControls.style.display = "flex";
-    opts.style.display = "none";
-    opcionesVisibles = false;
+    // Modo 1: opciones visibles directamente, sin toggle
+    opts.style.display = '';
+    opcionesVisibles = true;
   } else if (modoSubtipo === 2) {
     // Modo 2: opciones visibles y clicables normalmente
     opts.style.display = "";
@@ -4607,8 +4610,7 @@ function infSiguiente() {
 // ════════════════════════════════════════════════════════
 
 const PQ_CATS = ['heroes','historia','villanos','secundarios','lugares','mundo'];
-// Sectores: 6 cats + 1 corona. La corona ocupa la posición 6 (última, abajo centrada)
-// Orden fijo para el grid: heroes, historia, villanos, secundarios, lugares, mundo, corona
+// 7 sectores: 6 cats + corona
 const PQ_SECTORES = [...PQ_CATS, 'corona'];
 
 let pqGame = null;
@@ -4616,7 +4618,6 @@ let pqCatElegida = null;
 let pqEsCorona = false;
 let pqRespondida = false;
 let pqGirando = false;
-let pqSectorActual = -1; // índice del sector iluminado durante la animación
 let pqAnimTimer = null;
 
 function iniciarPreguntados() {
@@ -4631,6 +4632,7 @@ function iniciarPreguntados() {
     usadas: new Set(),
   };
   mostrarScreen('screen-preguntados');
+  pqRenderRuleta(-1);
   pqRenderTurno();
 }
 
@@ -4645,124 +4647,109 @@ function pqPickQuestion(cat) {
   return disp[Math.floor(Math.random() * disp.length)];
 }
 
-// ── Render del turno (vista ruleta) ──
-function pqRenderTurno() {
-  const j = pqJugadorActual();
+// ── Dibuja la ruleta SVG con sector iluminado ──
+function pqRenderRuleta(sectorIlum) {
+  const svg = document.getElementById('pq-ruleta-svg');
+  if (!svg) return;
+  const cx = 150, cy = 150, r = 142, rInner = 30;
+  const n = PQ_SECTORES.length; // 7
+  const angPor = 360 / n;
+  const j = pqGame ? pqJugadorActual() : null;
+  let html = '';
 
-  // Topbar
-  document.getElementById('pq-cp-icon').textContent = j.emoji;
-  document.getElementById('pq-cp-icon').style.background = j.color;
-  document.getElementById('pq-cp-name').textContent = j.name;
-  document.getElementById('pq-cp-turn').textContent = 'Toca para girar';
-
-  // Quesitos en topbar
-  const qWrap = document.getElementById('pq-cp-wedges');
-  qWrap.innerHTML = Object.entries(j.quesitos).map(([cat, tiene]) =>
-    `<div class="wedge-dot ${tiene?'filled':''}" style="background:${tiene?CATS_INFO[cat].color:'transparent'};border:2px solid ${CATS_INFO[cat].color}"></div>`
-  ).join('');
-
-  // Barra de corona
-  pqActualizarBarra();
-
-  // Render sectores
-  pqRenderSectores(-1);
-
-  // Reset botón girar
-  document.getElementById('pq-btn-girar').disabled = false;
-  document.getElementById('pq-btn-girar').textContent = '🎯 ¡Girar!';
-  document.getElementById('pq-btn-girar').onclick = pqGirar;
-  document.getElementById('pq-corona-selector').style.display = 'none';
-
-  // Vistas
-  document.getElementById('pq-vista-ruleta').style.display = 'flex';
-  document.getElementById('pq-vista-pregunta').style.display = 'none';
-
-  // Panel jugadores
-  pqRenderAllPlayers();
-}
-
-function pqActualizarBarra() {
-  const j = pqJugadorActual();
-  const acc = j.aciertosAcumulados || 0;
-  const pct = (acc / 3) * 100;
-  const barra = document.getElementById('pq-barra-corona');
-  const txt = document.getElementById('pq-barra-text');
-  if (barra) barra.style.width = pct + '%';
-  if (txt) txt.textContent = acc + '/3';
-}
-
-function pqRenderSectores(iluminado) {
-  const j = pqJugadorActual();
-  const grid = document.getElementById('pq-sectores-grid');
-  if (!grid) return;
-
-  grid.innerHTML = PQ_SECTORES.map((sector, i) => {
+  for (let i = 0; i < n; i++) {
+    const sector = PQ_SECTORES[i];
     const esCorona = sector === 'corona';
-    const info = esCorona ? null : CATS_INFO[sector];
-    const color = esCorona ? '#C9962C' : info.color;
+    const color = esCorona ? '#C9962C' : CATS_INFO[sector].color;
     const emoji = esCorona ? '👑' : CATS_EMOJIS[sector];
-    const nombre = esCorona ? 'Corona' : info.nombre;
-    const tieneQuesito = !esCorona && j.quesitos[sector];
-    const esIlum = i === iluminado;
+    const tieneQ = j && !esCorona && j.quesitos[sector];
+    const ilum = i === sectorIlum;
 
-    return `<div class="pq-sector ${esIlum ? 'iluminado' : ''} ${tieneQuesito ? 'ganado' : ''} ${esCorona ? 'corona-sector' : ''}"
-      style="background:${color}${esIlum ? 'ff' : '44'};border-color:${esIlum ? 'white' : color}">
-      <div class="pq-sector-emoji">${tieneQuesito ? '✅' : emoji}</div>
-      <div class="pq-sector-nombre">${nombre}</div>
-    </div>`;
-  }).join('');
+    const startDeg = i * angPor - 90;
+    const endDeg   = startDeg + angPor;
+    const x1 = cx + r * Math.cos(startDeg * Math.PI/180);
+    const y1 = cy + r * Math.sin(startDeg * Math.PI/180);
+    const x2 = cx + r * Math.cos(endDeg * Math.PI/180);
+    const y2 = cy + r * Math.sin(endDeg * Math.PI/180);
+    const xi1 = cx + rInner * Math.cos(startDeg * Math.PI/180);
+    const yi1 = cy + rInner * Math.sin(startDeg * Math.PI/180);
+    const xi2 = cx + rInner * Math.cos(endDeg * Math.PI/180);
+    const yi2 = cy + rInner * Math.sin(endDeg * Math.PI/180);
+
+    // Opacidad: iluminado = 100%, con quesito = 80%, normal = 60%
+    const opacity = ilum ? 1 : (tieneQ ? 0.8 : 0.55);
+    const strokeW = ilum ? 4 : 1.5;
+    const strokeC = ilum ? '#FFFFFF' : '#0F1B4C';
+
+    html += `<path d="M ${xi1} ${yi1} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} L ${xi2} ${yi2} A ${rInner} ${rInner} 0 0 0 ${xi1} ${yi1} Z"
+      fill="${color}" stroke="${strokeC}" stroke-width="${strokeW}" opacity="${opacity}"/>`;
+
+    // Brillo blanco encima cuando iluminado
+    if (ilum) {
+      html += `<path d="M ${xi1} ${yi1} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} L ${xi2} ${yi2} A ${rInner} ${rInner} 0 0 0 ${xi1} ${yi1} Z"
+        fill="rgba(255,255,255,0.18)" stroke="none"/>`;
+    }
+
+    // Texto/emoji
+    const midDeg = startDeg + angPor / 2;
+    const textR = (r + rInner) / 2;
+    const tx = cx + textR * Math.cos(midDeg * Math.PI/180);
+    const ty = cy + textR * Math.sin(midDeg * Math.PI/180);
+    const emojiShow = tieneQ ? '✅' : emoji;
+    html += `<text x="${tx}" y="${ty}" text-anchor="middle" dominant-baseline="middle"
+      font-size="${esCorona ? '22' : '18'}"
+      transform="rotate(${midDeg + 90},${tx},${ty})"
+      opacity="${opacity}">${emojiShow}</text>`;
+
+    // Separador
+    const lx1 = cx + rInner * Math.cos(startDeg * Math.PI/180);
+    const ly1 = cy + rInner * Math.sin(startDeg * Math.PI/180);
+    const lx2 = cx + r * Math.cos(startDeg * Math.PI/180);
+    const ly2 = cy + r * Math.sin(startDeg * Math.PI/180);
+    html += `<line x1="${lx1}" y1="${ly1}" x2="${lx2}" y2="${ly2}" stroke="#0F1B4C" stroke-width="2"/>`;
+  }
+
+  // Centro
+  html += `<circle cx="${cx}" cy="${cy}" r="${rInner}" fill="#0F1B4C" stroke="#FFD700" stroke-width="3"/>`;
+  html += `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-size="16">🎬</text>`;
+
+  svg.innerHTML = html;
 }
 
-// ── Animación de "giro" (iluminar sectores en secuencia) ──
+// ── Animación: iluminar sectores en secuencia frenando ──
 function pqGirar() {
   if (pqGirando) return;
   pqGirando = true;
   document.getElementById('pq-btn-girar').disabled = true;
   document.getElementById('pq-btn-girar').textContent = '⏳ Girando…';
 
-  // Elegir sector destino
   const destino = Math.floor(Math.random() * PQ_SECTORES.length);
+  const totalPasos = 22 + Math.floor(Math.random() * 8);
 
-  // Animación: iluminar secuencialmente, acelerando al principio y frenando al final
-  const totalPasos = 20 + Math.floor(Math.random() * 8); // 20-27 pasos
-  let paso = 0;
-  let posActual = Math.floor(Math.random() * PQ_SECTORES.length);
-
-  // Calcular secuencia de posiciones para que acabe en destino
+  // Construir secuencia que termina en destino
   const secuencia = [];
+  let pos = Math.floor(Math.random() * PQ_SECTORES.length);
   for (let i = 0; i < totalPasos - 1; i++) {
-    posActual = (posActual + 1) % PQ_SECTORES.length;
-    secuencia.push(posActual);
+    pos = (pos + 1) % PQ_SECTORES.length;
+    secuencia.push(pos);
   }
-  // Último paso = destino
   secuencia.push(destino);
 
+  let paso = 0;
   function animarPaso() {
-    const pos = secuencia[paso];
-    pqRenderSectores(pos);
-
+    pqRenderRuleta(secuencia[paso]);
     paso++;
     if (paso >= secuencia.length) {
-      // Fin de animación
       setTimeout(() => {
         pqGirando = false;
-        pqResultadoGiro(PQ_SECTORES[destino], destino);
-      }, 400);
+        pqResultadoGiro(PQ_SECTORES[destino]);
+      }, 450);
       return;
     }
-
-    // Velocidad: rápido al principio, lento al final
-    const progreso = paso / secuencia.length;
-    let delay;
-    if (progreso < 0.4) delay = 60;
-    else if (progreso < 0.7) delay = 100;
-    else if (progreso < 0.85) delay = 160;
-    else if (progreso < 0.95) delay = 260;
-    else delay = 400;
-
+    const prog = paso / secuencia.length;
+    const delay = prog < 0.35 ? 55 : prog < 0.6 ? 90 : prog < 0.78 ? 150 : prog < 0.9 ? 240 : 380;
     pqAnimTimer = setTimeout(animarPaso, delay);
   }
-
   animarPaso();
 }
 
@@ -4867,17 +4854,44 @@ function pqElegirCat(cat, esCorona) {
   document.getElementById('pq-vista-pregunta').style.display = 'block';
 }
 
+// ── Render del turno ──
+function pqRenderTurno() {
+  const j = pqJugadorActual();
+  document.getElementById('pq-cp-icon').textContent = j.emoji;
+  document.getElementById('pq-cp-icon').style.background = j.color;
+  document.getElementById('pq-cp-name').textContent = j.name;
+  document.getElementById('pq-cp-turn').textContent = 'Toca para girar';
+
+  const qWrap = document.getElementById('pq-cp-wedges');
+  qWrap.innerHTML = Object.entries(j.quesitos).map(([cat, tiene]) =>
+    `<div class="wedge-dot ${tiene?'filled':''}" style="background:${tiene?CATS_INFO[cat].color:'transparent'};border:2px solid ${CATS_INFO[cat].color}"></div>`
+  ).join('');
+
+  const acc = j.aciertosAcumulados || 0;
+  const barra = document.getElementById('pq-barra-corona');
+  const txt = document.getElementById('pq-barra-text');
+  if (barra) barra.style.width = ((acc/3)*100) + '%';
+  if (txt) txt.textContent = acc + '/3';
+
+  pqRenderRuleta(-1);
+
+  document.getElementById('pq-btn-girar').disabled = false;
+  document.getElementById('pq-btn-girar').textContent = '🎯 ¡Girar!';
+  document.getElementById('pq-btn-girar').onclick = pqGirar;
+  document.getElementById('pq-btn-girar').style.display = '';
+  document.getElementById('pq-corona-selector').style.display = 'none';
+  document.getElementById('pq-vista-ruleta').style.display = 'flex';
+  document.getElementById('pq-vista-pregunta').style.display = 'none';
+  pqRenderAllPlayers();
+}
+
 // ── Selector quesito tras 3 aciertos ──
 function pqMostrarSelectorQuesito() {
   const j = pqJugadorActual();
   document.getElementById('pq-vista-ruleta').style.display = 'flex';
   document.getElementById('pq-vista-pregunta').style.display = 'none';
   document.getElementById('pq-btn-girar').style.display = 'none';
-  pqRenderSectores(-1);
-
-  // Mostrar corona parpadeando
-  const coronaEl = document.querySelector('.corona-sector');
-  if (coronaEl) { coronaEl.style.opacity = '1'; coronaEl.style.boxShadow = '0 0 25px gold'; }
+  pqRenderRuleta(-1);
 
   const coronaCats = document.getElementById('pq-corona-cats');
   const titulo = document.querySelector('#pq-corona-selector > div');
