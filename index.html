@@ -1542,15 +1542,27 @@ async function supabaseCount(table, filters) {
 }
 
 async function cargarPreguntas(filtros) {
-  const filters = {};
-  if (filtros.estudio)    filters.estudio    = filtros.estudio;
-  if (filtros.dificultad) filters.dificultad = filtros.dificultad;
-  const data = await supabaseQuery(
-    "preguntas",
-    "categoria,pelicula,estudio,dificultad,pregunta,opcion_0,opcion_1,opcion_2,opcion_3,correcta,dato",
-    filters
-  );
-  return data.map(r => ({
+  const params = new URLSearchParams({ select: 'categoria,pelicula,estudio,dificultad,pregunta,opcion_0,opcion_1,opcion_2,opcion_3,correcta,dato' });
+  if (filtros.estudio)    params.append('estudio',    'eq.' + filtros.estudio);
+  if (filtros.dificultad) params.append('dificultad', 'eq.' + filtros.dificultad);
+
+  const pageSize = 1000;
+  let offset = 0;
+  let allData = [];
+
+  while (true) {
+    const url = `${SUPABASE_URL}/rest/v1/preguntas?${params}&limit=${pageSize}&offset=${offset}`;
+    const res = await fetch(url, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY }
+    });
+    if (!res.ok) throw new Error("Supabase error " + res.status);
+    const data = await res.json();
+    allData = allData.concat(data);
+    if (data.length < pageSize) break;
+    offset += pageSize;
+  }
+
+  return allData.map(r => ({
     categoria:  r.categoria,
     pelicula:   r.pelicula,
     estudio:    r.estudio,
@@ -1558,9 +1570,8 @@ async function cargarPreguntas(filtros) {
     pregunta:   r.pregunta,
     opciones:   [r.opcion_0, r.opcion_1, r.opcion_2, r.opcion_3],
     correcta:   r.correcta,
-    dato:       r.dato
+    dato:       r.dato,
   }));
-}
 
 // ════════════════════════════════════════════════════════
 //  ESTADO GLOBAL
@@ -3880,16 +3891,34 @@ const ESTUDIOS_EMOJI = {
 
 async function cargarListaPeliculas() {
   try {
-    const data = await supabaseQuery('preguntas', 'pelicula,estudio', {});
+    // Paginar de 1000 en 1000 hasta obtener todos los registros
     peliculasPorEstudio = {};
-    const conteo = {};
-    data.forEach(r => {
-      const est = r.estudio || 'Otros';
-      const pel = r.pelicula;
-      if (!peliculasPorEstudio[est]) peliculasPorEstudio[est] = new Set();
-      peliculasPorEstudio[est].add(pel);
-      conteo[est] = (conteo[est] || 0) + 1;
-    });
+    let offset = 0;
+    const pageSize = 1000;
+    while (true) {
+      const url = `${SUPABASE_URL}/rest/v1/preguntas?select=pelicula,estudio&limit=${pageSize}&offset=${offset}`;
+      const res = await fetch(url, {
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": "Bearer " + SUPABASE_KEY,
+        }
+      });
+      if (!res.ok) throw new Error("Supabase error " + res.status);
+      const data = await res.json();
+      if (!data.length) break;
+
+      data.forEach(r => {
+        const est = r.estudio || 'Otros';
+        const pel = r.pelicula;
+        if (!pel) return;
+        if (!peliculasPorEstudio[est]) peliculasPorEstudio[est] = new Set();
+        peliculasPorEstudio[est].add(pel);
+      });
+
+      if (data.length < pageSize) break;
+      offset += pageSize;
+    }
+
     // Convertir Sets a arrays ordenados
     for (const est in peliculasPorEstudio) {
       peliculasPorEstudio[est] = [...peliculasPorEstudio[est]].sort((a,b) => a.localeCompare(b,'es'));
