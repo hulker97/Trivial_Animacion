@@ -3931,8 +3931,22 @@ async function cargarListaPeliculas() {
 // ── Abrir / cerrar pantalla de filtros ──
 function abrirPantallaFiltros() {
   _pantallaFiltrosOrigen = document.querySelector('.screen.active')?.id || 'screen-setup';
+
+  const totalEstudios = Object.keys(peliculasPorEstudio).length;
+  if (totalEstudios === 0) {
+    // Aún cargando — mostrar pantalla con spinner y esperar
+    mostrarScreen('screen-filtros');
+    document.getElementById('filtros-estudios-lista').innerHTML =
+      '<div style="text-align:center;padding:3rem;color:var(--text2)"><div class="spinner" style="margin:0 auto 1rem"></div>Cargando películas…</div>';
+    cargarListaPeliculas().then(() => {
+      renderSelectPerfiles();
+      renderFiltrosPantalla();
+      actualizarResumenFiltros();
+    }).catch(console.error);
+    return;
+  }
+
   renderSelectPerfiles();
-  // Sincronizar el select de perfil secundario
   const p1 = document.getElementById('filtro-perfil')?.value || '';
   const p2 = document.getElementById('filtro-perfil-2');
   if (p2) p2.value = p1;
@@ -4263,8 +4277,9 @@ async function irASetupInfinito() {
   document.getElementById("btn-iniciar").onclick = irASubmodoInfinito;
   mostrarScreen("screen-setup");
   renderSelectPerfiles();
-  await cargarListaPeliculas();
   actualizarResumenFiltros();
+  // Cargar películas en segundo plano
+  cargarListaPeliculas().then(() => actualizarResumenFiltros()).catch(console.error);
 }
 
 function seleccionarSubmodo(subtipo) {
@@ -4279,8 +4294,9 @@ async function irASetup() {
   mostrarScreen("screen-setup");
   renderJugadores();
   renderSelectPerfiles();
-  await cargarListaPeliculas();
   actualizarResumenFiltros();
+  // Cargar películas en segundo plano
+  cargarListaPeliculas().then(() => actualizarResumenFiltros()).catch(console.error);
 }
 
 // ════════════════════════════════════════════════════════
