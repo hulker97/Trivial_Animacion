@@ -902,6 +902,33 @@ body > * { position: relative; z-index: 1; }
 }
 .filtro-expand-btn.abierto { transform: rotate(180deg); }
 
+/* ── Sectores Preguntados ── */
+.pq-sector {
+  border-radius: 16px;
+  padding: 0.8rem 0.5rem;
+  text-align: center;
+  transition: all 0.1s;
+  border: 3px solid transparent;
+  opacity: 0.45;
+  cursor: default;
+  user-select: none;
+}
+.pq-sector.iluminado {
+  opacity: 1;
+  transform: scale(1.06);
+  box-shadow: 0 0 20px rgba(255,255,255,0.4);
+  border-color: white;
+}
+.pq-sector.ganado {
+  opacity: 1;
+  border-color: white;
+}
+.pq-sector.corona-sector {
+  grid-column: span 2;
+}
+.pq-sector-emoji { font-size: 1.8rem; margin-bottom: 0.2rem; }
+.pq-sector-nombre { font-size: 0.72rem; font-weight: 800; color: white; line-height: 1.2; }
+
 @keyframes bounce {
   from { transform: translateY(0) scale(1); }
   to   { transform: translateY(-12px) scale(1.1); }
@@ -1294,66 +1321,74 @@ body > * { position: relative; z-index: 1; }
 <!-- ══════════════════════════════════════════════════
      PANTALLA: MODO PREGUNTADOS
 ══════════════════════════════════════════════════ -->
-<div id="screen-preguntados" class="screen" style="overflow-y:auto">
-  <!-- Topbar jugador -->
-  <div class="game-topbar">
+<div id="screen-preguntados" class="screen" style="overflow-y:auto;display:flex;flex-direction:column">
+
+  <!-- Topbar -->
+  <div class="game-topbar" style="flex-shrink:0">
     <div class="current-player-info">
       <div class="cp-icon" id="pq-cp-icon">?</div>
       <div>
         <div class="cp-name" id="pq-cp-name">–</div>
-        <div class="cp-turn" id="pq-cp-turn">Gira la ruleta</div>
+        <div class="cp-turn" id="pq-cp-turn">Toca para girar</div>
       </div>
     </div>
     <div class="wedges-bar" id="pq-cp-wedges"></div>
     <button class="btn btn-secondary btn-sm" onclick="if(confirm('¿Abandonar?'))location.reload()">✕</button>
   </div>
 
-  <!-- VISTA PRINCIPAL: Ruleta + botón girar -->
-  <div id="pq-vista-ruleta" style="display:flex;flex-direction:column;align-items:center;padding:0.5rem 0.8rem 0.8rem;width:100%">
+  <!-- Barra de corona (progreso hacia elegir categoría) -->
+  <div style="padding:0.4rem 1rem 0;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:0.5rem">
+      <div style="font-size:0.72rem;color:var(--text2);font-weight:700;white-space:nowrap">Barra corona</div>
+      <div style="flex:1;height:10px;background:rgba(255,255,255,0.1);border-radius:5px;overflow:hidden">
+        <div id="pq-barra-corona" style="height:100%;background:var(--gold);border-radius:5px;transition:width 0.4s;width:0%"></div>
+      </div>
+      <div id="pq-barra-text" style="font-size:0.72rem;color:var(--gold);font-weight:800;white-space:nowrap">0/3</div>
+      <div style="font-size:1rem">👑</div>
+    </div>
+  </div>
 
-    <!-- Ruleta SVG -->
-    <div style="position:relative;width:min(320px,90vw);height:min(320px,90vw);margin:0 auto">
-      <svg id="pq-ruleta-svg" viewBox="0 0 320 320" style="width:100%;height:100%;transition:transform 0s">
-        <!-- Sectores se generan por JS -->
-      </svg>
-      <!-- Flecha indicadora (arriba) -->
-      <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:1.8rem;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))">▼</div>
+  <!-- ZONA RULETA: sectores en grid que se iluminan -->
+  <div id="pq-vista-ruleta" style="flex:1;display:flex;flex-direction:column;align-items:center;padding:0.6rem 0.8rem">
+
+    <!-- Grid de 7 sectores (6 cats + corona) -->
+    <div id="pq-sectores-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;width:100%;max-width:400px;margin-bottom:0.6rem">
+      <!-- Se rellena por JS -->
     </div>
 
-    <!-- Resultado de la ruleta -->
-    <div id="pq-ruleta-resultado" style="display:none;text-align:center;margin:0.6rem 0 0.2rem">
-      <div id="pq-ruleta-label" style="font-family:'Fredoka One',cursive;font-size:1.3rem;color:var(--gold)">–</div>
-    </div>
-
-    <!-- Botón girar / estado -->
-    <button id="pq-btn-girar" class="btn btn-primary" style="margin-top:0.8rem;font-size:1.1rem;padding:0.9rem 2rem;width:100%;max-width:320px" onclick="pqGirar()">
-      🎯 ¡Girar la ruleta!
+    <!-- Botón girar grande -->
+    <button id="pq-btn-girar" class="btn btn-primary"
+      style="width:100%;max-width:400px;font-size:1.2rem;padding:1rem;margin-top:auto"
+      onclick="pqGirar()">
+      🎯 ¡Girar!
     </button>
 
-    <!-- Si cayó en corona: selector de categoría -->
-    <div id="pq-corona-selector" style="display:none;width:100%;max-width:320px;margin-top:0.8rem">
-      <div style="font-size:0.85rem;color:var(--gold);font-weight:800;text-align:center;margin-bottom:0.5rem">👑 ¡Corona! Elige tu categoría:</div>
+    <!-- Si cayó en corona: selector -->
+    <div id="pq-corona-selector" style="display:none;width:100%;max-width:400px;margin-top:0.6rem">
+      <div style="font-size:0.88rem;color:var(--gold);font-weight:800;text-align:center;margin-bottom:0.5rem">
+        👑 ¡Corona! Elige la categoría para ganar el personaje:
+      </div>
       <div id="pq-corona-cats" style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem"></div>
     </div>
 
-    <!-- Contador de aciertos (categoría normal) -->
-    <div id="pq-aciertos-wrap" style="display:none;text-align:center;margin-top:0.6rem">
-      <div style="font-size:0.8rem;color:var(--text2);font-weight:700">Aciertos en esta categoría</div>
-      <div id="pq-aciertos-dots" style="display:flex;gap:0.5rem;justify-content:center;margin-top:0.3rem"></div>
-      <div style="font-size:0.75rem;color:var(--text2);margin-top:0.2rem">Necesitas 3 para el quesito</div>
-    </div>
-
-    <!-- Mini panel todos los jugadores -->
-    <div id="pq-all-players" style="width:100%;max-width:320px;margin-top:0.8rem"></div>
+    <!-- Panel mini jugadores -->
+    <div id="pq-all-players" style="width:100%;max-width:400px;margin-top:0.6rem"></div>
   </div>
 
-  <!-- VISTA PREGUNTA -->
+  <!-- VISTA PREGUNTA (ocupa toda la pantalla cuando está activa) -->
   <div id="pq-vista-pregunta" style="display:none;padding:0 0.8rem 1rem;max-width:480px;margin:0 auto;width:100%">
+
+    <!-- Indicador de categoría actual (grande) -->
+    <div id="pq-cat-indicator" style="text-align:center;margin-bottom:0.6rem;padding:0.6rem;border-radius:12px">
+      <div id="pq-cat-emoji-big" style="font-size:2rem"></div>
+      <div id="pq-cat-nombre-big" style="font-family:'Fredoka One',cursive;font-size:1.1rem;color:white"></div>
+    </div>
+
     <div class="question-modal" style="margin:0">
       <div class="q-header">
         <span class="q-cat-badge" id="pq-cat-badge">–</span>
         <span class="q-movie" id="pq-movie">–</span>
-        <span class="q-wedge-badge hidden" id="pq-wedge-badge">🏅 Cuña</span>
+        <span class="q-wedge-badge hidden" id="pq-wedge-badge">🏅</span>
       </div>
       <div class="q-text" id="pq-text">–</div>
 
@@ -4570,171 +4605,185 @@ function infSiguiente() {
 // ════════════════════════════════════════════════════════
 //  MODO PREGUNTADOS
 // ════════════════════════════════════════════════════════
-// ── Estado global Preguntados ──
+
+const PQ_CATS = ['heroes','historia','villanos','secundarios','lugares','mundo'];
+// Sectores: 6 cats + 1 corona. La corona ocupa la posición 6 (última, abajo centrada)
+// Orden fijo para el grid: heroes, historia, villanos, secundarios, lugares, mundo, corona
+const PQ_SECTORES = [...PQ_CATS, 'corona'];
+
 let pqGame = null;
-let pqCatElegida = null;    // categoría de la pregunta actual
-let pqEsCorona = false;     // si la tirada cayó en corona
+let pqCatElegida = null;
+let pqEsCorona = false;
 let pqRespondida = false;
 let pqGirando = false;
-
-// Sectores de la ruleta: 6 categorías + 1 corona (posición aleatoria cada partida)
-// La ruleta tiene 7 sectores: 6 categorías × 1 + 1 corona
-const PQ_CATS = ['heroes','historia','villanos','secundarios','lugares','mundo'];
-const PQ_N_SECTORES = 7; // 6 cats + 1 corona
-const PQ_ANGULO = 360 / PQ_N_SECTORES; // ~51.43°
+let pqSectorActual = -1; // índice del sector iluminado durante la animación
+let pqAnimTimer = null;
 
 function iniciarPreguntados() {
   pqGame = {
     jugadores: jugadores.map(j => ({
       ...j,
       quesitos: { heroes:false, historia:false, villanos:false, secundarios:false, lugares:false, mundo:false },
-      // Contador global de aciertos consecutivos acumulados (se guardan aunque falle)
       aciertosAcumulados: 0,
     })),
     turno: 0,
     pool,
     usadas: new Set(),
-    // La posición de la corona en la ruleta (índice de sector 0-6)
-    coronaIdx: Math.floor(Math.random() * PQ_N_SECTORES),
-    // Sectores en orden: corona en posición coronaIdx, el resto son las 6 cats
-    sectores: null,
-    giroActual: 0, // ángulo actual de la ruleta
   };
-
-  // Construir array de sectores
-  pqGame.sectores = [];
-  let catI = 0;
-  for (let i = 0; i < PQ_N_SECTORES; i++) {
-    if (i === pqGame.coronaIdx) pqGame.sectores.push('corona');
-    else pqGame.sectores.push(PQ_CATS[catI++]);
-  }
-
-  pqRenderRuleta();
   mostrarScreen('screen-preguntados');
   pqRenderTurno();
 }
 
 function pqJugadorActual() { return pqGame.jugadores[pqGame.turno]; }
 
-// ── Dibuja la ruleta SVG ──
-function pqRenderRuleta() {
-  const svg = document.getElementById('pq-ruleta-svg');
-  const cx = 160, cy = 160, r = 150, rInner = 28;
-  const n = PQ_N_SECTORES;
-  let html = '';
-
-  for (let i = 0; i < n; i++) {
-    const cat = pqGame.sectores[i];
-    const esCorona = cat === 'corona';
-    const startDeg = i * PQ_ANGULO - 90; // -90 para empezar arriba
-    const endDeg = startDeg + PQ_ANGULO;
-    const color = esCorona ? '#FFD700' : CATS_INFO[cat].color;
-
-    // Coordenadas del arco
-    const x1 = cx + r * Math.cos(startDeg * Math.PI/180);
-    const y1 = cy + r * Math.sin(startDeg * Math.PI/180);
-    const x2 = cx + r * Math.cos(endDeg * Math.PI/180);
-    const y2 = cy + r * Math.sin(endDeg * Math.PI/180);
-    const xi1 = cx + rInner * Math.cos(startDeg * Math.PI/180);
-    const yi1 = cy + rInner * Math.sin(startDeg * Math.PI/180);
-    const xi2 = cx + rInner * Math.cos(endDeg * Math.PI/180);
-    const yi2 = cy + rInner * Math.sin(endDeg * Math.PI/180);
-
-    // Sector path (anillo)
-    html += `<path d="M ${xi1} ${yi1} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} L ${xi2} ${yi2} A ${rInner} ${rInner} 0 0 0 ${xi1} ${yi1} Z"
-      fill="${color}" stroke="#0F1B4C" stroke-width="2" opacity="${esCorona?'1':'0.85'}"/>`;
-
-    // Emoji/texto centrado del sector
-    const midDeg = startDeg + PQ_ANGULO / 2;
-    const textR = (r + rInner) / 2;
-    const tx = cx + textR * Math.cos(midDeg * Math.PI/180);
-    const ty = cy + textR * Math.sin(midDeg * Math.PI/180);
-    const emoji = esCorona ? '👑' : CATS_EMOJIS[cat];
-    html += `<text x="${tx}" y="${ty}" text-anchor="middle" dominant-baseline="middle"
-      font-size="${esCorona?'22':'18'}" transform="rotate(${midDeg + 90},${tx},${ty})">${emoji}</text>`;
+function pqPickQuestion(cat) {
+  const disp = pqGame.pool.filter(q => q.categoria === cat && !pqGame.usadas.has(q));
+  if (!disp.length) {
+    pqGame.pool.filter(q => q.categoria === cat).forEach(q => pqGame.usadas.delete(q));
+    return pqGame.pool.find(q => q.categoria === cat);
   }
-
-  // Centro decorativo
-  html += `<circle cx="${cx}" cy="${cy}" r="${rInner}" fill="#0F1B4C" stroke="#FFD700" stroke-width="3"/>`;
-  html += `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-size="16">🎬</text>`;
-
-  // Líneas separadoras
-  for (let i = 0; i < n; i++) {
-    const deg = i * PQ_ANGULO - 90;
-    const lx1 = cx + rInner * Math.cos(deg * Math.PI/180);
-    const ly1 = cy + rInner * Math.sin(deg * Math.PI/180);
-    const lx2 = cx + r * Math.cos(deg * Math.PI/180);
-    const ly2 = cy + r * Math.sin(deg * Math.PI/180);
-    html += `<line x1="${lx1}" y1="${ly1}" x2="${lx2}" y2="${ly2}" stroke="#0F1B4C" stroke-width="2"/>`;
-  }
-
-  svg.innerHTML = html;
+  return disp[Math.floor(Math.random() * disp.length)];
 }
 
-// ── Girar la ruleta ──
+// ── Render del turno (vista ruleta) ──
+function pqRenderTurno() {
+  const j = pqJugadorActual();
+
+  // Topbar
+  document.getElementById('pq-cp-icon').textContent = j.emoji;
+  document.getElementById('pq-cp-icon').style.background = j.color;
+  document.getElementById('pq-cp-name').textContent = j.name;
+  document.getElementById('pq-cp-turn').textContent = 'Toca para girar';
+
+  // Quesitos en topbar
+  const qWrap = document.getElementById('pq-cp-wedges');
+  qWrap.innerHTML = Object.entries(j.quesitos).map(([cat, tiene]) =>
+    `<div class="wedge-dot ${tiene?'filled':''}" style="background:${tiene?CATS_INFO[cat].color:'transparent'};border:2px solid ${CATS_INFO[cat].color}"></div>`
+  ).join('');
+
+  // Barra de corona
+  pqActualizarBarra();
+
+  // Render sectores
+  pqRenderSectores(-1);
+
+  // Reset botón girar
+  document.getElementById('pq-btn-girar').disabled = false;
+  document.getElementById('pq-btn-girar').textContent = '🎯 ¡Girar!';
+  document.getElementById('pq-btn-girar').onclick = pqGirar;
+  document.getElementById('pq-corona-selector').style.display = 'none';
+
+  // Vistas
+  document.getElementById('pq-vista-ruleta').style.display = 'flex';
+  document.getElementById('pq-vista-pregunta').style.display = 'none';
+
+  // Panel jugadores
+  pqRenderAllPlayers();
+}
+
+function pqActualizarBarra() {
+  const j = pqJugadorActual();
+  const acc = j.aciertosAcumulados || 0;
+  const pct = (acc / 3) * 100;
+  const barra = document.getElementById('pq-barra-corona');
+  const txt = document.getElementById('pq-barra-text');
+  if (barra) barra.style.width = pct + '%';
+  if (txt) txt.textContent = acc + '/3';
+}
+
+function pqRenderSectores(iluminado) {
+  const j = pqJugadorActual();
+  const grid = document.getElementById('pq-sectores-grid');
+  if (!grid) return;
+
+  grid.innerHTML = PQ_SECTORES.map((sector, i) => {
+    const esCorona = sector === 'corona';
+    const info = esCorona ? null : CATS_INFO[sector];
+    const color = esCorona ? '#C9962C' : info.color;
+    const emoji = esCorona ? '👑' : CATS_EMOJIS[sector];
+    const nombre = esCorona ? 'Corona' : info.nombre;
+    const tieneQuesito = !esCorona && j.quesitos[sector];
+    const esIlum = i === iluminado;
+
+    return `<div class="pq-sector ${esIlum ? 'iluminado' : ''} ${tieneQuesito ? 'ganado' : ''} ${esCorona ? 'corona-sector' : ''}"
+      style="background:${color}${esIlum ? 'ff' : '44'};border-color:${esIlum ? 'white' : color}">
+      <div class="pq-sector-emoji">${tieneQuesito ? '✅' : emoji}</div>
+      <div class="pq-sector-nombre">${nombre}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Animación de "giro" (iluminar sectores en secuencia) ──
 function pqGirar() {
   if (pqGirando) return;
   pqGirando = true;
-
-  // Reset estado
-  document.getElementById('pq-ruleta-resultado').style.display = 'none';
-  document.getElementById('pq-corona-selector').style.display = 'none';
-  document.getElementById('pq-aciertos-wrap').style.display = 'none';
   document.getElementById('pq-btn-girar').disabled = true;
   document.getElementById('pq-btn-girar').textContent = '⏳ Girando…';
 
   // Elegir sector destino
-  const sectorDestino = Math.floor(Math.random() * PQ_N_SECTORES);
-  // Calcular ángulo: queremos que el sector destino quede arriba (apuntado por la flecha ▼)
-  // La flecha está arriba, apunta al sector que está en ángulo 0 (arriba del SVG)
-  // El sector i empieza en i*PQ_ANGULO - 90, el centro está en i*PQ_ANGULO - 90 + PQ_ANGULO/2
-  // Para que quede arriba necesitamos rotar hasta que ese centro esté en -90 (arriba)
-  const centroDest = sectorDestino * PQ_ANGULO + PQ_ANGULO / 2;
-  // Ángulo de rotación total para que el centro del sector destino quede arriba
-  // Añadimos varias vueltas completas para el efecto de giro
-  const vueltasExtra = 5 + Math.floor(Math.random() * 3); // 5-7 vueltas
-  const anguloFinal = pqGame.giroActual + vueltasExtra * 360 + (360 - centroDest);
+  const destino = Math.floor(Math.random() * PQ_SECTORES.length);
 
-  const svg = document.getElementById('pq-ruleta-svg');
-  svg.style.transition = 'transform 3s cubic-bezier(0.17, 0.67, 0.12, 1)';
-  svg.style.transform = `rotate(${anguloFinal}deg)`;
-  pqGame.giroActual = anguloFinal % 360;
+  // Animación: iluminar secuencialmente, acelerando al principio y frenando al final
+  const totalPasos = 20 + Math.floor(Math.random() * 8); // 20-27 pasos
+  let paso = 0;
+  let posActual = Math.floor(Math.random() * PQ_SECTORES.length);
 
-  setTimeout(() => {
-    pqGirando = false;
-    svg.style.transition = 'none';
-    pqGame.giroActual = anguloFinal % 360;
-    pqResultadoGiro(pqGame.sectores[sectorDestino]);
-  }, 3200);
+  // Calcular secuencia de posiciones para que acabe en destino
+  const secuencia = [];
+  for (let i = 0; i < totalPasos - 1; i++) {
+    posActual = (posActual + 1) % PQ_SECTORES.length;
+    secuencia.push(posActual);
+  }
+  // Último paso = destino
+  secuencia.push(destino);
+
+  function animarPaso() {
+    const pos = secuencia[paso];
+    pqRenderSectores(pos);
+
+    paso++;
+    if (paso >= secuencia.length) {
+      // Fin de animación
+      setTimeout(() => {
+        pqGirando = false;
+        pqResultadoGiro(PQ_SECTORES[destino], destino);
+      }, 400);
+      return;
+    }
+
+    // Velocidad: rápido al principio, lento al final
+    const progreso = paso / secuencia.length;
+    let delay;
+    if (progreso < 0.4) delay = 60;
+    else if (progreso < 0.7) delay = 100;
+    else if (progreso < 0.85) delay = 160;
+    else if (progreso < 0.95) delay = 260;
+    else delay = 400;
+
+    pqAnimTimer = setTimeout(animarPaso, delay);
+  }
+
+  animarPaso();
 }
 
-// ── Procesar resultado del giro ──
-function pqResultadoGiro(sector) {
-  const esCorona = sector === 'corona';
-  pqEsCorona = esCorona;
+// ── Tras parar la ruleta ──
+function pqResultadoGiro(sector, idx) {
+  pqEsCorona = sector === 'corona';
 
-  const resEl = document.getElementById('pq-ruleta-resultado');
-  const labelEl = document.getElementById('pq-ruleta-label');
-  resEl.style.display = 'block';
-
-  document.getElementById('pq-btn-girar').disabled = false;
-
-  if (esCorona) {
-    labelEl.style.color = '#FFD700';
-    labelEl.textContent = '👑 ¡Corona! Elige tu categoría';
+  if (pqEsCorona) {
+    // Corona: mostrar selector de categoría
     document.getElementById('pq-btn-girar').style.display = 'none';
-
-    // Mostrar selector de categorías
+    const j = pqJugadorActual();
     const coronaCats = document.getElementById('pq-corona-cats');
     coronaCats.innerHTML = PQ_CATS.map(cat => {
       const info = CATS_INFO[cat];
-      const tieneQ = pqJugadorActual().quesitos[cat];
-      return `<div onclick="pqElegirCat('${cat}', true)" style="
-        background:${info.color}33;border:2px solid ${info.color};border-radius:12px;
-        padding:0.7rem 0.5rem;text-align:center;cursor:pointer;
-        ${tieneQ ? 'opacity:0.5' : ''}
-      ">
-        <div style="font-size:1.3rem">${CATS_EMOJIS[cat]}</div>
+      const tieneQ = j.quesitos[cat];
+      return `<div onclick="${tieneQ ? '' : `pqElegirCat('${cat}', true)`}" style="
+        background:${info.color}${tieneQ?'22':'44'};border:2px solid ${info.color};border-radius:12px;
+        padding:0.7rem 0.5rem;text-align:center;cursor:${tieneQ?'default':'pointer'};
+        opacity:${tieneQ?'0.4':'1'};transition:transform 0.15s"
+        ${tieneQ?'':`onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform=''"` }>
+        <div style="font-size:1.4rem">${CATS_EMOJIS[cat]}</div>
         <div style="font-size:0.72rem;font-weight:800;color:${info.color};line-height:1.2">${info.nombre}</div>
         ${tieneQ ? '<div style="font-size:0.65rem;color:var(--text2)">✓ Ya tienes</div>' : ''}
       </div>`;
@@ -4742,26 +4791,9 @@ function pqResultadoGiro(sector) {
     document.getElementById('pq-corona-selector').style.display = 'block';
 
   } else {
-    const info = CATS_INFO[sector];
-    labelEl.style.color = info.color;
-    labelEl.textContent = `${CATS_EMOJIS[sector]} ${info.nombre}`;
-    document.getElementById('pq-btn-girar').textContent = '▶ Responder';
-    document.getElementById('pq-btn-girar').onclick = () => pqElegirCat(sector, false);
-
-    // Mostrar contador de aciertos acumulados
-    pqRenderAciertos();
-    document.getElementById('pq-aciertos-wrap').style.display = 'block';
+    // Categoría normal: ir a pregunta directamente (sin botón intermedio)
+    pqElegirCat(sector, false);
   }
-}
-
-function pqRenderAciertos() {
-  const j = pqJugadorActual();
-  const aciertos = j.aciertosAcumulados || 0;
-  const dots = document.getElementById('pq-aciertos-dots');
-  if (!dots) return;
-  dots.innerHTML = [0,1,2].map(i =>
-    `<div style="width:20px;height:20px;border-radius:50%;border:2px solid var(--gold);background:${i < aciertos ? 'var(--gold)' : 'transparent'};transition:background 0.2s"></div>`
-  ).join('');
 }
 
 // ── Mostrar pregunta ──
@@ -4771,31 +4803,39 @@ function pqElegirCat(cat, esCorona) {
   pqRespondida = false;
 
   const q = pqPickQuestion(cat);
-  if (!q) { alert("No hay preguntas de esa categoría con los filtros actuales."); return; }
+  if (!q) { alert('No hay preguntas de esa categoría.'); pqRenderTurno(); return; }
   pqGame.usadas.add(q);
   pqGame._preguntaActual = q;
 
   const catInfo = CATS_INFO[cat];
+
+  // Indicador grande de categoría
+  const catInd = document.getElementById('pq-cat-indicator');
+  catInd.style.background = catInfo.color + '33';
+  catInd.style.border = `2px solid ${catInfo.color}`;
+  document.getElementById('pq-cat-emoji-big').textContent = pqEsCorona ? '👑' : CATS_EMOJIS[cat];
+  document.getElementById('pq-cat-nombre-big').textContent = pqEsCorona ? `👑 Corona · ${catInfo.nombre}` : catInfo.nombre;
+
+  // Cabecera pregunta
   const badge = document.getElementById('pq-cat-badge');
   badge.textContent = `${CATS_EMOJIS[cat]} ${catInfo.nombre}`;
   badge.style.background = catInfo.color;
   document.getElementById('pq-movie').textContent = q.pelicula;
   document.getElementById('pq-text').textContent = q.pregunta;
 
+  // Badge cuña/corona/final
   const j = pqJugadorActual();
   const todasLlenas = Object.values(j.quesitos).every(v=>v);
-  const wedgeBadge = document.getElementById('pq-wedge-badge');
-  if (todasLlenas) {
-    wedgeBadge.classList.remove('hidden'); wedgeBadge.textContent = '🏆 FINAL';
-  } else if (esCorona) {
-    wedgeBadge.classList.remove('hidden'); wedgeBadge.textContent = '👑 Corona · Quesito directo';
-  } else {
-    const acc = j.aciertosAcumulados || 0;
-    wedgeBadge.classList.remove('hidden');
-    wedgeBadge.textContent = `🏅 Acierto ${acc + 1}/3`;
+  const wedge = document.getElementById('pq-wedge-badge');
+  if (todasLlenas) { wedge.classList.remove('hidden'); wedge.textContent = '🏆 FINAL'; }
+  else if (pqEsCorona) { wedge.classList.remove('hidden'); wedge.textContent = '👑 Quesito directo'; }
+  else {
+    const acc = (j.aciertosAcumulados || 0) + 1;
+    wedge.classList.remove('hidden');
+    wedge.textContent = acc >= 3 ? '🏅 ¡A por el quesito!' : `🏅 ${acc}/3`;
   }
 
-  // Reset UI
+  // Reset UI pregunta
   ['pq-dato','pq-result','pq-respuesta-correcta'].forEach(id => {
     const el = document.getElementById(id);
     el.classList.remove('visible','correct','wrong'); el.textContent = '';
@@ -4805,6 +4845,7 @@ function pqElegirCat(cat, esCorona) {
   document.getElementById('pq-reveal-actions').style.display = 'none';
   document.getElementById('pq-reader-controls').style.display = 'none';
 
+  // Opciones según submodo
   const opts = document.getElementById('pq-options');
   opts.style.display = '';
   opts.innerHTML = q.opciones.map((op, i) =>
@@ -4826,13 +4867,39 @@ function pqElegirCat(cat, esCorona) {
   document.getElementById('pq-vista-pregunta').style.display = 'block';
 }
 
-function pqPickQuestion(cat) {
-  const disponibles = pqGame.pool.filter(q => q.categoria === cat && !pqGame.usadas.has(q));
-  if (!disponibles.length) {
-    pqGame.pool.filter(q => q.categoria === cat).forEach(q => pqGame.usadas.delete(q));
-    return pqGame.pool.find(q => q.categoria === cat);
-  }
-  return disponibles[Math.floor(Math.random() * disponibles.length)];
+// ── Selector quesito tras 3 aciertos ──
+function pqMostrarSelectorQuesito() {
+  const j = pqJugadorActual();
+  document.getElementById('pq-vista-ruleta').style.display = 'flex';
+  document.getElementById('pq-vista-pregunta').style.display = 'none';
+  document.getElementById('pq-btn-girar').style.display = 'none';
+  pqRenderSectores(-1);
+
+  // Mostrar corona parpadeando
+  const coronaEl = document.querySelector('.corona-sector');
+  if (coronaEl) { coronaEl.style.opacity = '1'; coronaEl.style.boxShadow = '0 0 25px gold'; }
+
+  const coronaCats = document.getElementById('pq-corona-cats');
+  const titulo = document.querySelector('#pq-corona-selector > div');
+  if (titulo) titulo.textContent = '🏅 3 aciertos · ¡Elige tu quesito!';
+
+  coronaCats.innerHTML = PQ_CATS.map(cat => {
+    const info = CATS_INFO[cat];
+    const tieneQ = j.quesitos[cat];
+    return `<div onclick="${tieneQ ? '' : `pqElegirQuesito('${cat}')`}" style="
+      background:${info.color}${tieneQ?'22':'44'};border:2px solid ${info.color};border-radius:12px;
+      padding:0.7rem 0.5rem;text-align:center;cursor:${tieneQ?'default':'pointer'};opacity:${tieneQ?'0.4':'1'}">
+      <div style="font-size:1.4rem">${CATS_EMOJIS[cat]}</div>
+      <div style="font-size:0.72rem;font-weight:800;color:${info.color};line-height:1.2">${info.nombre}</div>
+      ${tieneQ ? '<div style="font-size:0.65rem;color:var(--text2)">✓ Ya tienes</div>' : ''}
+    </div>`;
+  }).join('');
+  document.getElementById('pq-corona-selector').style.display = 'block';
+}
+
+function pqElegirQuesito(cat) {
+  document.getElementById('pq-corona-selector').style.display = 'none';
+  pqElegirCat(cat, true);
 }
 
 function pqToggleOpciones() {
@@ -4852,7 +4919,7 @@ function pqOpcion(idx) {
     if (i === q.correcta) el.classList.add('correct');
     else if (i === idx && !correct) el.classList.add('wrong');
   }
-  if (q.dato) { const d = document.getElementById('pq-dato'); d.textContent = '💡 '+q.dato; d.classList.add('visible'); }
+  if (q.dato) { const d=document.getElementById('pq-dato'); d.textContent='💡 '+q.dato; d.classList.add('visible'); }
   const r = document.getElementById('pq-result');
   r.textContent = correct ? '✅ ¡Correcto!' : '❌ Incorrecto';
   r.classList.add('visible', correct ? 'correct' : 'wrong');
@@ -4868,7 +4935,7 @@ function pqRevelar() {
   const r = document.getElementById('pq-respuesta-correcta');
   r.textContent = '✅ Respuesta correcta: ' + q.opciones[q.correcta];
   r.classList.add('visible');
-  if (q.dato) { const d = document.getElementById('pq-dato'); d.textContent = '💡 '+q.dato; d.classList.add('visible'); }
+  if (q.dato) { const d=document.getElementById('pq-dato'); d.textContent='💡 '+q.dato; d.classList.add('visible'); }
   document.getElementById('pq-judge-btns').classList.add('visible');
 }
 
@@ -4889,101 +4956,32 @@ function pqContinuar() {
 
   if (correcto) {
     if (pqEsCorona || todasLlenas) {
-      // Corona o pregunta final: 1 acierto = quesito directo
+      // Corona o final: 1 acierto = quesito directo
       if (!todasLlenas) j.quesitos[cat] = true;
       if (Object.values(j.quesitos).every(v => v)) { pqMostrarVictoria(j); return; }
       pqGame.turno = (pqGame.turno + 1) % pqGame.jugadores.length;
       pqRenderTurno();
     } else {
-      // Categoría normal: sumar acierto (NO se resetean al fallar)
+      // Cat normal: sumar acierto (se guardan aunque falle)
       j.aciertosAcumulados = (j.aciertosAcumulados || 0) + 1;
-
       if (j.aciertosAcumulados >= 3) {
-        // Con 3 aciertos → el jugador elige la categoría para optar al quesito
-        j.aciertosAcumulados = 0; // resetear el contador tras conseguir el derecho
+        j.aciertosAcumulados = 0;
         pqMostrarSelectorQuesito();
       } else {
-        // Pasa turno (pero los aciertos quedan guardados)
         pqGame.turno = (pqGame.turno + 1) % pqGame.jugadores.length;
         pqRenderTurno();
       }
     }
   } else {
-    // Falló: los aciertos SE GUARDAN, solo pasa turno
+    // Fallo: aciertos se guardan, pasa turno
     pqGame.turno = (pqGame.turno + 1) % pqGame.jugadores.length;
     pqRenderTurno();
   }
 }
 
-// Selector de categoría para optar al quesito (tras 3 aciertos)
-function pqMostrarSelectorQuesito() {
-  const j = pqJugadorActual();
-
-  // Volver a vista ruleta y mostrar selector especial
-  document.getElementById('pq-vista-ruleta').style.display = 'flex';
-  document.getElementById('pq-vista-pregunta').style.display = 'none';
-  document.getElementById('pq-ruleta-resultado').style.display = 'block';
-  document.getElementById('pq-btn-girar').style.display = 'none';
-  document.getElementById('pq-aciertos-wrap').style.display = 'none';
-
-  document.getElementById('pq-ruleta-label').style.color = '#FFD700';
-  document.getElementById('pq-ruleta-label').textContent = '🏅 3 aciertos · Elige tu quesito';
-
-  // Reutilizar el selector de corona
-  const coronaCats = document.getElementById('pq-corona-cats');
-  coronaCats.innerHTML = PQ_CATS.map(cat => {
-    const info = CATS_INFO[cat];
-    const tieneQ = j.quesitos[cat];
-    return `<div onclick="${tieneQ ? '' : `pqElegirQuesito('${cat}')`}" style="
-      background:${info.color}33;border:2px solid ${info.color};border-radius:12px;
-      padding:0.7rem 0.5rem;text-align:center;cursor:${tieneQ ? 'default' : 'pointer'};
-      opacity:${tieneQ ? '0.4' : '1'};
-    ">
-      <div style="font-size:1.3rem">${CATS_EMOJIS[cat]}</div>
-      <div style="font-size:0.72rem;font-weight:800;color:${info.color};line-height:1.2">${info.nombre}</div>
-      ${tieneQ ? '<div style="font-size:0.65rem;color:var(--text2)">✓ Ya tienes</div>' : ''}
-    </div>`;
-  }).join('');
-
-  document.getElementById('pq-corona-selector').style.display = 'block';
-  document.getElementById('pq-corona-selector').querySelector('div').textContent = '🏅 Elige qué quesito quieres optar:';
-}
-
-function pqElegirQuesito(cat) {
-  // El jugador elige la categoría → se hace una pregunta de esa categoría para ganar el quesito
-  document.getElementById('pq-corona-selector').style.display = 'none';
-  pqElegirCat(cat, true); // tratarlo como corona (1 acierto = quesito)
-}
-
-function pqRenderTurno() {
-  const j = pqJugadorActual();
-  document.getElementById('pq-cp-icon').textContent = j.emoji;
-  document.getElementById('pq-cp-icon').style.background = j.color;
-  document.getElementById('pq-cp-name').textContent = j.name;
-  document.getElementById('pq-cp-turn').textContent = 'Gira la ruleta';
-
-  const qWrap = document.getElementById('pq-cp-wedges');
-  qWrap.innerHTML = Object.entries(j.quesitos).map(([cat, tiene]) =>
-    `<div class="wedge-dot ${tiene?'filled':''}" style="background:${tiene?CATS_INFO[cat].color:'transparent'};border:2px solid ${CATS_INFO[cat].color}" title="${CATS_INFO[cat].nombre}"></div>`
-  ).join('');
-
-  // Resetear vista ruleta
-  document.getElementById('pq-vista-ruleta').style.display = 'flex';
-  document.getElementById('pq-vista-pregunta').style.display = 'none';
-  document.getElementById('pq-ruleta-resultado').style.display = 'none';
-  document.getElementById('pq-corona-selector').style.display = 'none';
-  document.getElementById('pq-aciertos-wrap').style.display = 'none';
-  document.getElementById('pq-btn-girar').style.display = '';
-  document.getElementById('pq-btn-girar').textContent = '🎯 ¡Girar la ruleta!';
-  document.getElementById('pq-btn-girar').onclick = pqGirar;
-  document.getElementById('pq-btn-girar').disabled = false;
-
-  pqRenderAllPlayers();
-}
-
 function pqRenderAllPlayers() {
   const wrap = document.getElementById('pq-all-players');
-  if (!wrap) return;
+  if (!wrap || !pqGame) return;
   wrap.innerHTML = `<div style="font-size:0.72rem;color:var(--text2);font-weight:700;margin-bottom:0.4rem;text-align:center">Quesitos de todos</div>` +
     pqGame.jugadores.map((j, i) => {
       const acc = j.aciertosAcumulados || 0;
@@ -4992,80 +4990,46 @@ function pqRenderAllPlayers() {
         <div style="font-size:0.75rem;font-weight:700;min-width:55px;color:var(--text)">${j.name}</div>
         <div style="display:flex;gap:2px">
           ${Object.entries(j.quesitos).map(([cat,tiene]) =>
-            `<div style="width:12px;height:12px;border-radius:50%;background:${tiene?CATS_INFO[cat].color:'rgba(255,255,255,0.08)'};border:1.5px solid ${CATS_INFO[cat].color}" title="${CATS_INFO[cat].nombre}"></div>`
+            `<div style="width:12px;height:12px;border-radius:50%;background:${tiene?CATS_INFO[cat].color:'rgba(255,255,255,0.08)'};border:1.5px solid ${CATS_INFO[cat].color}"></div>`
           ).join('')}
         </div>
-        ${acc > 0 ? `<div style="display:flex;gap:2px;margin-left:2px">${[0,1,2].map(k=>`<div style="width:8px;height:8px;border-radius:50%;background:${k<acc?'var(--gold)':'rgba(255,215,0,0.2)'};border:1px solid var(--gold)"></div>`).join('')}</div>` : ''}
+        ${acc > 0 ? `<div style="display:flex;gap:2px">${[0,1,2].map(k=>`<div style="width:8px;height:8px;border-radius:50%;background:${k<acc?'var(--gold)':'rgba(255,215,0,0.2)'};border:1px solid var(--gold)"></div>`).join('')}</div>` : ''}
       </div>`;
     }).join('');
 }
 
 function pqMostrarVictoria(j) {
-  // Rellenar nombre y emoji del ganador
   document.getElementById('fin-winner').textContent = `${j.emoji} ${j.name}`;
   document.getElementById('fin-winner').style.color = j.color;
-
-  // Quesitos del ganador
   const qDiv = document.getElementById('fin-wedges');
   if (qDiv) {
     qDiv.innerHTML = Object.entries(CATS_INFO).map(([cat, info]) =>
       `<div style="width:36px;height:36px;border-radius:50%;background:${info.color};display:inline-flex;align-items:center;justify-content:center;font-size:1.3rem;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${CATS_EMOJIS[cat]}</div>`
     ).join('');
   }
-
-  // Clasificación de todos los jugadores
-  const jugadoresSrc = pqGame?.jugadores || rectGame?.jugadores || (game ? game.players : []);
   const clasiDiv = document.getElementById('fin-clasificacion');
-  if (clasiDiv && jugadoresSrc?.length) {
-    // Ordenar por número de quesitos
-    const sorted = [...jugadoresSrc].sort((a, b) => {
-      const qa = Object.values(a.quesitos || {}).filter(Boolean).length;
-      const qb = Object.values(b.quesitos || {}).filter(Boolean).length;
-      return qb - qa;
-    });
-    clasiDiv.innerHTML = sorted.map((jug, i) => {
-      const nQ = Object.values(jug.quesitos || {}).filter(Boolean).length;
-      const esGanador = jug.name === j.name && jug.emoji === j.emoji;
-      return `<div style="display:flex;align-items:center;gap:0.7rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.06);${esGanador?'background:rgba(255,215,0,0.08);border-radius:8px;padding:0.5rem 0.5rem;':''}" >
-        <div style="font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--text2);min-width:24px;text-align:center">${i+1}º</div>
-        <div style="width:28px;height:28px;border-radius:50%;background:${jug.color};display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">${jug.emoji}</div>
-        <div style="font-size:0.9rem;font-weight:700;flex:1;color:${esGanador?'var(--gold)':'var(--text)'}">${jug.name}${esGanador?' 🏆':''}</div>
+  if (clasiDiv && pqGame?.jugadores) {
+    const sorted = [...pqGame.jugadores].sort((a,b) =>
+      Object.values(b.quesitos||{}).filter(Boolean).length - Object.values(a.quesitos||{}).filter(Boolean).length
+    );
+    clasiDiv.innerHTML = sorted.map((jug,i) => {
+      const nQ = Object.values(jug.quesitos||{}).filter(Boolean).length;
+      const esG = jug.name===j.name && jug.emoji===j.emoji;
+      return `<div style="display:flex;align-items:center;gap:0.7rem;padding:0.5rem 0.3rem;border-bottom:1px solid rgba(255,255,255,0.06)">
+        <div style="font-family:'Fredoka One',cursive;font-size:1rem;color:var(--text2);min-width:22px;text-align:center">${i+1}º</div>
+        <div style="width:26px;height:26px;border-radius:50%;background:${jug.color};display:flex;align-items:center;justify-content:center;font-size:0.95rem;flex-shrink:0">${jug.emoji}</div>
+        <div style="font-size:0.88rem;font-weight:700;flex:1;color:${esG?'var(--gold)':'var(--text)'}">${jug.name}${esG?' 🏆':''}</div>
         <div style="display:flex;gap:3px">
-          ${Object.entries(CATS_INFO).map(([cat, info]) => {
-            const tiene = (jug.quesitos || {})[cat];
-            return `<div style="width:14px;height:14px;border-radius:50%;background:${tiene?info.color:'rgba(255,255,255,0.08)'};border:1.5px solid ${info.color}"></div>`;
+          ${Object.entries(CATS_INFO).map(([cat,info]) => {
+            const tiene = (jug.quesitos||{})[cat];
+            return `<div style="width:13px;height:13px;border-radius:50%;background:${tiene?info.color:'rgba(255,255,255,0.08)'};border:1.5px solid ${info.color}"></div>`;
           }).join('')}
         </div>
       </div>`;
     }).join('');
   }
-
-  // Confetti
   lanzarConfetti();
-
   mostrarScreen('screen-fin');
-}
-
-function lanzarConfetti() {
-  const container = document.getElementById('fin-confetti');
-  if (!container) return;
-  container.innerHTML = '';
-  const colors = ['#FFD700','#FF4081','#40C4FF','#69F0AE','#E040FB','#FF6D00'];
-  for (let i = 0; i < 80; i++) {
-    const el = document.createElement('div');
-    el.className = 'confetti-piece';
-    el.style.left = Math.random() * 100 + 'vw';
-    el.style.top = '-20px';
-    el.style.background = colors[Math.floor(Math.random() * colors.length)];
-    el.style.width = (6 + Math.random() * 8) + 'px';
-    el.style.height = (6 + Math.random() * 8) + 'px';
-    el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
-    el.style.animationDuration = (2 + Math.random() * 3) + 's';
-    el.style.animationDelay = (Math.random() * 2) + 's';
-    container.appendChild(el);
-  }
-  // Limpiar después de 6s
-  setTimeout(() => { if (container) container.innerHTML = ''; }, 6000);
 }
 
 function volverASetup() {
@@ -5074,6 +5038,7 @@ function volverASetup() {
 }
 
 function mostrarVictoriaPQ(j) { pqMostrarVictoria(j); }
+
 
 // ════════════════════════════════════════════════════════
 //  MODO TABLERO RECTANGULAR
