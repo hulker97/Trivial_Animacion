@@ -1482,15 +1482,12 @@ body > * { position: relative; z-index: 1; }
     <button class="btn btn-secondary btn-sm" onclick="if(confirm('¿Abandonar?'))location.reload()">✕</button>
   </div>
 
-  <!-- Barra de corona (progreso hacia elegir categoría) -->
+  <!-- Racha hacia la corona (3 gemas que se iluminan) -->
   <div style="padding:0.4rem 1rem 0;flex-shrink:0">
-    <div style="display:flex;align-items:center;gap:0.5rem">
-      <div style="font-size:0.72rem;color:var(--text2);font-weight:700;white-space:nowrap">Barra corona</div>
-      <div style="flex:1;height:10px;background:rgba(255,255,255,0.1);border-radius:5px;overflow:hidden">
-        <div id="pq-barra-corona" style="height:100%;background:var(--gold);border-radius:5px;transition:width 0.4s;width:0%"></div>
-      </div>
-      <div id="pq-barra-text" style="font-size:0.72rem;color:var(--gold);font-weight:800;white-space:nowrap">0/3</div>
-      <div style="font-size:1rem">👑</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:0.6rem;background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.2);border-radius:50px;padding:0.35rem 1rem">
+      <div style="font-size:0.72rem;color:var(--text2);font-weight:700;white-space:nowrap">Racha</div>
+      <div id="pq-racha-gemas" style="display:flex;gap:0.3rem"></div>
+      <div style="font-size:1.05rem;filter:drop-shadow(0 0 4px rgba(255,215,0,0.6))">👑</div>
     </div>
   </div>
 
@@ -1823,6 +1820,41 @@ const FICHAS_POR_ID = Object.fromEntries(FICHAS_JUGADOR.map(f => [f.id, f]));
 let fichasElegidas = {}; // { indiceJugador: fichaId } — selección durante el setup
 
 // Devuelve el <img> de la ficha de un jugador (o su emoji de respaldo si no ha elegido ficha o falla la imagen)
+// ── Mini "quesito" tipo Trivial Pursuit: 6 porciones de color, iluminadas si se tienen ──
+function quesitoSVG(quesitos, sizePx) {
+  const cx = 50, cy = 50, rOuter = 47, rInner = 15;
+  const n = CATS.length;
+  const angPor = 360 / n;
+  const toRad = d => d * Math.PI / 180;
+  let paths = '';
+  CATS.forEach((cat, i) => {
+    const info = CATS_INFO[cat];
+    const earned = !!(quesitos && quesitos[cat]);
+    const startDeg = i * angPor - 90;
+    const endDeg = startDeg + angPor;
+    const x1 = cx + rOuter * Math.cos(toRad(startDeg)), y1 = cy + rOuter * Math.sin(toRad(startDeg));
+    const x2 = cx + rOuter * Math.cos(toRad(endDeg)), y2 = cy + rOuter * Math.sin(toRad(endDeg));
+    const xi1 = cx + rInner * Math.cos(toRad(startDeg)), yi1 = cy + rInner * Math.sin(toRad(startDeg));
+    const xi2 = cx + rInner * Math.cos(toRad(endDeg)), yi2 = cy + rInner * Math.sin(toRad(endDeg));
+    const path = `M ${xi1.toFixed(1)} ${yi1.toFixed(1)} L ${x1.toFixed(1)} ${y1.toFixed(1)} A ${rOuter} ${rOuter} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)} L ${xi2.toFixed(1)} ${yi2.toFixed(1)} A ${rInner} ${rInner} 0 0 0 ${xi1.toFixed(1)} ${yi1.toFixed(1)} Z`;
+    const gradId = `qz${cat}${Math.random().toString(36).slice(2,7)}`;
+    if (earned) {
+      paths += `<defs><radialGradient id="${gradId}" cx="35%" cy="30%" r="80%">
+        <stop offset="0%" stop-color="${info.color}" stop-opacity="1"/>
+        <stop offset="100%" stop-color="${info.color}" stop-opacity="0.75"/>
+      </radialGradient></defs>`;
+      paths += `<path d="${path}" fill="url(#${gradId})" stroke="rgba(255,255,255,0.65)" stroke-width="1.6" style="filter:drop-shadow(0 0 3px ${info.color})"/>`;
+    } else {
+      paths += `<path d="${path}" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.16)" stroke-width="1.2"/>`;
+    }
+  });
+  return `<svg viewBox="0 0 100 100" width="${sizePx}" height="${sizePx}" style="display:block;overflow:visible">
+    <circle cx="50" cy="50" r="49" fill="none" stroke="rgba(255,215,0,0.3)" stroke-width="1.2"/>
+    ${paths}
+    <circle cx="50" cy="50" r="14" fill="#0a0e2e" stroke="var(--gold)" stroke-width="1.6"/>
+  </svg>`;
+}
+
 function fichaTag(jugadorOFichaId, sizePx, extraStyle) {
   let ficha, emojiFallback;
   if (typeof jugadorOFichaId === 'string') {
@@ -4405,17 +4437,14 @@ function renderPlayersPanel() {
   let s = "";
   game.players.forEach((p, i) => {
     const active = i === game.currentPlayerIndex;
+    const quesitosObj = Object.fromEntries(CATS.map(c => [c, p.wedges.includes(c)]));
     s += `<div class="player-card ${active ? 'active-player' : ''}">
       <div class="pc-head">
         <div class="pc-icon" style="background:${p.color}">${fichaTag(p, 26)}</div>
         <div class="pc-name">${p.name}</div>
       </div>
-      <div class="pc-wedges">`;
-    CATS.forEach(cat => {
-      const earned = p.wedges.includes(cat);
-      s += `<div class="pc-wedge ${earned ? 'earned' : ''}" style="${earned ? 'background:'+CATS_INFO[cat].color : 'background:rgba(255,255,255,0.1)'}" title="${CATS_INFO[cat].nombre}"></div>`;
-    });
-    s += `</div></div>`;
+      <div class="pc-wedges" style="justify-content:center">${quesitoSVG(quesitosObj, 44)}</div>
+    </div>`;
   });
   panel.innerHTML = s;
 }
@@ -4441,12 +4470,8 @@ function renderTopbar() {
   document.getElementById("cp-turn").textContent = phaseLabels[game.phase] || "–";
 
   // Cuñas
-  let whtml = "";
-  CATS.forEach(cat => {
-    const earned = p.wedges.includes(cat);
-    whtml += `<div class="wedge-dot ${earned ? 'earned' : ''}" style="${earned ? 'background:'+CATS_INFO[cat].color : ''}" title="${CATS_INFO[cat].nombre}"></div>`;
-  });
-  document.getElementById("cp-wedges").innerHTML = whtml;
+  const quesitosObj = Object.fromEntries(CATS.map(c => [c, p.wedges.includes(c)]));
+  document.getElementById("cp-wedges").innerHTML = quesitoSVG(quesitosObj, 34);
 }
 
 // ════════════════════════════════════════════════════════
@@ -5874,15 +5899,18 @@ function pqRenderTurno() {
   document.getElementById('pq-cp-turn').textContent = 'Toca para girar';
 
   const qWrap = document.getElementById('pq-cp-wedges');
-  qWrap.innerHTML = Object.entries(j.quesitos).map(([cat, tiene]) =>
-    `<div class="wedge-dot ${tiene?'filled':''}" style="background:${tiene?CATS_INFO[cat].color:'transparent'};border:2px solid ${CATS_INFO[cat].color}"></div>`
-  ).join('');
+  qWrap.innerHTML = quesitoSVG(j.quesitos, 34);
 
   const acc = j.aciertosAcumulados || 0;
-  const barra = document.getElementById('pq-barra-corona');
-  const txt = document.getElementById('pq-barra-text');
-  if (barra) barra.style.width = ((acc/3)*100) + '%';
-  if (txt) txt.textContent = acc + '/3';
+  const gemas = document.getElementById('pq-racha-gemas');
+  if (gemas) {
+    let g = '';
+    for (let k = 0; k < 3; k++) {
+      const lit = k < acc;
+      g += `<span style="font-size:1.1rem;transition:all 0.25s;${lit ? 'filter:drop-shadow(0 0 5px rgba(255,215,0,0.9));transform:scale(1.1)' : 'opacity:0.25;filter:grayscale(1)'}">💎</span>`;
+    }
+    gemas.innerHTML = g;
+  }
 
   pqRenderRuleta(-1);
 
@@ -6024,12 +6052,8 @@ function pqRenderAllPlayers() {
       return `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;opacity:${i===pqGame.turno?'1':'0.55'}">
         <div style="width:24px;height:24px;border-radius:50%;background:${j.color};display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;overflow:hidden">${fichaTag(j, 22)}</div>
         <div style="font-size:0.75rem;font-weight:700;min-width:55px;color:var(--text)">${j.name}</div>
-        <div style="display:flex;gap:2px">
-          ${Object.entries(j.quesitos).map(([cat,tiene]) =>
-            `<div style="width:12px;height:12px;border-radius:50%;background:${tiene?CATS_INFO[cat].color:'rgba(255,255,255,0.08)'};border:1.5px solid ${CATS_INFO[cat].color}"></div>`
-          ).join('')}
-        </div>
-        ${acc > 0 ? `<div style="display:flex;gap:2px">${[0,1,2].map(k=>`<div style="width:8px;height:8px;border-radius:50%;background:${k<acc?'var(--gold)':'rgba(255,215,0,0.2)'};border:1px solid var(--gold)"></div>`).join('')}</div>` : ''}
+        ${quesitoSVG(j.quesitos, 26)}
+        ${acc > 0 ? `<div style="display:flex;gap:2px">${[0,1,2].map(k=>`<span style="font-size:0.6rem;${k<acc?'filter:drop-shadow(0 0 3px rgba(255,215,0,0.8))':'opacity:0.25;filter:grayscale(1)'}">💎</span>`).join('')}</div>` : ''}
       </div>`;
     }).join('');
 }
@@ -6055,12 +6079,7 @@ function pqMostrarVictoria(j) {
         <div style="font-family:'Fredoka One',cursive;font-size:1rem;color:var(--text2);min-width:22px;text-align:center">${i+1}º</div>
         <div style="width:26px;height:26px;border-radius:50%;background:${jug.color};display:flex;align-items:center;justify-content:center;font-size:0.95rem;flex-shrink:0;overflow:hidden">${fichaTag(jug, 24)}</div>
         <div style="font-size:0.88rem;font-weight:700;flex:1;color:${esG?'var(--gold)':'var(--text)'}">${jug.name}${esG?' 🏆':''}</div>
-        <div style="display:flex;gap:3px">
-          ${Object.entries(CATS_INFO).map(([cat,info]) => {
-            const tiene = (jug.quesitos||{})[cat];
-            return `<div style="width:13px;height:13px;border-radius:50%;background:${tiene?info.color:'rgba(255,255,255,0.08)'};border:1.5px solid ${info.color}"></div>`;
-          }).join('')}
-        </div>
+        ${quesitoSVG(jug.quesitos, 30)}
       </div>`;
     }).join('');
   }
@@ -6127,9 +6146,7 @@ function rectRenderTopbar() {
   document.getElementById('rect-cp-name').textContent = j.name;
   document.getElementById('rect-cp-turn').textContent = 'Tira el dado';
   const qWrap = document.getElementById('rect-cp-wedges');
-  qWrap.innerHTML = Object.entries(j.quesitos).map(([cat,tiene]) =>
-    `<div class="wedge-dot ${tiene?'filled':''}" style="background:${tiene?CATS_INFO[cat].color:'transparent'};border:2px solid ${CATS_INFO[cat].color}"></div>`
-  ).join('');
+  qWrap.innerHTML = quesitoSVG(j.quesitos, 34);
   document.getElementById('rect-dado-btn').disabled = rectGame.esperandoMovimiento;
 }
 
