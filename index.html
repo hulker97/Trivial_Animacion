@@ -2064,6 +2064,8 @@ function onlineCrearSala() {
   mostrarScreen('screen-online-host-lobby');
   document.getElementById('online-codigo-grande').textContent = onlineCodigoSala;
   document.getElementById('online-host-nombre').value = 'Anfitrión';
+  if (!fichasElegidas[-1]) fichasElegidas[-1] = fichaAleatoria([]);
+  document.getElementById('online-host-ficha-preview').innerHTML = fichaTag(fichasElegidas[-1], 32);
   renderOnlineHostLobby();
 
   onlinePeer = new Peer('trivial-' + onlineCodigoSala, { debug: 0, config: ONLINE_ICE_CONFIG });
@@ -2189,6 +2191,8 @@ function onlineIrAPantallaUnirse() {
   if (btn) { btn.disabled = false; btn.textContent = 'Unirse →'; }
   const err = document.getElementById('online-join-error');
   if (err) err.style.display = 'none';
+  if (!fichasElegidas[-2]) fichasElegidas[-2] = fichaAleatoria([]);
+  document.getElementById('online-join-ficha-preview').innerHTML = fichaTag(fichasElegidas[-2], 40);
   mostrarScreen('screen-online-join');
 }
 
@@ -4786,9 +4790,26 @@ function hideModal(id) { document.getElementById(id).classList.add("hidden"); }
 // ════════════════════════════════════════════════════════
 //  SETUP UI
 // ════════════════════════════════════════════════════════
+// Devuelve el id de una ficha al azar, evitando repetir las que ya estén en uso
+function fichaAleatoria(idsExcluidos) {
+  const excluidos = new Set(idsExcluidos || []);
+  const disponibles = FICHAS_JUGADOR.filter(f => !excluidos.has(f.id));
+  const pool = disponibles.length ? disponibles : FICHAS_JUGADOR;
+  return pool[Math.floor(Math.random() * pool.length)].id;
+}
+
 function renderJugadores() {
   const list = document.getElementById("jugadores-list");
   let s = "";
+  // Asignar ficha aleatoria a quien aún no tenga una, sin repetir entre jugadores
+  const enUso = Object.values(fichasElegidas).filter(Boolean);
+  for (let i = 0; i < numJugadores; i++) {
+    if (!fichasElegidas[i]) {
+      const nueva = fichaAleatoria(enUso);
+      fichasElegidas[i] = nueva;
+      enUso.push(nueva);
+    }
+  }
   for (let i = 0; i < numJugadores; i++) {
     const color = PLAYER_COLORS[i];
     const emoji = PLAYER_EMOJIS[i];
@@ -4797,7 +4818,7 @@ function renderJugadores() {
     s += `<div class="jugador-row">
       <div class="jugador-num" style="background:${color};color:white">${i+1}</div>
       <button type="button" onclick="abrirSelectorFicha(${i})" title="Elegir ficha" style="width:36px;height:36px;border-radius:50%;border:2px solid ${color};background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;flex-shrink:0;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,0.3)">
-        ${fichaId ? fichaTag(fichaId, 32) : `<span style="font-size:1.3rem">${emoji}</span>`}
+        ${fichaTag(fichaId, 32)}
       </button>
       <input type="text" id="jname-${i}" value="${defaultName}" maxlength="20" placeholder="Nombre jugador ${i+1}"/>
     </div>`;
