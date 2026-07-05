@@ -1034,7 +1034,7 @@ body > * { position: relative; z-index: 1; }
         <div class="modo-card-desc">Este móvil elige las preguntas y muestra la partida. Los demás se unen con un código.</div>
       </div>
     </div>
-    <div class="modo-card" onclick="mostrarScreen('screen-online-join')">
+    <div class="modo-card" onclick="onlineIrAPantallaUnirse()">
       <div class="modo-card-icon">🔗</div>
       <div class="modo-card-body">
         <div class="modo-card-title">Unirse a una sala</div>
@@ -1109,7 +1109,7 @@ body > * { position: relative; z-index: 1; }
   </div>
   <div id="online-join-error" style="color:#F44336;font-weight:700;font-size:0.85rem;display:none;margin-bottom:0.5rem"></div>
   <div style="display:flex;gap:1rem;justify-content:center;max-width:600px;width:100%;margin:0.5rem auto;">
-    <button class="btn btn-secondary" onclick="mostrarScreen('screen-online-menu')">← Volver</button>
+    <button class="btn btn-secondary" onclick="onlineCancelarYVolver()">← Volver</button>
     <button class="btn btn-primary" id="online-btn-unirse" onclick="onlineUnirseASala()">Unirse →</button>
   </div>
 </div>
@@ -2034,6 +2034,7 @@ function onlineObtenerGuestId() {
 }
 
 let onlineReconectando = false;
+let onlineTimeoutJoinId = null;
 let onlineUltimoCodigo = null;
 let onlineUltimoNombre = null;
 
@@ -2051,6 +2052,7 @@ const ONLINE_ICE_CONFIG = {
 };
 
 function onlineCrearSala() {
+  onlineLimpiarConexionPrevia();
   modoOnline = 'host';
   onlineJugadoresLobby = [];
   onlineCodigoSala = generarCodigoSala();
@@ -2164,6 +2166,33 @@ function onlineHostContinuarASetup() {
 }
 
 // ── INVITADO ──
+// ── Destruye cualquier peer/conexión de un intento anterior antes de empezar uno nuevo ──
+function onlineLimpiarConexionPrevia() {
+  if (onlineTimeoutJoinId) { clearTimeout(onlineTimeoutJoinId); onlineTimeoutJoinId = null; }
+  try { if (onlinePeer) onlinePeer.destroy(); } catch(e) {}
+  onlinePeer = null;
+  onlineConexionHost = null;
+  onlineConexiones = {};
+  onlineReconectando = false;
+}
+
+// ── Preparar la pantalla de unirse desde cero (botón, error y conexiones previas limpias) ──
+function onlineIrAPantallaUnirse() {
+  onlineLimpiarConexionPrevia();
+  modoOnline = null;
+  const btn = document.getElementById('online-btn-unirse');
+  if (btn) { btn.disabled = false; btn.textContent = 'Unirse →'; }
+  const err = document.getElementById('online-join-error');
+  if (err) err.style.display = 'none';
+  mostrarScreen('screen-online-join');
+}
+
+function onlineCancelarYVolver() {
+  onlineLimpiarConexionPrevia();
+  modoOnline = null;
+  mostrarScreen('screen-online-menu');
+}
+
 function onlineUnirseASala() {
   const codigo = document.getElementById('online-join-codigo').value.trim().toUpperCase();
   const nombre = document.getElementById('online-join-nombre').value.trim() || 'Jugador';
@@ -2176,11 +2205,12 @@ function onlineUnirseASala() {
 }
 
 function onlineConectarComoInvitado(codigo, nombre, fichaId) {
+  onlineLimpiarConexionPrevia();
   modoOnline = 'guest';
   onlinePeer = new Peer(undefined, { debug: 0, config: ONLINE_ICE_CONFIG });
 
   let resuelto = false;
-  const timeoutId = setTimeout(() => {
+  onlineTimeoutJoinId = setTimeout(() => {
     if (resuelto) return;
     resuelto = true;
     if (pqGame) { onlineReintentarConexion(); return; }
@@ -2192,7 +2222,7 @@ function onlineConectarComoInvitado(codigo, nombre, fichaId) {
     onlineConexionHost = onlinePeer.connect('trivial-' + codigo, { reliable: true });
     onlineConexionHost.on('open', () => {
       resuelto = true;
-      clearTimeout(timeoutId);
+      clearTimeout(onlineTimeoutJoinId);
       onlineConexionHost.send({ type: 'JOIN', nombre, fichaId, guestId: onlineObtenerGuestId() });
       if (!pqGame) mostrarScreen('screen-online-wait');
       onlineReconectando = false;
@@ -2203,7 +2233,7 @@ function onlineConectarComoInvitado(codigo, nombre, fichaId) {
       console.error('Conexión invitado, error:', err);
       if (resuelto) return;
       resuelto = true;
-      clearTimeout(timeoutId);
+      clearTimeout(onlineTimeoutJoinId);
       if (pqGame) onlineGestionarDesconexion();
       else onlineMostrarErrorJoin('No se pudo conectar. Comprueba el código.');
     });
@@ -2212,7 +2242,7 @@ function onlineConectarComoInvitado(codigo, nombre, fichaId) {
     console.error('Peer error (guest):', err);
     if (resuelto) return;
     resuelto = true;
-    clearTimeout(timeoutId);
+    clearTimeout(onlineTimeoutJoinId);
     if (pqGame) onlineGestionarDesconexion();
     else onlineMostrarErrorJoin('No se pudo conectar. Comprueba el código e inténtalo de nuevo.');
   });
