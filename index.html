@@ -5287,6 +5287,11 @@ function mostrarScreen(id) {
 
 function seleccionarModo(modo) {
   modoJuego = modo;
+  if (modo === 'tablero') {
+    // Empezar de cero cada vez que se entra a configurar una partida nueva
+    numJugadores = 2;
+    Object.keys(fichasElegidas).forEach(k => { if (Number(k) >= 0) delete fichasElegidas[k]; });
+  }
   if (modo === 'infinito') {
     // Para infinito: ir directo a setup pero ocultando la sección de jugadores
     irASetupInfinito();
