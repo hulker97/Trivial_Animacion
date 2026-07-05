@@ -1247,7 +1247,7 @@ body > * { position: relative; z-index: 1; }
 
   <!-- Botones -->
   <div style="display:flex;gap:1rem;justify-content:center;max-width:600px;width:100%;margin:0 auto;">
-    <button class="btn btn-secondary" onclick="modoJuego==='infinito'?mostrarScreen('screen-inicio'):mostrarScreen('screen-modo')">← Volver</button>
+    <button class="btn btn-secondary" onclick="if(modoJuego==='infinito'){mostrarScreen('screen-inicio');}else{resetearConfigJugadores();mostrarScreen('screen-modo');}">← Volver</button>
     <button class="btn btn-primary" id="btn-iniciar" onclick="iniciarJuego()">🎲 Iniciar juego</button>
   </div>
 </div>
@@ -5285,12 +5285,16 @@ function mostrarScreen(id) {
   document.getElementById(id).classList.add("active");
 }
 
+// Empezar de cero la configuración de jugadores (número y fichas asignadas)
+function resetearConfigJugadores() {
+  numJugadores = 2;
+  Object.keys(fichasElegidas).forEach(k => { if (Number(k) >= 0) delete fichasElegidas[k]; });
+}
+
 function seleccionarModo(modo) {
   modoJuego = modo;
   if (modo === 'tablero') {
-    // Empezar de cero cada vez que se entra a configurar una partida nueva
-    numJugadores = 2;
-    Object.keys(fichasElegidas).forEach(k => { if (Number(k) >= 0) delete fichasElegidas[k]; });
+    resetearConfigJugadores();
   }
   if (modo === 'infinito') {
     // Para infinito: ir directo a setup pero ocultando la sección de jugadores
