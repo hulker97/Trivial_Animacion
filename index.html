@@ -2114,7 +2114,9 @@ function onlineEngancharConsolaPeerJS() {
   console.log = (...args) => {
     origLog(...args);
     const texto = args.map(a => typeof a === 'string' ? a : (a && a.message) || '').join(' ');
-    if (/PeerJS/i.test(texto)) onlineDiag(`🔵 ${texto}`);
+    if (/PeerJS/i.test(texto) && /candidate|ICE|connection|open|error|close/i.test(texto)) {
+      onlineDiag(`🔵 ${texto.slice(0, 140)}`);
+    }
   };
 }
 
@@ -2137,12 +2139,14 @@ function onlineEngancharDiagICE(conn, etiqueta) {
     pc.onicecandidate = (e) => {
       if (e.candidate) onlineDiag(`${etiqueta}: candidato ${e.candidate.type} (${e.candidate.protocol})`);
     };
-    // Sondeo de respaldo cada 3s por si algún evento no llega a disparar en este navegador
+    // Sondeo de respaldo cada 6s (máximo 1 minuto) por si algún evento no llega a disparar en este navegador
+    let sondeos = 0;
     const poll = setInterval(() => {
-      if (!onlinePeer && !onlinePeer) { clearInterval(poll); return; }
+      sondeos++;
+      if (sondeos > 10) { clearInterval(poll); return; }
       onlineDiag(`${etiqueta}: [sondeo] ICE=${pc.iceConnectionState} conexión=${pc.connectionState}`);
       if (pc.connectionState === 'connected' || pc.connectionState === 'closed' || pc.connectionState === 'failed') clearInterval(poll);
-    }, 3000);
+    }, 6000);
   };
   intentar();
 }
