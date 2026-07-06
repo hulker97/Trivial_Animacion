@@ -2785,7 +2785,7 @@ function onlineAplicarEstadoRemoto(estado) {
     if (ganador) pqMostrarVictoria(ganador);
   }
   onlineActualizarBloqueoTurno();
-  pqAutoAjustarPantalla();
+  autoAjustarPantalla();
 }
 
 // ── Bloquear/permitir la interacción según si es mi turno ──
@@ -5566,9 +5566,36 @@ async function iniciarJuego() {
 // ════════════════════════════════════════════════════════
 //  NAVEGACIÓN Y SELECCIÓN DE MODO
 // ════════════════════════════════════════════════════════
+// Pantallas "de juego" donde queremos que quepa todo sin scroll (reescalando si hace falta).
+// Las de configuración/menús se dejan con su scroll normal, porque pueden tener listas largas.
+const PANTALLAS_AUTOAJUSTABLES = new Set(['screen-preguntados', 'screen-rect', 'screen-game', 'screen-infinito', 'screen-fin']);
+
+function autoAjustarPantalla() {
+  requestAnimationFrame(() => {
+    const screen = document.querySelector('.screen.active');
+    if (!screen || !PANTALLAS_AUTOAJUSTABLES.has(screen.id)) return;
+    screen.style.zoom = 1;
+    const disponible = window.innerHeight;
+    const necesario = screen.scrollHeight;
+    if (necesario > disponible) {
+      const factor = Math.max(0.7, disponible / necesario - 0.01);
+      screen.style.zoom = factor;
+    }
+  });
+}
+
+// Reajustar cada vez que cambie algo dentro de la pantalla activa (nueva pregunta, nuevo turno, etc.)
+let _autoAjusteTimer = null;
+function _solicitarAutoAjuste() {
+  if (_autoAjusteTimer) clearTimeout(_autoAjusteTimer);
+  _autoAjusteTimer = setTimeout(autoAjustarPantalla, 80);
+}
+new MutationObserver(_solicitarAutoAjuste).observe(document.body, { childList: true, subtree: true, characterData: true });
+
 function mostrarScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
+  autoAjustarPantalla();
 }
 
 // Empezar de cero la configuración de jugadores (número y fichas asignadas)
@@ -6044,22 +6071,6 @@ function pqResultadoGiro(sector, idx) {
   }
 }
 
-// ── Reescala automáticamente la pantalla de Preguntados para que quepa entera,
-//    sin importar el tamaño del móvil (usa "zoom" para que el hueco se recupere de verdad) ──
-function pqAutoAjustarPantalla() {
-  requestAnimationFrame(() => {
-    const screen = document.getElementById('screen-preguntados');
-    if (!screen || !screen.classList.contains('active')) return;
-    screen.style.zoom = 1;
-    const disponible = window.innerHeight;
-    const necesario = screen.scrollHeight;
-    if (necesario > disponible) {
-      const factor = Math.max(0.7, disponible / necesario - 0.01);
-      screen.style.zoom = factor;
-    }
-  });
-}
-
 function pqMostrarSelectorCoronaUI() {
   document.getElementById('pq-btn-girar').style.display = 'none';
   const j = pqJugadorActual();
@@ -6081,7 +6092,7 @@ function pqMostrarSelectorCoronaUI() {
   }).join('');
   document.getElementById('pq-corona-selector').style.display = 'block';
   onlineActualizarBloqueoTurno();
-  pqAutoAjustarPantalla();
+  autoAjustarPantalla();
 }
 
 // ── Mostrar pregunta ──
@@ -6159,7 +6170,7 @@ function pqRenderPreguntaUI(q, cat, esCorona) {
   document.getElementById('pq-vista-ruleta').style.display = 'none';
   document.getElementById('pq-vista-pregunta').style.display = 'block';
   onlineActualizarBloqueoTurno();
-  pqAutoAjustarPantalla();
+  autoAjustarPantalla();
 }
 
 // ── Render del turno ──
@@ -6195,7 +6206,7 @@ function pqRenderTurno() {
   document.getElementById('pq-vista-pregunta').style.display = 'none';
   pqRenderAllPlayers();
   onlineActualizarBloqueoTurno();
-  pqAutoAjustarPantalla();
+  autoAjustarPantalla();
   if (modoOnline === 'host') onlineBroadcastEstado('ruleta');
 }
 
@@ -6224,7 +6235,7 @@ function pqMostrarSelectorQuesito() {
   }).join('');
   document.getElementById('pq-corona-selector').style.display = 'block';
   onlineActualizarBloqueoTurno();
-  pqAutoAjustarPantalla();
+  autoAjustarPantalla();
   if (modoOnline === 'host') onlineBroadcastEstado('selector-quesito');
 }
 
@@ -6548,7 +6559,7 @@ function rectOnContinue() {
 // ════════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════════
-window.addEventListener('resize', () => { if (typeof pqAutoAjustarPantalla === 'function') pqAutoAjustarPantalla(); });
+window.addEventListener('resize', () => { if (typeof autoAjustarPantalla === 'function') autoAjustarPantalla(); });
 
 window.addEventListener("DOMContentLoaded", () => {
   // Esperar a que el script de Supabase esté listo
