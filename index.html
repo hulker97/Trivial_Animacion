@@ -1821,38 +1821,40 @@ let fichasElegidas = {}; // { indiceJugador: fichaId } — selección durante el
 
 // Devuelve el <img> de la ficha de un jugador (o su emoji de respaldo si no ha elegido ficha o falla la imagen)
 // ── Mini "quesito" tipo Trivial Pursuit: 6 porciones de color, iluminadas si se tienen ──
-function quesitoSVG(quesitos, sizePx) {
-  const cx = 50, cy = 50, rOuter = 47, rInner = 15;
-  const n = CATS.length;
-  const angPor = 360 / n;
-  const toRad = d => d * Math.PI / 180;
-  let paths = '';
-  CATS.forEach((cat, i) => {
+// ── Fila de 6 quesitos con la mascota de cada categoría: apagada si no la tienes, iluminada si sí ──
+function quesitosFila(quesitos, sizePx, gapPx) {
+  const gap = gapPx != null ? gapPx : 4;
+  return `<div style="display:flex;gap:${gap}px;flex-shrink:0">` + CATS.map(cat => {
     const info = CATS_INFO[cat];
     const earned = !!(quesitos && quesitos[cat]);
-    const startDeg = i * angPor - 90;
-    const endDeg = startDeg + angPor;
-    const x1 = cx + rOuter * Math.cos(toRad(startDeg)), y1 = cy + rOuter * Math.sin(toRad(startDeg));
-    const x2 = cx + rOuter * Math.cos(toRad(endDeg)), y2 = cy + rOuter * Math.sin(toRad(endDeg));
-    const xi1 = cx + rInner * Math.cos(toRad(startDeg)), yi1 = cy + rInner * Math.sin(toRad(startDeg));
-    const xi2 = cx + rInner * Math.cos(toRad(endDeg)), yi2 = cy + rInner * Math.sin(toRad(endDeg));
-    const path = `M ${xi1.toFixed(1)} ${yi1.toFixed(1)} L ${x1.toFixed(1)} ${y1.toFixed(1)} A ${rOuter} ${rOuter} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)} L ${xi2.toFixed(1)} ${yi2.toFixed(1)} A ${rInner} ${rInner} 0 0 0 ${xi1.toFixed(1)} ${yi1.toFixed(1)} Z`;
-    const gradId = `qz${cat}${Math.random().toString(36).slice(2,7)}`;
-    if (earned) {
-      paths += `<defs><radialGradient id="${gradId}" cx="35%" cy="30%" r="80%">
-        <stop offset="0%" stop-color="${info.color}" stop-opacity="1"/>
-        <stop offset="100%" stop-color="${info.color}" stop-opacity="0.75"/>
-      </radialGradient></defs>`;
-      paths += `<path d="${path}" fill="url(#${gradId})" stroke="rgba(255,255,255,0.65)" stroke-width="1.6" style="filter:drop-shadow(0 0 3px ${info.color})"/>`;
-    } else {
-      paths += `<path d="${path}" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.16)" stroke-width="1.2"/>`;
-    }
-  });
-  return `<svg viewBox="0 0 100 100" width="${sizePx}" height="${sizePx}" style="display:block;overflow:visible">
-    <circle cx="50" cy="50" r="49" fill="none" stroke="rgba(255,215,0,0.3)" stroke-width="1.2"/>
-    ${paths}
-    <circle cx="50" cy="50" r="14" fill="#0a0e2e" stroke="var(--gold)" stroke-width="1.6"/>
-  </svg>`;
+    return `<div style="width:${sizePx}px;height:${sizePx}px;border-radius:50%;flex-shrink:0;
+      background:${earned ? info.color+'2e' : 'rgba(255,255,255,0.05)'};
+      border:2px solid ${earned ? info.color : 'rgba(255,255,255,0.15)'};
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:${earned ? '0 0 8px '+info.color+'aa' : 'none'};
+      transition:all 0.3s;" title="${info.nombre}">
+      <div style="width:${Math.round(sizePx*0.82)}px;height:${Math.round(sizePx*0.82)}px;display:flex;align-items:center;justify-content:center;
+        filter:${earned ? 'none' : 'grayscale(1) brightness(0.55)'};opacity:${earned ? '1' : '0.4'};transition:all 0.3s">
+        ${mascotaTag(cat, Math.round(sizePx*0.82))}
+      </div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+function quesitoSVG(quesitos, sizePx) {
+  // Fila de 6 puntos, uno por categoría: apagado/gris si no se tiene, a color y con brillo si sí
+  const size = sizePx || 20;
+  const gap = Math.max(2, Math.round(size * 0.12));
+  const dots = CATS.map(cat => {
+    const info = CATS_INFO[cat];
+    const earned = !!(quesitos && quesitos[cat]);
+    const estilo = earned
+      ? `background:${info.color}33;border-color:${info.color};box-shadow:0 0 6px ${info.color},inset 0 1px 0 rgba(255,255,255,0.25)`
+      : `background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.18)`;
+    const imgEstilo = earned ? '' : 'filter:grayscale(1) brightness(0.6);opacity:0.55';
+    return `<span title="${info.nombre}" style="display:inline-flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;border:1.5px solid;transition:all 0.3s;flex-shrink:0;${estilo}">${mascotaTag(cat, Math.round(size*0.82), imgEstilo)}</span>`;
+  }).join('');
+  return `<div style="display:inline-flex;gap:${gap}px;flex-wrap:wrap;align-items:center;justify-content:center">${dots}</div>`;
 }
 
 function fichaTag(jugadorOFichaId, sizePx, extraStyle) {
@@ -4443,7 +4445,7 @@ function renderPlayersPanel() {
         <div class="pc-icon" style="background:${p.color}">${fichaTag(p, 26)}</div>
         <div class="pc-name">${p.name}</div>
       </div>
-      <div class="pc-wedges" style="justify-content:center">${quesitoSVG(quesitosObj, 44)}</div>
+      <div class="pc-wedges" style="justify-content:center">${quesitosFila(quesitosObj, 15, 3)}</div>
     </div>`;
   });
   panel.innerHTML = s;
@@ -4471,7 +4473,7 @@ function renderTopbar() {
 
   // Cuñas
   const quesitosObj = Object.fromEntries(CATS.map(c => [c, p.wedges.includes(c)]));
-  document.getElementById("cp-wedges").innerHTML = quesitoSVG(quesitosObj, 34);
+  document.getElementById("cp-wedges").innerHTML = quesitosFila(quesitosObj, 16, 3);
 }
 
 // ════════════════════════════════════════════════════════
@@ -5899,7 +5901,7 @@ function pqRenderTurno() {
   document.getElementById('pq-cp-turn').textContent = 'Toca para girar';
 
   const qWrap = document.getElementById('pq-cp-wedges');
-  qWrap.innerHTML = quesitoSVG(j.quesitos, 34);
+  qWrap.innerHTML = quesitosFila(j.quesitos, 16, 3);
 
   const acc = j.aciertosAcumulados || 0;
   const gemas = document.getElementById('pq-racha-gemas');
@@ -6052,7 +6054,7 @@ function pqRenderAllPlayers() {
       return `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;opacity:${i===pqGame.turno?'1':'0.55'}">
         <div style="width:24px;height:24px;border-radius:50%;background:${j.color};display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;overflow:hidden">${fichaTag(j, 22)}</div>
         <div style="font-size:0.75rem;font-weight:700;min-width:55px;color:var(--text)">${j.name}</div>
-        ${quesitoSVG(j.quesitos, 26)}
+        ${quesitosFila(j.quesitos, 13, 2)}
         ${acc > 0 ? `<div style="display:flex;gap:2px">${[0,1,2].map(k=>`<span style="font-size:0.6rem;${k<acc?'filter:drop-shadow(0 0 3px rgba(255,215,0,0.8))':'opacity:0.25;filter:grayscale(1)'}">💎</span>`).join('')}</div>` : ''}
       </div>`;
     }).join('');
@@ -6079,7 +6081,7 @@ function pqMostrarVictoria(j) {
         <div style="font-family:'Fredoka One',cursive;font-size:1rem;color:var(--text2);min-width:22px;text-align:center">${i+1}º</div>
         <div style="width:26px;height:26px;border-radius:50%;background:${jug.color};display:flex;align-items:center;justify-content:center;font-size:0.95rem;flex-shrink:0;overflow:hidden">${fichaTag(jug, 24)}</div>
         <div style="font-size:0.88rem;font-weight:700;flex:1;color:${esG?'var(--gold)':'var(--text)'}">${jug.name}${esG?' 🏆':''}</div>
-        ${quesitoSVG(jug.quesitos, 30)}
+        ${quesitosFila(jug.quesitos, 14, 2)}
       </div>`;
     }).join('');
   }
@@ -6146,7 +6148,7 @@ function rectRenderTopbar() {
   document.getElementById('rect-cp-name').textContent = j.name;
   document.getElementById('rect-cp-turn').textContent = 'Tira el dado';
   const qWrap = document.getElementById('rect-cp-wedges');
-  qWrap.innerHTML = quesitoSVG(j.quesitos, 34);
+  qWrap.innerHTML = quesitosFila(j.quesitos, 16, 3);
   document.getElementById('rect-dado-btn').disabled = rectGame.esperandoMovimiento;
 }
 
