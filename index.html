@@ -2094,12 +2094,25 @@ let onlineDiagLog = [];
 function onlineDiag(msg) {
   const t = new Date().toLocaleTimeString('es-ES', { hour12: false });
   onlineDiagLog.push(`${t}  ${msg}`);
-  if (onlineDiagLog.length > 40) onlineDiagLog.shift();
+  if (onlineDiagLog.length > 80) onlineDiagLog.shift();
   console.log('[online]', msg);
   ['online-diag-host', 'online-diag-join', 'online-diag-wait'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.textContent = onlineDiagLog.join('\n'); el.scrollTop = el.scrollHeight; }
   });
+}
+
+// Capturar los logs internos de PeerJS (debug:3) para verlos también en el panel, sin necesitar el inspector
+let onlineConsoleEnganchado = false;
+function onlineEngancharConsolaPeerJS() {
+  if (onlineConsoleEnganchado) return;
+  onlineConsoleEnganchado = true;
+  const origLog = console.log.bind(console);
+  console.log = (...args) => {
+    origLog(...args);
+    const texto = args.map(a => typeof a === 'string' ? a : (a && a.message) || '').join(' ');
+    if (/PeerJS/i.test(texto)) onlineDiag(`🔵 ${texto}`);
+  };
 }
 
 // Engancha el estado ICE real de una conexión (PeerJS expone el RTCPeerConnection subyacente)
@@ -2175,9 +2188,10 @@ async function onlineCrearSala() {
   renderOnlineHostLobby();
 
   onlineDiagLog = [];
+  onlineEngancharConsolaPeerJS();
   onlineDiag(`Creando sala con código ${onlineCodigoSala}…`);
   const iceServers = await onlineObtenerIceServers();
-  onlinePeer = new Peer('trivial-' + onlineCodigoSala, { debug: 0, config: { iceServers } });
+  onlinePeer = new Peer('trivial-' + onlineCodigoSala, { debug: 3, config: { iceServers } });
   onlinePeer.on('open', id => {
     onlineMiPeerId = id;
     onlineDiag(`✅ Conectado al servidor de señalización. Mi id: ${id}`);
@@ -2335,9 +2349,10 @@ async function onlineConectarComoInvitado(codigo, nombre, fichaId) {
   onlineLimpiarConexionPrevia();
   modoOnline = 'guest';
   onlineDiagLog = [];
+  onlineEngancharConsolaPeerJS();
   onlineDiag(`Conectando al servidor de señalización…`);
   const iceServers = await onlineObtenerIceServers();
-  onlinePeer = new Peer(undefined, { debug: 0, config: { iceServers } });
+  onlinePeer = new Peer(undefined, { debug: 3, config: { iceServers } });
 
   let resuelto = false;
   onlineTimeoutJoinId = setTimeout(() => {
