@@ -1088,6 +1088,7 @@ body > * { position: relative; z-index: 1; }
   <details style="max-width:600px;width:100%;margin:0.8rem auto 0;color:var(--text2);font-size:0.72rem">
     <summary style="cursor:pointer;font-weight:700">🔧 Diagnóstico de conexión (si algo falla, mándame una foto de esto)</summary>
     <pre id="online-diag-host" style="white-space:pre-wrap;background:rgba(0,0,0,0.3);border-radius:8px;padding:0.6rem;margin-top:0.4rem;max-height:180px;overflow-y:auto;font-family:monospace;font-size:0.65rem"></pre>
+    <button class="btn btn-secondary btn-sm" style="margin-top:0.4rem;width:100%" onclick="onlineCopiarDiagnostico()">📋 Copiar diagnóstico</button>
   </details>
 </div>
 
@@ -1119,6 +1120,7 @@ body > * { position: relative; z-index: 1; }
   <details style="max-width:600px;width:100%;margin:0.8rem auto 0;color:var(--text2);font-size:0.72rem">
     <summary style="cursor:pointer;font-weight:700">🔧 Diagnóstico de conexión (si algo falla, mándame una foto de esto)</summary>
     <pre id="online-diag-join" style="white-space:pre-wrap;background:rgba(0,0,0,0.3);border-radius:8px;padding:0.6rem;margin-top:0.4rem;max-height:180px;overflow-y:auto;font-family:monospace;font-size:0.65rem"></pre>
+    <button class="btn btn-secondary btn-sm" style="margin-top:0.4rem;width:100%" onclick="onlineCopiarDiagnostico()">📋 Copiar diagnóstico</button>
   </details>
 </div>
 
@@ -1139,6 +1141,7 @@ body > * { position: relative; z-index: 1; }
   <details style="max-width:440px;width:100%;margin:0.8rem auto 0;color:var(--text2);font-size:0.72rem">
     <summary style="cursor:pointer;font-weight:700">🔧 Diagnóstico de conexión</summary>
     <pre id="online-diag-wait" style="white-space:pre-wrap;background:rgba(0,0,0,0.3);border-radius:8px;padding:0.6rem;margin-top:0.4rem;max-height:180px;overflow-y:auto;font-family:monospace;font-size:0.65rem"></pre>
+    <button class="btn btn-secondary btn-sm" style="margin-top:0.4rem;width:100%" onclick="onlineCopiarDiagnostico()">📋 Copiar diagnóstico</button>
   </details>
 </div>
 
@@ -2271,6 +2274,34 @@ function renderOnlineHostLobby() {
       <div style="flex:1;font-weight:800">${j.nombre}</div></div>`;
   });
   list.innerHTML = s;
+}
+
+function onlineCopiarDiagnostico() {
+  const texto = onlineDiagLog.join('\n') || '(vacío, todavía no ha pasado nada)';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(
+      () => mostrarToast('¡Diagnóstico copiado! Pégalo donde quieras enviarlo.'),
+      () => onlineMostrarDiagnosticoManual(texto)
+    );
+  } else {
+    onlineMostrarDiagnosticoManual(texto);
+  }
+}
+
+function onlineMostrarDiagnosticoManual(texto) {
+  // Reserva si el portapapeles falla: seleccionar un textarea para copiar a mano
+  let ta = document.getElementById('online-diag-textarea-copia');
+  if (!ta) {
+    ta = document.createElement('textarea');
+    ta.id = 'online-diag-textarea-copia';
+    ta.style.cssText = 'position:fixed;top:10%;left:5%;width:90%;height:70%;z-index:9999;font-size:0.7rem;font-family:monospace';
+    document.body.appendChild(ta);
+  }
+  ta.value = texto;
+  ta.style.display = 'block';
+  ta.focus();
+  ta.select();
+  mostrarToast('Mantén el dedo y elige "Seleccionar todo" y "Copiar"');
 }
 
 function onlineCopiarEnlace() {
