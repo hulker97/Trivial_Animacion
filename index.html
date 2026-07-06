@@ -983,6 +983,7 @@ body > * { position: relative; z-index: 1; }
 }
 </style>
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 
@@ -1903,6 +1904,12 @@ function svgFichaOrEmoji(p, cx, cy, size) {
 // ════════════════════════════════════════════════════════
 const SUPABASE_URL = "https://zonsbegwclplvhiuuiss.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3QA_LvTEHW5WFbtsL-M8Sw_h1PZPS5U";
+let supabaseClient = null;
+try {
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+} catch (e) {
+  console.error('No se pudo inicializar el cliente de Supabase Realtime (el modo online no estará disponible):', e);
+}
 let sb = null;
 
 function initSupabase() {
@@ -1982,16 +1989,58 @@ async function cargarPreguntas(filtros) {
 //  ESTADO GLOBAL
 // ════════════════════════════════════════════════════════
 // ════════════════════════════════════════════════════════
-//  MODO ONLINE — PeerJS (host = anfitrión autoritativo, invitados = espejo)
+//  MODO ONLINE — Señalización vía Supabase Realtime + WebRTC manual
+//  (el host es la autoridad del juego; el canal de Supabase solo sirve
+//  para que los dispositivos "se encuentren" y monten la conexión directa)
 // ════════════════════════════════════════════════════════
 let modoOnline = null;       // null | 'host' | 'guest'
-let onlinePeer = null;
-let onlineConexiones = {};   // host: peerId -> DataConnection
-let onlineConexionHost = null; // guest: DataConnection al host
+let onlineCanalSenalizacion = null; // canal de Supabase Realtime compartido por la sala
+let onlineConexiones = {};   // host: peerId -> OnlineConn
+let onlineConexionHost = null; // guest: OnlineConn hacia el host
 let onlineCodigoSala = null;
 let onlineJugadoresLobby = []; // host: [{peerId, nombre, fichaId}], sin contar al propio host
 let onlineMiPeerId = null;
 let onlineOrdenPeerIds = [];  // host: orden de peerId que determina el indice en pqGame.jugadores (index 0 = host)
+
+function onlineGenerarPeerId() {
+  return 'p' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+}
+
+// Envía un mensaje de señalización (oferta/respuesta/candidato) por el canal de Supabase
+function onlineEnviarSenal(msg) {
+  if (!onlineCanalSenalizacion) return;
+  onlineCanalSenalizacion.send({ type: 'broadcast', event: 'signal', payload: msg });
+}
+
+// ── Envoltorio para que una RTCDataChannel se comporte como las DataConnection de antes
+//    (mismo .send/.on('data'|'open'|'close')/.peer/.peerConnection que ya usa el resto del código) ──
+class OnlineConn {
+  constructor(peerId, dataChannel, pc) {
+    this.peer = peerId;
+    this.dataChannel = dataChannel;
+    this.pc = pc;
+    this._handlers = { data: [], open: [], close: [], error: [] };
+    dataChannel.addEventListener('open', () => this._handlers.open.forEach(h => h()));
+    dataChannel.addEventListener('message', (e) => {
+      let data; try { data = JSON.parse(e.data); } catch (err) { return; }
+      this._handlers.data.forEach(h => h(data));
+    });
+    dataChannel.addEventListener('close', () => this._handlers.close.forEach(h => h()));
+    dataChannel.addEventListener('error', (e) => this._handlers.error.forEach(h => h(e)));
+  }
+  get peerConnection() { return this.pc; }
+  send(data) {
+    try { if (this.dataChannel.readyState === 'open') this.dataChannel.send(JSON.stringify(data)); } catch (e) {}
+  }
+  on(evento, cb) {
+    if (evento === 'open' && this.dataChannel.readyState === 'open') { cb(); return; }
+    if (this._handlers[evento]) this._handlers[evento].push(cb);
+  }
+  close() {
+    try { this.dataChannel.close(); } catch (e) {}
+    try { this.pc.close(); } catch (e) {}
+  }
+}
 
 let pqVotos = {}; // host: peerId (o 'HOST') -> true/false, para el modo viva voz online
 
@@ -2106,39 +2155,25 @@ function onlineDiag(msg) {
   });
 }
 
-// Capturar los logs internos de PeerJS (debug:3) para verlos también en el panel, sin necesitar el inspector
-let onlineConsoleEnganchado = false;
-function onlineEngancharConsolaPeerJS() {
-  if (onlineConsoleEnganchado) return;
-  onlineConsoleEnganchado = true;
-  console.log = (...args) => {
-    onlineConsoleNativo(...args);
-    const texto = args.map(a => typeof a === 'string' ? a : (a && a.message) || '').join(' ');
-    if (/PeerJS/i.test(texto) && /candidate|ICE|connection|open|error|close/i.test(texto)) {
-      onlineDiag(`🔵 ${texto.slice(0, 140)}`);
-    }
-  };
-}
-
-// Engancha el estado ICE real de una conexión (PeerJS expone el RTCPeerConnection subyacente)
+// Engancha el estado ICE real de una conexión (para verlo en el panel de diagnóstico)
 function onlineEngancharDiagICE(conn, etiqueta) {
   let intentos = 0;
   const intentar = () => {
     intentos++;
-    const pc = conn.peerConnection;
+    const pc = conn.peerConnection || conn; // acepta tanto un OnlineConn como un RTCPeerConnection directo
     if (!pc) {
       if (intentos < 20) setTimeout(intentar, 250);
       else onlineDiag(`${etiqueta}: ⚠️ no se pudo acceder al RTCPeerConnection interno`);
       return;
     }
     onlineDiag(`${etiqueta}: conexión interna lista (ICE=${pc.iceConnectionState}, estado=${pc.connectionState}, señal=${pc.signalingState})`);
-    pc.oniceconnectionstatechange = () => onlineDiag(`${etiqueta}: ICE = ${pc.iceConnectionState}`);
-    pc.onconnectionstatechange = () => onlineDiag(`${etiqueta}: conexión = ${pc.connectionState}`);
-    pc.onsignalingstatechange = () => onlineDiag(`${etiqueta}: señal = ${pc.signalingState}`);
-    pc.onicegatheringstatechange = () => onlineDiag(`${etiqueta}: gathering = ${pc.iceGatheringState}`);
-    pc.onicecandidate = (e) => {
+    pc.addEventListener('iceconnectionstatechange', () => onlineDiag(`${etiqueta}: ICE = ${pc.iceConnectionState}`));
+    pc.addEventListener('connectionstatechange', () => onlineDiag(`${etiqueta}: conexión = ${pc.connectionState}`));
+    pc.addEventListener('signalingstatechange', () => onlineDiag(`${etiqueta}: señal = ${pc.signalingState}`));
+    pc.addEventListener('icegatheringstatechange', () => onlineDiag(`${etiqueta}: gathering = ${pc.iceGatheringState}`));
+    pc.addEventListener('icecandidate', (e) => {
       if (e.candidate) onlineDiag(`${etiqueta}: candidato ${e.candidate.type} (${e.candidate.protocol})`);
-    };
+    });
     // Sondeo de respaldo cada 6s (máximo 1 minuto) por si algún evento no llega a disparar en este navegador
     let sondeos = 0;
     const poll = setInterval(() => {
@@ -2183,6 +2218,10 @@ async function onlineObtenerIceServers() {
 }
 
 async function onlineCrearSala() {
+  if (!supabaseClient) {
+    mostrarToast('No se pudo cargar el sistema de conexión online. Comprueba tu internet y recarga la página.');
+    return;
+  }
   onlineLimpiarConexionPrevia();
   modoOnline = 'host';
   onlineJugadoresLobby = [];
@@ -2199,38 +2238,63 @@ async function onlineCrearSala() {
   onlineDiagLog = [];
   const diagHost = document.getElementById('online-diag-host');
   if (diagHost) diagHost.textContent = '';
-  onlineEngancharConsolaPeerJS();
   onlineDiag(`Creando sala con código ${onlineCodigoSala}…`);
   const iceServers = await onlineObtenerIceServers();
-  onlinePeer = new Peer('trivial-' + onlineCodigoSala, { debug: 3, config: { iceServers } });
-  onlinePeer.on('open', id => {
-    onlineMiPeerId = id;
-    onlineDiag(`✅ Conectado al servidor de señalización. Mi id: ${id}`);
-  });
-  onlinePeer.on('connection', conn => {
-    onlineDiag(`📥 Llega una conexión entrante de ${conn.peer}`);
-    onlineConexiones[conn.peer] = conn;
-    onlineEngancharDiagICE(conn, `Invitado ${conn.peer.slice(0,6)}`);
-    conn.on('open', () => onlineDiag(`✅ Canal de datos ABIERTO con ${conn.peer.slice(0,6)}`));
+  onlineMiPeerId = 'host';
+
+  onlineCanalSenalizacion = supabaseClient.channel(`trivial-room-${onlineCodigoSala}`, { config: { broadcast: { self: false } } });
+  onlineCanalSenalizacion
+    .on('broadcast', { event: 'signal' }, ({ payload }) => onlineHostRecibeSenal(payload, iceServers))
+    .subscribe((status) => {
+      onlineDiag(`Canal de señalización: ${status}`);
+      if (status === 'SUBSCRIBED') onlineDiag(`✅ Sala abierta y esperando invitados`);
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        mostrarToast('Error de conexión con el servidor. Intenta crear la sala de nuevo.');
+      }
+    });
+}
+
+// ── El host recibe un mensaje de señalización de un invitado (a través de Supabase) ──
+async function onlineHostRecibeSenal(msg, iceServers) {
+  if (msg.to && msg.to !== 'host') return; // no es para mí
+  if (msg.from === 'host') return; // eco de mi propio mensaje
+
+  if (msg.type === 'join-request') {
+    onlineDiag(`📥 Llega una solicitud de conexión de ${msg.from.slice(0,6)}`);
+    const pc = new RTCPeerConnection({ iceServers });
+    const dc = pc.createDataChannel('game');
+    const conn = new OnlineConn(msg.from, dc, pc);
+    onlineConexiones[msg.from] = conn;
+    onlineEngancharDiagICE(conn, `Invitado ${msg.from.slice(0,6)}`);
+    pc.addEventListener('icecandidate', (e) => {
+      if (e.candidate) onlineEnviarSenal({ type: 'ice-candidate', to: msg.from, from: 'host', candidate: e.candidate.toJSON() });
+    });
+    conn.on('open', () => onlineDiag(`✅ Canal de datos ABIERTO con ${msg.from.slice(0,6)}`));
     conn.on('data', data => onlineHostRecibe(conn, data));
     conn.on('close', () => {
-      onlineDiag(`🔌 Se cerró la conexión con ${conn.peer.slice(0,6)}`);
-      delete onlineConexiones[conn.peer];
-      if (pqGame) {
-        // Partida en marcha: no lo quitamos, solo esperamos a que reconecte
-        return;
-      }
-      onlineJugadoresLobby = onlineJugadoresLobby.filter(j => j.peerId !== conn.peer);
+      onlineDiag(`🔌 Se cerró la conexión con ${msg.from.slice(0,6)}`);
+      delete onlineConexiones[msg.from];
+      if (pqGame) return; // partida en marcha: no lo quitamos, solo esperamos a que reconecte
+      onlineJugadoresLobby = onlineJugadoresLobby.filter(j => j.peerId !== msg.from);
       renderOnlineHostLobby();
       onlineBroadcast({ type: 'LOBBY_UPDATE', jugadores: onlineJugadoresLobby });
     });
-    conn.on('error', (e) => onlineDiag(`❌ Error en conexión con ${conn.peer.slice(0,6)}: ${e}`));
-  });
-  onlinePeer.on('error', err => {
-    console.error('Peer error (host):', err);
-    onlineDiag(`❌ Error del servidor de señalización: ${err.type || err}`);
-    mostrarToast('Error de conexión. Intenta crear la sala de nuevo.');
-  });
+    conn.on('error', (e) => onlineDiag(`❌ Error en conexión con ${msg.from.slice(0,6)}: ${e}`));
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    onlineEnviarSenal({ type: 'offer', to: msg.from, from: 'host', sdp: pc.localDescription });
+
+  } else if (msg.type === 'answer') {
+    const conn = onlineConexiones[msg.from];
+    if (conn) {
+      onlineDiag(`📥 Respuesta recibida de ${msg.from.slice(0,6)}`);
+      await conn.pc.setRemoteDescription(msg.sdp);
+    }
+  } else if (msg.type === 'ice-candidate') {
+    const conn = onlineConexiones[msg.from];
+    if (conn && msg.candidate) { try { await conn.pc.addIceCandidate(msg.candidate); } catch (e) {} }
+  }
 }
 
 function onlineHostRecibe(conn, data) {
@@ -2347,8 +2411,10 @@ function onlineHostContinuarASetup() {
 // ── Destruye cualquier peer/conexión de un intento anterior antes de empezar uno nuevo ──
 function onlineLimpiarConexionPrevia() {
   if (onlineTimeoutJoinId) { clearTimeout(onlineTimeoutJoinId); onlineTimeoutJoinId = null; }
-  try { if (onlinePeer) onlinePeer.destroy(); } catch(e) {}
-  onlinePeer = null;
+  try { if (onlineConexionHost) onlineConexionHost.close(); } catch(e) {}
+  try { Object.values(onlineConexiones).forEach(c => c.close()); } catch(e) {}
+  try { if (onlineCanalSenalizacion) supabaseClient.removeChannel(onlineCanalSenalizacion); } catch(e) {}
+  onlineCanalSenalizacion = null;
   onlineConexionHost = null;
   onlineConexiones = {};
   onlineReconectando = false;
@@ -2408,13 +2474,16 @@ function onlineUnirseASala() {
 }
 
 async function onlineConectarComoInvitado(codigo, nombre, fichaId) {
+  if (!supabaseClient) {
+    onlineMostrarErrorJoin('No se pudo cargar el sistema de conexión online. Comprueba tu internet y recarga la página.');
+    return;
+  }
   onlineLimpiarConexionPrevia();
   modoOnline = 'guest';
   onlineDiagLog = [];
-  onlineEngancharConsolaPeerJS();
   onlineDiag(`Conectando al servidor de señalización…`);
   const iceServers = await onlineObtenerIceServers();
-  onlinePeer = new Peer(undefined, { debug: 3, config: { iceServers } });
+  onlineMiPeerId = onlineGenerarPeerId();
 
   let resuelto = false;
   onlineTimeoutJoinId = setTimeout(() => {
@@ -2425,25 +2494,26 @@ async function onlineConectarComoInvitado(codigo, nombre, fichaId) {
     onlineMostrarErrorJoin('No se pudo conectar en 15 segundos. Comprueba que el anfitrión sigue en la sala, que el código es correcto, e idealmente que ambos estéis en la misma WiFi.');
   }, 15000);
 
-  onlinePeer.on('open', id => {
-    onlineMiPeerId = id;
-    onlineDiag(`✅ Conectado al servidor de señalización. Mi id: ${id}`);
-    onlineDiag(`Intentando conectar con la sala trivial-${codigo}…`);
-    onlineConexionHost = onlinePeer.connect('trivial-' + codigo, { reliable: true });
-    onlineEngancharDiagICE(onlineConexionHost, 'Yo→Host');
-    onlineConexionHost.on('open', () => {
+  const pc = new RTCPeerConnection({ iceServers });
+  onlineEngancharDiagICE(pc, 'Yo→Host');
+  pc.addEventListener('icecandidate', (e) => {
+    if (e.candidate) onlineEnviarSenal({ type: 'ice-candidate', to: 'host', from: onlineMiPeerId, candidate: e.candidate.toJSON() });
+  });
+  pc.addEventListener('datachannel', (e) => {
+    const conn = new OnlineConn('host', e.channel, pc);
+    onlineConexionHost = conn;
+    conn.on('open', () => {
       resuelto = true;
       onlineDiag(`✅ Canal de datos ABIERTO con el anfitrión`);
       clearTimeout(onlineTimeoutJoinId);
-      onlineConexionHost.send({ type: 'JOIN', nombre, fichaId, guestId: onlineObtenerGuestId() });
+      conn.send({ type: 'JOIN', nombre, fichaId, guestId: onlineObtenerGuestId() });
       if (!pqGame) mostrarScreen('screen-online-wait');
       onlineReconectando = false;
     });
-    onlineConexionHost.on('data', data => onlineGuestRecibe(data));
-    onlineConexionHost.on('close', () => { onlineDiag('🔌 Conexión con el anfitrión cerrada'); onlineGestionarDesconexion(); });
-    onlineConexionHost.on('error', (err) => {
-      console.error('Conexión invitado, error:', err);
-      onlineDiag(`❌ Error de conexión con el anfitrión: ${err.type || err}`);
+    conn.on('data', data => onlineGuestRecibe(data));
+    conn.on('close', () => { onlineDiag('🔌 Conexión con el anfitrión cerrada'); onlineGestionarDesconexion(); });
+    conn.on('error', (err) => {
+      onlineDiag(`❌ Error de conexión con el anfitrión: ${err}`);
       if (resuelto) return;
       resuelto = true;
       clearTimeout(onlineTimeoutJoinId);
@@ -2451,15 +2521,39 @@ async function onlineConectarComoInvitado(codigo, nombre, fichaId) {
       else onlineMostrarErrorJoin('No se pudo conectar. Comprueba el código.');
     });
   });
-  onlinePeer.on('error', err => {
-    console.error('Peer error (guest):', err);
-    onlineDiag(`❌ Error del servidor de señalización: ${err.type || err}`);
-    if (resuelto) return;
-    resuelto = true;
-    clearTimeout(onlineTimeoutJoinId);
-    if (pqGame) onlineGestionarDesconexion();
-    else onlineMostrarErrorJoin('No se pudo conectar. Comprueba el código e inténtalo de nuevo.');
-  });
+
+  onlineDiag(`Conectando al canal de señalización de la sala ${codigo}…`);
+  onlineCanalSenalizacion = supabaseClient.channel(`trivial-room-${codigo}`, { config: { broadcast: { self: false } } });
+  onlineCanalSenalizacion
+    .on('broadcast', { event: 'signal' }, ({ payload }) => onlineGuestRecibeSenal(payload, pc))
+    .subscribe((status) => {
+      onlineDiag(`Canal de señalización: ${status}`);
+      if (status === 'SUBSCRIBED') {
+        onlineDiag(`✅ Conectado. Avisando al anfitrión…`);
+        onlineEnviarSenal({ type: 'join-request', to: 'host', from: onlineMiPeerId });
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (resuelto) return;
+        resuelto = true;
+        clearTimeout(onlineTimeoutJoinId);
+        onlineDiag(`❌ Error conectando al canal de señalización`);
+        if (pqGame) onlineGestionarDesconexion();
+        else onlineMostrarErrorJoin('No se pudo conectar al servidor. Inténtalo de nuevo.');
+      }
+    });
+}
+
+// ── El invitado recibe un mensaje de señalización del host (a través de Supabase) ──
+async function onlineGuestRecibeSenal(msg, pc) {
+  if (msg.to && msg.to !== onlineMiPeerId) return; // no es para mí
+  if (msg.type === 'offer') {
+    onlineDiag(`📥 Oferta recibida del anfitrión`);
+    await pc.setRemoteDescription(msg.sdp);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    onlineEnviarSenal({ type: 'answer', to: 'host', from: onlineMiPeerId, sdp: pc.localDescription });
+  } else if (msg.type === 'ice-candidate') {
+    if (msg.candidate) { try { await pc.addIceCandidate(msg.candidate); } catch (e) {} }
+  }
 }
 
 // ── Si se pierde la conexión a mitad de partida, reintentar solo automáticamente ──
@@ -2486,7 +2580,7 @@ function onlineReintentarConexion() {
     onlineMostrarPantallaReconexion(false);
     return;
   }
-  try { if (onlinePeer) onlinePeer.destroy(); } catch(e) {}
+  onlineLimpiarConexionPrevia();
   setTimeout(() => {
     onlineConectarComoInvitado(onlineUltimoCodigo, onlineUltimoNombre, fichasElegidas[-2] || null);
     setTimeout(() => { if (onlineReconectando) onlineReintentarConexion(); }, 2500);
@@ -2583,8 +2677,7 @@ function onlineGuestRecibe(data) {
 }
 
 function onlineSalir() {
-  try { if (onlinePeer) onlinePeer.destroy(); } catch(e) {}
-  onlinePeer = null; onlineConexiones = {}; onlineConexionHost = null;
+  onlineLimpiarConexionPrevia();
   modoOnline = null; onlineJugadoresLobby = []; onlineOrdenPeerIds = [];
   mostrarScreen('screen-inicio');
 }
