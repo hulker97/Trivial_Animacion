@@ -2093,12 +2093,13 @@ let onlineUltimoNombre = null;
 // Servidores STUN/TURN públicos: ayudan a conectar cuando los dispositivos están
 // en redes distintas (ej. uno por WiFi y otro con datos móviles)
 // ── Diagnóstico visible en pantalla (para depurar fallos de conexión reales, no solo consola) ──
+const onlineConsoleNativo = console.log.bind(console); // referencia original, ANTES de cualquier parche
 let onlineDiagLog = [];
 function onlineDiag(msg) {
   const t = new Date().toLocaleTimeString('es-ES', { hour12: false });
   onlineDiagLog.push(`${t}  ${msg}`);
   if (onlineDiagLog.length > 80) onlineDiagLog.shift();
-  console.log('[online]', msg);
+  onlineConsoleNativo('[online]', msg);
   ['online-diag-host', 'online-diag-join', 'online-diag-wait'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.textContent = onlineDiagLog.join('\n'); el.scrollTop = el.scrollHeight; }
@@ -2110,9 +2111,8 @@ let onlineConsoleEnganchado = false;
 function onlineEngancharConsolaPeerJS() {
   if (onlineConsoleEnganchado) return;
   onlineConsoleEnganchado = true;
-  const origLog = console.log.bind(console);
   console.log = (...args) => {
-    origLog(...args);
+    onlineConsoleNativo(...args);
     const texto = args.map(a => typeof a === 'string' ? a : (a && a.message) || '').join(' ');
     if (/PeerJS/i.test(texto) && /candidate|ICE|connection|open|error|close/i.test(texto)) {
       onlineDiag(`🔵 ${texto.slice(0, 140)}`);
