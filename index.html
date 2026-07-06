@@ -6474,40 +6474,37 @@ function rectRenderTopbar() {
   document.getElementById('rect-dado-btn').disabled = rectGame.esperandoMovimiento;
 }
 
-// Genera las coordenadas (columna,fila) de una espiral cuadrada de n casillas,
-// empezando por fuera (casilla 0) y terminando en el centro (casilla n-1) — como el tablero real de la Oca
+// Genera las coordenadas (en px, centradas en 0,0) de una espiral real de n casillas,
+// empezando por fuera (casilla 0) y terminando en el centro (casilla n-1) — como el tablero real de la Oca.
+// Es una espiral polar (no una cuadrícula), así que deja huecos visibles entre cada vuelta.
 let _espiralCache = null;
-function generarEspiral(n) {
-  if (_espiralCache && _espiralCache.length === n) return _espiralCache;
-  const coords = [{ x: 0, y: 0 }];
-  let x = 0, y = 0, dx = 1, dy = 0;
-  let pasosEnSegmento = 1, pasosHechos = 0, segmentos = 0;
-  while (coords.length < n) {
-    x += dx; y += dy;
-    coords.push({ x, y });
-    pasosHechos++;
-    if (pasosHechos === pasosEnSegmento) {
-      pasosHechos = 0;
-      [dx, dy] = [-dy, dx];
-      segmentos++;
-      if (segmentos % 2 === 0) pasosEnSegmento++;
-    }
+function generarEspiral(n, cellSize) {
+  if (_espiralCache && _espiralCache.n === n && _espiralCache.cellSize === cellSize) return _espiralCache.coords;
+  const coords = [];
+  let radio = cellSize * 0.7;
+  let angulo = 0;
+  const crecimientoPorVuelta = cellSize * 1.35;
+  for (let i = 0; i < n; i++) {
+    coords.push({ x: Math.cos(angulo) * radio, y: Math.sin(angulo) * radio });
+    const pasoAngular = cellSize / radio;
+    angulo += pasoAngular;
+    radio += (crecimientoPorVuelta * pasoAngular) / (2 * Math.PI);
   }
-  coords.reverse();
-  _espiralCache = coords;
+  coords.reverse(); // que la casilla 0 quede fuera y la ultima en el centro
+  _espiralCache = { n, cellSize, coords };
   return coords;
 }
 
 function rectRenderBoard() {
   const board = document.getElementById('rect-board');
   const casillas = rectGame.casillas;
-  const coords = generarEspiral(casillas.length);
+  const cell = 50, gap = 6;
+  const coords = generarEspiral(casillas.length, cell + gap);
 
-  const minX = Math.min(...coords.map(c => c.x)), maxX = Math.max(...coords.map(c => c.x));
-  const minY = Math.min(...coords.map(c => c.y)), maxY = Math.max(...coords.map(c => c.y));
-  const cell = 50, gap = 3;
-  const anchoPx = (maxX - minX + 1) * (cell + gap);
-  const altoPx = (maxY - minY + 1) * (cell + gap);
+  const minX = Math.min(...coords.map(c => c.x)) - cell/2, maxX = Math.max(...coords.map(c => c.x)) + cell/2;
+  const minY = Math.min(...coords.map(c => c.y)) - cell/2, maxY = Math.max(...coords.map(c => c.y)) + cell/2;
+  const anchoPx = maxX - minX;
+  const altoPx = maxY - minY;
 
   const ICONOS = { oca:'🦢', puente:'🌉', posada:'🏨', pozo:'🕳️', laberinto:'🌀', carcel:'🔒', calavera:'💀', dados:'🎲', meta:'🏆', inicio:'🏁' };
   const NOMBRES = { oca:'Oca', puente:'Puente', posada:'Posada', pozo:'Pozo', laberinto:'Laberinto', carcel:'Cárcel', calavera:'Calavera', dados:'Dados', meta:'¡META!', inicio:'Salida' };
@@ -6527,8 +6524,8 @@ function rectRenderBoard() {
   let html = `<div style="position:relative;width:${anchoPx}px;height:${altoPx}px;margin:0 auto">`;
 
   html += `<svg width="${anchoPx}" height="${altoPx}" style="position:absolute;top:0;left:0;pointer-events:none">
-    <polyline points="${coords.map(c => `${(c.x-minX)*(cell+gap)+cell/2},${(c.y-minY)*(cell+gap)+cell/2}`).join(' ')}"
-      fill="none" stroke="rgba(255,215,0,0.25)" stroke-width="${cell+gap}" stroke-linejoin="round" stroke-linecap="round"/>
+    <polyline points="${coords.map(c => `${c.x-minX},${c.y-minY}`).join(' ')}"
+      fill="none" stroke="rgba(255,215,0,0.2)" stroke-width="${cell*0.35}" stroke-linejoin="round" stroke-linecap="round"/>
   </svg>`;
 
   coords.forEach((coord, idx) => {
@@ -6537,8 +6534,8 @@ function rectRenderBoard() {
     const especial = cas.tipo !== 'normal';
     const info = especial ? null : CATS_INFO[cas.cat];
     const jugadoresAqui = rectGame.jugadores.filter(j => j.pos === cas.id);
-    const left = (coord.x - minX) * (cell + gap);
-    const top = (coord.y - minY) * (cell + gap);
+    const left = coord.x - minX - cell / 2;
+    const top = coord.y - minY - cell / 2;
 
     const fondo = especial ? FONDOS[cas.tipo] : `radial-gradient(circle at 35% 30%, ${info.color}, ${info.color}99)`;
     const anillo = cas.tipo === 'meta' ? '3px solid var(--gold)' : '2.5px solid rgba(255,255,255,0.55)';
@@ -6561,7 +6558,7 @@ function rectRenderBoard() {
     </div>`;
   });
 
-  const cx = anchoPx / 2, cy = altoPx / 2;
+  const cx = -minX, cy = -minY;
   html += `<div style="position:absolute;left:${cx-46}px;top:${cy-46}px;width:92px;height:92px;
     background:radial-gradient(circle at 40% 30%, #FFF9C4, #F9A825 70%, #E65100);
     border:3px solid var(--gold);border-radius:50%;display:flex;flex-direction:column;
