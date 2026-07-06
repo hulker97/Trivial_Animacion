@@ -2323,6 +2323,13 @@ function onlineIrAPantallaUnirse() {
   if (btn) { btn.disabled = false; btn.textContent = 'Unirse →'; }
   const err = document.getElementById('online-join-error');
   if (err) err.style.display = 'none';
+  const codigoInput = document.getElementById('online-join-codigo');
+  if (codigoInput) codigoInput.value = '';
+  onlineDiagLog = [];
+  ['online-diag-join', 'online-diag-wait'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '';
+  });
   if (!fichasElegidas[-2]) fichasElegidas[-2] = fichaAleatoria([]);
   document.getElementById('online-join-ficha-preview').innerHTML = fichaTag(fichasElegidas[-2], 40);
   mostrarScreen('screen-online-join');
