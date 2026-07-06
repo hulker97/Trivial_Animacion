@@ -1190,7 +1190,7 @@ body > * { position: relative; z-index: 1; }
         🎯 Preguntados
       </button>
       <button class="filtro-tab" id="tab-tablero-rect" onclick="setTipoTablero('rectangular')">
-        📋 Rectangular
+        🦢 Oca
       </button>
       <button class="filtro-tab" id="tab-tablero-circular" onclick="setTipoTablero('circular')">
         ⭕ Circular
@@ -1591,7 +1591,7 @@ body > * { position: relative; z-index: 1; }
         <div class="cp-turn" id="rect-cp-turn">–</div>
       </div>
     </div>
-    <div class="wedges-bar" id="rect-cp-wedges"></div>
+    <div id="rect-cp-wedges" style="font-family:'Fredoka One',cursive;font-size:0.85rem;color:var(--gold);text-align:right"></div>
     <button class="btn btn-secondary btn-sm" onclick="if(confirm('¿Abandonar?'))location.reload()">✕</button>
   </div>
 
@@ -1599,6 +1599,7 @@ body > * { position: relative; z-index: 1; }
     <button class="btn btn-primary" id="rect-dado-btn" onclick="rectTirarDado()" style="flex:1;font-size:1.1rem">🎲 Tirar dado</button>
     <div id="rect-dado-result" style="font-size:1.8rem;min-width:2rem;text-align:center"></div>
   </div>
+  <div id="rect-aviso-especial" style="display:none;text-align:center;font-weight:800;color:var(--gold);padding:0 0.8rem;font-size:0.85rem"></div>
 
   <!-- Tablero rectangular scrollable -->
   <div id="rect-board" style="padding:0.5rem 0.8rem 2rem;overflow-y:auto;flex:1"></div>
@@ -2835,7 +2836,7 @@ function setTipoTablero(tipo) {
   document.getElementById(ids[tipo])?.classList.add('active');
   const descs = {
     preguntados: 'Rueda de categorías · Ideal para móvil · Rápido y visual',
-    rectangular: 'Camino serpentino vertical · Se adapta a la pantalla del móvil',
+    rectangular: '🦢 Juego de la Oca de verdad: ocas, puentes, pozo, cárcel, calavera... ¡gana quien llegue antes a la meta!',
     circular: 'Tablero clásico circular con spokes y HQ · Vista completa',
   };
   const descEl = document.getElementById('tablero-tipo-desc');
@@ -5073,6 +5074,24 @@ function onQuestionContinue() {
 function showModal(id) { document.getElementById(id).classList.remove("hidden"); }
 function hideModal(id) { document.getElementById(id).classList.add("hidden"); }
 
+// Confeti de victoria — funciona en cualquier pantalla/modal, no depende de cuál esté activa
+function lanzarConfetti() {
+  const colores = ['#FFD700','#FF4081','#40C4FF','#69F0AE','#E040FB','#FF6D00'];
+  const contenedor = document.createElement('div');
+  contenedor.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:9999';
+  document.body.appendChild(contenedor);
+  for (let i = 0; i < 60; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = (Math.random() * 100) + '%';
+    p.style.background = colores[Math.floor(Math.random() * colores.length)];
+    p.style.animationDuration = (2 + Math.random() * 2) + 's';
+    p.style.animationDelay = (Math.random() * 0.5) + 's';
+    contenedor.appendChild(p);
+  }
+  setTimeout(() => contenedor.remove(), 4500);
+}
+
 // ════════════════════════════════════════════════════════
 //  SETUP UI
 // ════════════════════════════════════════════════════════
@@ -6384,37 +6403,56 @@ function mostrarVictoriaPQ(j) { pqMostrarVictoria(j); }
 // ════════════════════════════════════════════════════════
 //  MODO TABLERO RECTANGULAR
 // ════════════════════════════════════════════════════════
-const RECT_COLS = 4;    // 4 casillas por fila
-const RECT_ROWS = 14;   // 14 filas = 56 casillas aprox
+const RECT_COLS = 5;     // 5 casillas por fila
+const RECT_TOTAL = 63;   // 63 casillas: el tablero clásico de la Oca
 const RECT_CATS = ['heroes','historia','villanos','secundarios','lugares','mundo'];
+
+// Posiciones clásicas del juego de la Oca (1-indexadas en la tradición, aquí ya en 0-indexado)
+const RECT_OCAS = [4,8,13,17,22,26,31,35,40,44,49,53,58];
+const RECT_PUENTE = { 5: 11, 11: 5 };
+const RECT_POSADA = 18;
+const RECT_POZO = 30;
+const RECT_LABERINTO = 41;
+const RECT_LABERINTO_DESTINO = 29;
+const RECT_CARCEL = 51;
+const RECT_CALAVERA = 57;
+const RECT_DADOS = { 25: 52, 52: 25 };
+const RECT_META = 62;
 
 let rectGame = null;
 
 function iniciarTableroRect() {
-  // Crear casillas del tablero rectangular
+  const especiales = {};
+  RECT_OCAS.forEach(i => especiales[i] = 'oca');
+  Object.keys(RECT_PUENTE).forEach(i => especiales[i] = 'puente');
+  especiales[RECT_POSADA] = 'posada';
+  especiales[RECT_POZO] = 'pozo';
+  especiales[RECT_LABERINTO] = 'laberinto';
+  especiales[RECT_CARCEL] = 'carcel';
+  especiales[RECT_CALAVERA] = 'calavera';
+  Object.keys(RECT_DADOS).forEach(i => especiales[i] = 'dados');
+  especiales[RECT_META] = 'meta';
+
   const casillas = [];
   let catIdx = 0;
-  const total = RECT_COLS * RECT_ROWS;
-  for (let i = 0; i < total; i++) {
-    let tipo = 'normal';
-    if (i === 0) tipo = 'inicio';
-    else if ((i+1) % 9 === 0) tipo = 'roll_again';
-    else if ((i+1) % 7 === 0 && i > 5) tipo = 'hq';
-    casillas.push({ tipo, cat: RECT_CATS[catIdx % 6], id: i });
-    if (tipo !== 'roll_again') catIdx++;
+  for (let i = 0; i < RECT_TOTAL; i++) {
+    if (i === 0) { casillas.push({ tipo: 'inicio', id: i }); continue; }
+    if (especiales[i]) { casillas.push({ tipo: especiales[i], id: i }); continue; }
+    casillas.push({ tipo: 'normal', cat: RECT_CATS[catIdx % 6], id: i });
+    catIdx++;
   }
 
   rectGame = {
     casillas,
-    jugadores: jugadores.map((j, i) => ({
-      ...j,
-      pos: 0,
-      quesitos: { heroes:false, historia:false, villanos:false, secundarios:false, lugares:false, mundo:false }
+    jugadores: jugadores.map(j => ({
+      ...j, pos: 0, turnosPerdidos: 0, atascado: false,
     })),
     turno: 0,
     pool,
     usadas: new Set(),
     esperandoMovimiento: false,
+    ganador: null,
+    pozoOcupado: null, // id del jugador atascado en el pozo (indice)
   };
 
   mostrarScreen("screen-rect");
@@ -6429,9 +6467,10 @@ function rectRenderTopbar() {
   document.getElementById('rect-cp-icon').innerHTML = fichaTag(j, 32);
   document.getElementById('rect-cp-icon').style.background = j.color;
   document.getElementById('rect-cp-name').textContent = j.name;
-  document.getElementById('rect-cp-turn').textContent = 'Tira el dado';
-  const qWrap = document.getElementById('rect-cp-wedges');
-  qWrap.innerHTML = quesitosFila(j.quesitos, 26, 4);
+  document.getElementById('rect-cp-turn').textContent = j.atascado ? '🕳️ Atascado en el pozo'
+    : j.turnosPerdidos > 0 ? `⏳ Pierde turno (${j.turnosPerdidos})`
+    : 'Tira el dado';
+  document.getElementById('rect-cp-wedges').textContent = `🏁 Casilla ${j.pos}/${RECT_META}`;
   document.getElementById('rect-dado-btn').disabled = rectGame.esperandoMovimiento;
 }
 
@@ -6441,10 +6480,12 @@ function rectRenderBoard() {
   const cols = RECT_COLS;
   const rows = Math.ceil(casillas.length / cols);
 
+  const ICONOS = { oca:'🦢', puente:'🌉', posada:'🏨', pozo:'🕳️', laberinto:'🌀', carcel:'🔒', calavera:'💀', dados:'🎲', meta:'🏆', inicio:'🏁' };
+  const NOMBRES = { oca:'Oca', puente:'Puente', posada:'Posada', pozo:'Pozo', laberinto:'Laberinto', carcel:'Cárcel', calavera:'Calavera', dados:'Dados', meta:'¡META!', inicio:'Salida' };
+
   let html = `<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:4px">`;
 
   for (let r = 0; r < rows; r++) {
-    // En filas pares van de izq a der, en impares de der a izq (serpentina)
     const izqDer = r % 2 === 0;
     const rowCasillas = [];
     for (let c = 0; c < cols; c++) {
@@ -6455,30 +6496,28 @@ function rectRenderBoard() {
 
     for (const cas of rowCasillas) {
       if (!cas) { html += '<div></div>'; continue; }
-      const info = CATS_INFO[cas.cat];
+      const especial = cas.tipo !== 'normal';
+      const info = especial ? null : CATS_INFO[cas.cat];
       const jugadoresAqui = rectGame.jugadores.filter(j => j.pos === cas.id);
-      const esActual = cas.id === rectJugadorActual().pos;
-      const esResaltada = rectGame.esperandoMovimiento && rectGame._posiblesMovimientos?.includes(cas.id);
 
-      let bg = info.color + '22';
-      let border = `2px solid ${info.color}55`;
-      if (cas.tipo === 'hq') { bg = info.color + '44'; border = `3px solid ${info.color}`; }
-      if (cas.tipo === 'roll_again') { bg = '#F9A82533'; border = '2px solid #F9A825'; }
+      let bg = info ? info.color + '22' : 'rgba(255,255,255,0.06)';
+      let border = info ? `2px solid ${info.color}55` : '2px solid rgba(255,255,255,0.18)';
+      if (cas.tipo === 'meta') { bg = 'linear-gradient(135deg,#FFD70044,#FFA50044)'; border = '3px solid var(--gold)'; }
       if (cas.tipo === 'inicio') { bg = '#ffffff22'; border = '2px solid #ffffff44'; }
-      if (esResaltada) { bg = '#FFD70044'; border = '3px solid #FFD700'; }
+      if (cas.tipo === 'calavera') { bg = '#00000055'; border = '2px solid #ffffff33'; }
+      if (cas.tipo === 'oca') { bg = '#4CAF5033'; border = '2px solid #4CAF50'; }
+      if (cas.tipo === 'pozo') { bg = '#03A9F433'; border = '2px solid #03A9F4'; }
 
-      html += `<div onclick="rectClickCasilla(${cas.id})" style="
+      html += `<div style="
         background:${bg};border:${border};border-radius:8px;
-        padding:4px;min-height:52px;display:flex;flex-direction:column;
-        align-items:center;justify-content:center;cursor:${esResaltada?'pointer':'default'};
-        position:relative;transition:all 0.2s;
-        ${esResaltada?'transform:scale(1.05);box-shadow:0 0 8px #FFD700':''}
+        padding:3px;min-height:50px;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;position:relative;
       ">
-        <div style="font-size:0.6rem;font-weight:800;color:${info.color};text-align:center;line-height:1.2">
-          ${cas.tipo==='hq' ? '🏠' : cas.tipo==='roll_again' ? '🎲' : cas.tipo==='inicio' ? '🏁' : mascotaTag(cas.cat, 20)}
+        <div style="font-size:0.6rem;font-weight:800;color:${info ? info.color : 'white'};text-align:center;line-height:1.2">
+          ${especial ? ICONOS[cas.tipo] : mascotaTag(cas.cat, 18)}
         </div>
-        <div style="font-size:0.55rem;color:rgba(255,255,255,0.6);text-align:center;line-height:1.1">
-          ${cas.tipo==='hq' ? 'HQ' : cas.tipo==='roll_again' ? '¡Otra vez!' : cas.tipo==='inicio' ? 'Inicio' : ''}
+        <div style="font-size:0.5rem;color:rgba(255,255,255,0.6);text-align:center;line-height:1.1">
+          ${especial ? NOMBRES[cas.tipo] : ''}
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:1px;justify-content:center;margin-top:2px">
           ${jugadoresAqui.map(j=>`<div style="width:14px;height:14px;border-radius:50%;background:${j.color};font-size:0.55rem;display:flex;align-items:center;justify-content:center;overflow:hidden">${fichaTag(j, 13)}</div>`).join('')}
@@ -6491,48 +6530,180 @@ function rectRenderBoard() {
   board.innerHTML = html;
 }
 
+function rectMostrarAviso(texto) {
+  const el = document.getElementById('rect-aviso-especial');
+  el.textContent = texto;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 2200);
+}
+
+function rectPasarTurno() {
+  rectGame.turno = (rectGame.turno + 1) % rectGame.jugadores.length;
+  rectRenderTopbar();
+  rectRenderBoard();
+}
+
 function rectTirarDado() {
-  if (rectGame.esperandoMovimiento) return;
+  if (rectGame.esperandoMovimiento || rectGame.ganador) return;
+  const j = rectJugadorActual();
+
+  // ¿Está en el pozo? Se queda sin tirar hasta que le rescaten
+  if (j.atascado) {
+    rectMostrarAviso(`🕳️ ${j.name} sigue atascado en el pozo…`);
+    setTimeout(rectPasarTurno, 900);
+    return;
+  }
+  // ¿Tiene turnos perdidos pendientes (posada/cárcel)?
+  if (j.turnosPerdidos > 0) {
+    j.turnosPerdidos--;
+    rectMostrarAviso(`⏳ ${j.name} pierde el turno`);
+    setTimeout(rectPasarTurno, 900);
+    return;
+  }
+
   const dado = Math.floor(Math.random() * 6) + 1;
   document.getElementById('rect-dado-result').textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][dado-1];
-  const j = rectJugadorActual();
-  const nuevaPos = Math.min(j.pos + dado, rectGame.casillas.length - 1);
-  const posibles = [];
-  for (let p = j.pos + 1; p <= nuevaPos; p++) posibles.push(p);
-  // Mover directamente al destino
-  rectMoverJugador(nuevaPos);
+
+  let destino = j.pos + dado;
+  if (destino > RECT_META) {
+    // Te pasas de la meta: rebotas hacia atras la diferencia
+    const exceso = destino - RECT_META;
+    destino = RECT_META - exceso;
+  }
+  rectGame.esperandoMovimiento = true;
+  rectMoverJugador(destino);
 }
 
 function rectMoverJugador(nuevaPos) {
   const j = rectJugadorActual();
   j.pos = nuevaPos;
-  const cas = rectGame.casillas[nuevaPos];
   rectRenderBoard();
+  rectRenderTopbar();
 
-  if (cas.tipo === 'roll_again') {
-    document.getElementById('rect-cp-turn').textContent = '¡Vuelve a tirar! 🎲';
-    return; // No pasa turno
+  const cas = rectGame.casillas[nuevaPos];
+
+  if (cas.tipo === 'meta') {
+    rectGame.ganador = j;
+    setTimeout(() => rectMostrarVictoria(j), 400);
+    return;
   }
 
-  // Mostrar pregunta
-  setTimeout(() => rectMostrarPregunta(cas), 300);
+  if (cas.tipo === 'oca') {
+    const siguienteOca = RECT_OCAS.find(p => p > nuevaPos);
+    setTimeout(() => {
+      rectMostrarAviso('🦢 ¡De oca en oca, y tiro porque me toca!');
+      j.pos = siguienteOca !== undefined ? siguienteOca : RECT_META;
+      rectRenderBoard(); rectRenderTopbar();
+      setTimeout(() => {
+        rectGame.esperandoMovimiento = false;
+        if (rectGame.casillas[j.pos].tipo === 'meta') { rectGame.ganador = j; rectMostrarVictoria(j); }
+        else if (rectGame.casillas[j.pos].tipo !== 'oca') rectResolverCasilla(j.pos);
+      }, 700);
+    }, 300);
+    return;
+  }
+
+  if (cas.tipo === 'puente') {
+    const destino = RECT_PUENTE[nuevaPos];
+    setTimeout(() => {
+      rectMostrarAviso('🌉 ¡Cruzas el puente!');
+      j.pos = destino;
+      rectRenderBoard(); rectRenderTopbar();
+      rectGame.esperandoMovimiento = false;
+      if (rectGame.casillas[j.pos].tipo === 'meta') { rectGame.ganador = j; rectMostrarVictoria(j); }
+    }, 400);
+    return;
+  }
+
+  if (cas.tipo === 'dados') {
+    const destino = RECT_DADOS[nuevaPos];
+    setTimeout(() => {
+      rectMostrarAviso('🎲 ¡Salto de dados!');
+      j.pos = destino;
+      rectRenderBoard(); rectRenderTopbar();
+      rectGame.esperandoMovimiento = false;
+      if (rectGame.casillas[j.pos].tipo === 'meta') { rectGame.ganador = j; rectMostrarVictoria(j); }
+    }, 400);
+    return;
+  }
+
+  if (cas.tipo === 'laberinto') {
+    setTimeout(() => {
+      rectMostrarAviso('🌀 ¡Te pierdes en el laberinto!');
+      j.pos = RECT_LABERINTO_DESTINO;
+      rectRenderBoard(); rectRenderTopbar();
+      rectGame.esperandoMovimiento = false;
+    }, 400);
+    return;
+  }
+
+  if (cas.tipo === 'calavera') {
+    setTimeout(() => {
+      rectMostrarAviso('💀 ¡Vuelves a la salida!');
+      j.pos = 0;
+      rectRenderBoard(); rectRenderTopbar();
+      rectGame.esperandoMovimiento = false;
+    }, 400);
+    return;
+  }
+
+  if (cas.tipo === 'posada') {
+    j.turnosPerdidos = 1;
+    rectMostrarAviso('🏨 Posada: pierdes el próximo turno');
+    rectGame.esperandoMovimiento = false;
+    setTimeout(rectPasarTurno, 900);
+    return;
+  }
+
+  if (cas.tipo === 'carcel') {
+    j.turnosPerdidos = 2;
+    rectMostrarAviso('🔒 ¡A la cárcel! Pierdes 2 turnos');
+    rectGame.esperandoMovimiento = false;
+    setTimeout(rectPasarTurno, 900);
+    return;
+  }
+
+  if (cas.tipo === 'pozo') {
+    // Si ya habia alguien atascado, se libera y el nuevo ocupa su lugar
+    if (rectGame.pozoOcupado !== null && rectGame.pozoOcupado !== rectGame.jugadores.indexOf(j)) {
+      const liberado = rectGame.jugadores[rectGame.pozoOcupado];
+      liberado.atascado = false;
+      rectMostrarAviso(`🕳️ ${j.name} cae al pozo y libera a ${liberado.name}`);
+    } else {
+      rectMostrarAviso('🕳️ ¡Caes al pozo! Esperarás hasta que alguien te libere');
+    }
+    j.atascado = true;
+    rectGame.pozoOcupado = rectGame.jugadores.indexOf(j);
+    rectGame.esperandoMovimiento = false;
+    setTimeout(rectPasarTurno, 1000);
+    return;
+  }
+
+  if (cas.tipo === 'inicio') {
+    rectGame.esperandoMovimiento = false;
+    setTimeout(rectPasarTurno, 400);
+    return;
+  }
+
+  // Casilla normal: pregunta de categoria
+  setTimeout(() => rectResolverCasilla(nuevaPos), 300);
 }
 
-function rectMostrarPregunta(cas) {
+function rectResolverCasilla(pos) {
+  const cas = rectGame.casillas[pos];
+  if (cas.tipo !== 'normal') { rectGame.esperandoMovimiento = false; rectPasarTurno(); return; }
   const disponibles = rectGame.pool.filter(q => q.categoria === cas.cat && !rectGame.usadas.has(q));
   const q = disponibles.length > 0
     ? disponibles[Math.floor(Math.random() * disponibles.length)]
     : rectGame.pool.find(q => q.categoria === cas.cat);
-  if (!q) return;
+  if (!q) { rectGame.esperandoMovimiento = false; rectPasarTurno(); return; }
   rectGame.usadas.add(q);
   rectGame._preguntaActual = q;
 
-  // Reutilizar el modal de pregunta del modo circular
   game = game || {};
   game.pendingQuestion = q;
-  game.phase = cas.tipo === 'hq' ? 'wedge-question' : 'normal';
+  game.phase = 'normal';
   showQuestionModal(false);
-  // Override de onQuestionContinue para volver al rect
   document.getElementById('q-continue-btn').onclick = rectOnContinue;
 }
 
@@ -6540,20 +6711,23 @@ function rectOnContinue() {
   const correcto = document.getElementById('q-result').classList.contains('correct') ||
     document.getElementById('q-result').dataset.correcto === '1';
   hideModal('modal-pregunta');
-  const j = rectJugadorActual();
-  const cas = rectGame.casillas[j.pos];
+  rectGame.esperandoMovimiento = false;
 
-  if (correcto && cas.tipo === 'hq') {
-    j.quesitos[cas.cat] = true;
+  if (correcto) {
+    rectMostrarAviso('✅ ¡Correcto! Tira otra vez');
+    rectRenderTopbar();
+    rectRenderBoard();
+  } else {
+    rectPasarTurno();
   }
-  if (Object.values(j.quesitos).every(v=>v)) {
-    mostrarVictoriaPQ(j); return;
-  }
-  if (!correcto || (correcto && cas.tipo !== 'hq')) {
-    rectGame.turno = (rectGame.turno + 1) % rectGame.jugadores.length;
-  }
-  rectRenderTopbar();
-  rectRenderBoard();
+}
+
+function rectMostrarVictoria(j) {
+  lanzarConfetti();
+  const overlay = document.getElementById('modal-gameover');
+  document.getElementById('gameover-text').innerHTML =
+    `${fichaTag(j, 40, 'border-radius:50%;vertical-align:middle;margin-right:0.4rem')} <b>${j.name}</b> ha llegado antes a la meta 🏆`;
+  showModal('modal-gameover');
 }
 
 // ════════════════════════════════════════════════════════
