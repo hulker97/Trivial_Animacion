@@ -1085,6 +1085,10 @@ body > * { position: relative; z-index: 1; }
     <button class="btn btn-secondary" onclick="onlineSalir()">✕ Cancelar sala</button>
     <button class="btn btn-primary" id="online-btn-continuar-setup" onclick="onlineHostContinuarASetup()">Elegir preguntas →</button>
   </div>
+  <details style="max-width:600px;width:100%;margin:0.8rem auto 0;color:var(--text2);font-size:0.72rem">
+    <summary style="cursor:pointer;font-weight:700">🔧 Diagnóstico de conexión (si algo falla, mándame una foto de esto)</summary>
+    <pre id="online-diag-host" style="white-space:pre-wrap;background:rgba(0,0,0,0.3);border-radius:8px;padding:0.6rem;margin-top:0.4rem;max-height:180px;overflow-y:auto;font-family:monospace;font-size:0.65rem"></pre>
+  </details>
 </div>
 
 <!-- ══════════════════════════════════════════════════
@@ -1112,6 +1116,10 @@ body > * { position: relative; z-index: 1; }
     <button class="btn btn-secondary" onclick="onlineCancelarYVolver()">← Volver</button>
     <button class="btn btn-primary" id="online-btn-unirse" onclick="onlineUnirseASala()">Unirse →</button>
   </div>
+  <details style="max-width:600px;width:100%;margin:0.8rem auto 0;color:var(--text2);font-size:0.72rem">
+    <summary style="cursor:pointer;font-weight:700">🔧 Diagnóstico de conexión (si algo falla, mándame una foto de esto)</summary>
+    <pre id="online-diag-join" style="white-space:pre-wrap;background:rgba(0,0,0,0.3);border-radius:8px;padding:0.6rem;margin-top:0.4rem;max-height:180px;overflow-y:auto;font-family:monospace;font-size:0.65rem"></pre>
+  </details>
 </div>
 
 <!-- ══════════════════════════════════════════════════
@@ -1128,6 +1136,10 @@ body > * { position: relative; z-index: 1; }
     <div id="online-wait-lista-jugadores"></div>
   </div>
   <button class="btn btn-secondary" style="margin-top:1rem" onclick="onlineSalir()">✕ Salir de la sala</button>
+  <details style="max-width:440px;width:100%;margin:0.8rem auto 0;color:var(--text2);font-size:0.72rem">
+    <summary style="cursor:pointer;font-weight:700">🔧 Diagnóstico de conexión</summary>
+    <pre id="online-diag-wait" style="white-space:pre-wrap;background:rgba(0,0,0,0.3);border-radius:8px;padding:0.6rem;margin-top:0.4rem;max-height:180px;overflow-y:auto;font-family:monospace;font-size:0.65rem"></pre>
+  </details>
 </div>
 
 <div id="screen-modo" class="screen">
@@ -2077,23 +2089,64 @@ let onlineUltimoNombre = null;
 
 // Servidores STUN/TURN públicos: ayudan a conectar cuando los dispositivos están
 // en redes distintas (ej. uno por WiFi y otro con datos móviles)
-const ONLINE_ICE_CONFIG = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
-    { urls: 'stun:global.stun.twilio.com:3478' },
-    { urls: 'stun:openrelay.metered.ca:80' },
-    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-  ],
-  iceCandidatePoolSize: 4,
-};
+// ── Diagnóstico visible en pantalla (para depurar fallos de conexión reales, no solo consola) ──
+let onlineDiagLog = [];
+function onlineDiag(msg) {
+  const t = new Date().toLocaleTimeString('es-ES', { hour12: false });
+  onlineDiagLog.push(`${t}  ${msg}`);
+  if (onlineDiagLog.length > 40) onlineDiagLog.shift();
+  console.log('[online]', msg);
+  ['online-diag-host', 'online-diag-join', 'online-diag-wait'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = onlineDiagLog.join('\n'); el.scrollTop = el.scrollHeight; }
+  });
+}
 
-function onlineCrearSala() {
+// Engancha el estado ICE real de una conexión (PeerJS expone el RTCPeerConnection subyacente)
+function onlineEngancharDiagICE(conn, etiqueta) {
+  try {
+    const pc = conn.peerConnection;
+    if (!pc) return;
+    pc.oniceconnectionstatechange = () => onlineDiag(`${etiqueta}: ICE = ${pc.iceConnectionState}`);
+    pc.onicegatheringstatechange = () => onlineDiag(`${etiqueta}: gathering = ${pc.iceGatheringState}`);
+    pc.onicecandidate = (e) => {
+      if (e.candidate) onlineDiag(`${etiqueta}: candidato ${e.candidate.type} (${e.candidate.protocol})`);
+    };
+  } catch (e) {}
+}
+
+const ONLINE_METERED_APP = 'trivial_disney';
+const ONLINE_METERED_API_KEY = 'c0e70186476da65cd6da73c812bb22e941f8';
+
+// Reserva por si la API de Metered no responde: solo STUN (sin TURN no siempre basta, pero es mejor que nada)
+const ONLINE_ICE_FALLBACK = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:global.stun.twilio.com:3478' },
+];
+
+let onlineIceServersCache = null;
+async function onlineObtenerIceServers() {
+  if (onlineIceServersCache) return onlineIceServersCache;
+  try {
+    onlineDiag('Pidiendo servidores TURN a Metered…');
+    const resp = await fetch(`https://${ONLINE_METERED_APP}.metered.live/api/v1/turn/credentials?apiKey=${ONLINE_METERED_API_KEY}`);
+    const servers = await resp.json();
+    if (Array.isArray(servers) && servers.length) {
+      onlineIceServersCache = servers;
+      onlineDiag(`✅ TURN de Metered obtenido (${servers.length} servidores)`);
+      return servers;
+    }
+    throw new Error('Respuesta vacía');
+  } catch (e) {
+    console.error('Error obteniendo TURN de Metered:', e);
+    onlineDiag('⚠️ No se pudo obtener TURN de Metered, usando solo STUN de reserva');
+    return ONLINE_ICE_FALLBACK;
+  }
+}
+
+async function onlineCrearSala() {
   onlineLimpiarConexionPrevia();
   modoOnline = 'host';
   onlineJugadoresLobby = [];
@@ -2105,12 +2158,22 @@ function onlineCrearSala() {
   document.getElementById('online-host-ficha-preview').innerHTML = fichaTag(fichasElegidas[-1], 32);
   renderOnlineHostLobby();
 
-  onlinePeer = new Peer('trivial-' + onlineCodigoSala, { debug: 0, config: ONLINE_ICE_CONFIG });
-  onlinePeer.on('open', id => { onlineMiPeerId = id; });
+  onlineDiagLog = [];
+  onlineDiag(`Creando sala con código ${onlineCodigoSala}…`);
+  const iceServers = await onlineObtenerIceServers();
+  onlinePeer = new Peer('trivial-' + onlineCodigoSala, { debug: 0, config: { iceServers } });
+  onlinePeer.on('open', id => {
+    onlineMiPeerId = id;
+    onlineDiag(`✅ Conectado al servidor de señalización. Mi id: ${id}`);
+  });
   onlinePeer.on('connection', conn => {
+    onlineDiag(`📥 Llega una conexión entrante de ${conn.peer}`);
     onlineConexiones[conn.peer] = conn;
+    onlineEngancharDiagICE(conn, `Invitado ${conn.peer.slice(0,6)}`);
+    conn.on('open', () => onlineDiag(`✅ Canal de datos ABIERTO con ${conn.peer.slice(0,6)}`));
     conn.on('data', data => onlineHostRecibe(conn, data));
     conn.on('close', () => {
+      onlineDiag(`🔌 Se cerró la conexión con ${conn.peer.slice(0,6)}`);
       delete onlineConexiones[conn.peer];
       if (pqGame) {
         // Partida en marcha: no lo quitamos, solo esperamos a que reconecte
@@ -2120,9 +2183,11 @@ function onlineCrearSala() {
       renderOnlineHostLobby();
       onlineBroadcast({ type: 'LOBBY_UPDATE', jugadores: onlineJugadoresLobby });
     });
+    conn.on('error', (e) => onlineDiag(`❌ Error en conexión con ${conn.peer.slice(0,6)}: ${e}`));
   });
   onlinePeer.on('error', err => {
     console.error('Peer error (host):', err);
+    onlineDiag(`❌ Error del servidor de señalización: ${err.type || err}`);
     mostrarToast('Error de conexión. Intenta crear la sala de nuevo.');
   });
 }
@@ -2250,33 +2315,42 @@ function onlineUnirseASala() {
   onlineConectarComoInvitado(codigo, nombre, fichasElegidas[-2] || null);
 }
 
-function onlineConectarComoInvitado(codigo, nombre, fichaId) {
+async function onlineConectarComoInvitado(codigo, nombre, fichaId) {
   onlineLimpiarConexionPrevia();
   modoOnline = 'guest';
-  onlinePeer = new Peer(undefined, { debug: 0, config: ONLINE_ICE_CONFIG });
+  onlineDiagLog = [];
+  onlineDiag(`Conectando al servidor de señalización…`);
+  const iceServers = await onlineObtenerIceServers();
+  onlinePeer = new Peer(undefined, { debug: 0, config: { iceServers } });
 
   let resuelto = false;
   onlineTimeoutJoinId = setTimeout(() => {
     if (resuelto) return;
     resuelto = true;
+    onlineDiag(`⏱️ Timeout de 15s alcanzado sin conectar`);
     if (pqGame) { onlineReintentarConexion(); return; }
     onlineMostrarErrorJoin('No se pudo conectar en 15 segundos. Comprueba que el anfitrión sigue en la sala, que el código es correcto, e idealmente que ambos estéis en la misma WiFi.');
   }, 15000);
 
   onlinePeer.on('open', id => {
     onlineMiPeerId = id;
+    onlineDiag(`✅ Conectado al servidor de señalización. Mi id: ${id}`);
+    onlineDiag(`Intentando conectar con la sala trivial-${codigo}…`);
     onlineConexionHost = onlinePeer.connect('trivial-' + codigo, { reliable: true });
+    onlineEngancharDiagICE(onlineConexionHost, 'Yo→Host');
     onlineConexionHost.on('open', () => {
       resuelto = true;
+      onlineDiag(`✅ Canal de datos ABIERTO con el anfitrión`);
       clearTimeout(onlineTimeoutJoinId);
       onlineConexionHost.send({ type: 'JOIN', nombre, fichaId, guestId: onlineObtenerGuestId() });
       if (!pqGame) mostrarScreen('screen-online-wait');
       onlineReconectando = false;
     });
     onlineConexionHost.on('data', data => onlineGuestRecibe(data));
-    onlineConexionHost.on('close', () => onlineGestionarDesconexion());
+    onlineConexionHost.on('close', () => { onlineDiag('🔌 Conexión con el anfitrión cerrada'); onlineGestionarDesconexion(); });
     onlineConexionHost.on('error', (err) => {
       console.error('Conexión invitado, error:', err);
+      onlineDiag(`❌ Error de conexión con el anfitrión: ${err.type || err}`);
       if (resuelto) return;
       resuelto = true;
       clearTimeout(onlineTimeoutJoinId);
@@ -2286,6 +2360,7 @@ function onlineConectarComoInvitado(codigo, nombre, fichaId) {
   });
   onlinePeer.on('error', err => {
     console.error('Peer error (guest):', err);
+    onlineDiag(`❌ Error del servidor de señalización: ${err.type || err}`);
     if (resuelto) return;
     resuelto = true;
     clearTimeout(onlineTimeoutJoinId);
