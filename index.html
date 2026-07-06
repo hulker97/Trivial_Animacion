@@ -1824,19 +1824,22 @@ let fichasElegidas = {}; // { indiceJugador: fichaId } — selección durante el
 // ── Fila de 6 quesitos con la mascota de cada categoría: apagada si no la tienes, iluminada si sí ──
 function quesitosFila(quesitos, sizePx, gapPx) {
   const gap = gapPx != null ? gapPx : 4;
-  return `<div style="display:flex;gap:${gap}px;flex-shrink:0">` + CATS.map(cat => {
+  return `<div style="display:flex;gap:${gap}px;flex-shrink:0;align-items:flex-end">` + CATS.map(cat => {
     const info = CATS_INFO[cat];
     const earned = !!(quesitos && quesitos[cat]);
-    return `<div style="width:${sizePx}px;height:${sizePx}px;border-radius:50%;flex-shrink:0;
-      background:${earned ? info.color+'2e' : 'rgba(255,255,255,0.05)'};
-      border:2px solid ${earned ? info.color : 'rgba(255,255,255,0.15)'};
-      display:flex;align-items:center;justify-content:center;
-      box-shadow:${earned ? '0 0 8px '+info.color+'aa' : 'none'};
-      transition:all 0.3s;" title="${info.nombre}">
-      <div style="width:${Math.round(sizePx*0.82)}px;height:${Math.round(sizePx*0.82)}px;display:flex;align-items:center;justify-content:center;
-        filter:${earned ? 'none' : 'grayscale(1) brightness(0.55)'};opacity:${earned ? '1' : '0.4'};transition:all 0.3s">
-        ${mascotaTag(cat, Math.round(sizePx*0.82))}
-      </div>
+    const outline = earned ? info.color : 'rgba(255,255,255,0.55)';
+    // Contorno marcado siguiendo la silueta real (8 sombras sin difuminado alrededor) + brillo si se tiene
+    const contorno = [
+      `drop-shadow(1.4px 0 0 ${outline})`, `drop-shadow(-1.4px 0 0 ${outline})`,
+      `drop-shadow(0 1.4px 0 ${outline})`, `drop-shadow(0 -1.4px 0 ${outline})`,
+      `drop-shadow(1.1px 1.1px 0 ${outline})`, `drop-shadow(-1.1px -1.1px 0 ${outline})`,
+      `drop-shadow(1.1px -1.1px 0 ${outline})`, `drop-shadow(-1.1px 1.1px 0 ${outline})`,
+    ].join(' ');
+    const glow = earned ? ` drop-shadow(0 0 5px ${info.color}cc)` : '';
+    const base = earned ? '' : 'grayscale(1) brightness(0.65)';
+    return `<div style="width:${sizePx}px;height:${sizePx}px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+      opacity:${earned ? '1' : '0.65'};transition:all 0.3s;filter:${base} ${contorno}${glow}" title="${info.nombre}">
+      ${mascotaTag(cat, sizePx)}
     </div>`;
   }).join('') + `</div>`;
 }
@@ -4445,7 +4448,7 @@ function renderPlayersPanel() {
         <div class="pc-icon" style="background:${p.color}">${fichaTag(p, 26)}</div>
         <div class="pc-name">${p.name}</div>
       </div>
-      <div class="pc-wedges" style="justify-content:center">${quesitosFila(quesitosObj, 15, 3)}</div>
+      <div class="pc-wedges" style="justify-content:center">${quesitosFila(quesitosObj, 24, 4)}</div>
     </div>`;
   });
   panel.innerHTML = s;
@@ -4473,7 +4476,7 @@ function renderTopbar() {
 
   // Cuñas
   const quesitosObj = Object.fromEntries(CATS.map(c => [c, p.wedges.includes(c)]));
-  document.getElementById("cp-wedges").innerHTML = quesitosFila(quesitosObj, 16, 3);
+  document.getElementById("cp-wedges").innerHTML = quesitosFila(quesitosObj, 26, 4);
 }
 
 // ════════════════════════════════════════════════════════
@@ -5901,7 +5904,7 @@ function pqRenderTurno() {
   document.getElementById('pq-cp-turn').textContent = 'Toca para girar';
 
   const qWrap = document.getElementById('pq-cp-wedges');
-  qWrap.innerHTML = quesitosFila(j.quesitos, 16, 3);
+  qWrap.innerHTML = quesitosFila(j.quesitos, 26, 4);
 
   const acc = j.aciertosAcumulados || 0;
   const gemas = document.getElementById('pq-racha-gemas');
@@ -6054,7 +6057,7 @@ function pqRenderAllPlayers() {
       return `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;opacity:${i===pqGame.turno?'1':'0.55'}">
         <div style="width:24px;height:24px;border-radius:50%;background:${j.color};display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;overflow:hidden">${fichaTag(j, 22)}</div>
         <div style="font-size:0.75rem;font-weight:700;min-width:55px;color:var(--text)">${j.name}</div>
-        ${quesitosFila(j.quesitos, 13, 2)}
+        ${quesitosFila(j.quesitos, 20, 3)}
         ${acc > 0 ? `<div style="display:flex;gap:2px">${[0,1,2].map(k=>`<span style="font-size:0.6rem;${k<acc?'filter:drop-shadow(0 0 3px rgba(255,215,0,0.8))':'opacity:0.25;filter:grayscale(1)'}">💎</span>`).join('')}</div>` : ''}
       </div>`;
     }).join('');
@@ -6081,7 +6084,7 @@ function pqMostrarVictoria(j) {
         <div style="font-family:'Fredoka One',cursive;font-size:1rem;color:var(--text2);min-width:22px;text-align:center">${i+1}º</div>
         <div style="width:26px;height:26px;border-radius:50%;background:${jug.color};display:flex;align-items:center;justify-content:center;font-size:0.95rem;flex-shrink:0;overflow:hidden">${fichaTag(jug, 24)}</div>
         <div style="font-size:0.88rem;font-weight:700;flex:1;color:${esG?'var(--gold)':'var(--text)'}">${jug.name}${esG?' 🏆':''}</div>
-        ${quesitosFila(jug.quesitos, 14, 2)}
+        ${quesitosFila(jug.quesitos, 20, 3)}
       </div>`;
     }).join('');
   }
@@ -6148,7 +6151,7 @@ function rectRenderTopbar() {
   document.getElementById('rect-cp-name').textContent = j.name;
   document.getElementById('rect-cp-turn').textContent = 'Tira el dado';
   const qWrap = document.getElementById('rect-cp-wedges');
-  qWrap.innerHTML = quesitosFila(j.quesitos, 16, 3);
+  qWrap.innerHTML = quesitosFila(j.quesitos, 26, 4);
   document.getElementById('rect-dado-btn').disabled = rectGame.esperandoMovimiento;
 }
 
