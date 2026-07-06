@@ -2785,6 +2785,7 @@ function onlineAplicarEstadoRemoto(estado) {
     if (ganador) pqMostrarVictoria(ganador);
   }
   onlineActualizarBloqueoTurno();
+  pqAutoAjustarPantalla();
 }
 
 // ── Bloquear/permitir la interacción según si es mi turno ──
@@ -6043,6 +6044,22 @@ function pqResultadoGiro(sector, idx) {
   }
 }
 
+// ── Reescala automáticamente la pantalla de Preguntados para que quepa entera,
+//    sin importar el tamaño del móvil (usa "zoom" para que el hueco se recupere de verdad) ──
+function pqAutoAjustarPantalla() {
+  requestAnimationFrame(() => {
+    const screen = document.getElementById('screen-preguntados');
+    if (!screen || !screen.classList.contains('active')) return;
+    screen.style.zoom = 1;
+    const disponible = window.innerHeight;
+    const necesario = screen.scrollHeight;
+    if (necesario > disponible) {
+      const factor = Math.max(0.7, disponible / necesario - 0.01);
+      screen.style.zoom = factor;
+    }
+  });
+}
+
 function pqMostrarSelectorCoronaUI() {
   document.getElementById('pq-btn-girar').style.display = 'none';
   const j = pqJugadorActual();
@@ -6064,6 +6081,7 @@ function pqMostrarSelectorCoronaUI() {
   }).join('');
   document.getElementById('pq-corona-selector').style.display = 'block';
   onlineActualizarBloqueoTurno();
+  pqAutoAjustarPantalla();
 }
 
 // ── Mostrar pregunta ──
@@ -6141,6 +6159,7 @@ function pqRenderPreguntaUI(q, cat, esCorona) {
   document.getElementById('pq-vista-ruleta').style.display = 'none';
   document.getElementById('pq-vista-pregunta').style.display = 'block';
   onlineActualizarBloqueoTurno();
+  pqAutoAjustarPantalla();
 }
 
 // ── Render del turno ──
@@ -6176,6 +6195,7 @@ function pqRenderTurno() {
   document.getElementById('pq-vista-pregunta').style.display = 'none';
   pqRenderAllPlayers();
   onlineActualizarBloqueoTurno();
+  pqAutoAjustarPantalla();
   if (modoOnline === 'host') onlineBroadcastEstado('ruleta');
 }
 
@@ -6204,6 +6224,7 @@ function pqMostrarSelectorQuesito() {
   }).join('');
   document.getElementById('pq-corona-selector').style.display = 'block';
   onlineActualizarBloqueoTurno();
+  pqAutoAjustarPantalla();
   if (modoOnline === 'host') onlineBroadcastEstado('selector-quesito');
 }
 
@@ -6527,6 +6548,8 @@ function rectOnContinue() {
 // ════════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════════
+window.addEventListener('resize', () => { if (typeof pqAutoAjustarPantalla === 'function') pqAutoAjustarPantalla(); });
+
 window.addEventListener("DOMContentLoaded", () => {
   // Esperar a que el script de Supabase esté listo
   initSupabase();
