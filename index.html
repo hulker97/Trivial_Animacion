@@ -2104,15 +2104,31 @@ function onlineDiag(msg) {
 
 // Engancha el estado ICE real de una conexión (PeerJS expone el RTCPeerConnection subyacente)
 function onlineEngancharDiagICE(conn, etiqueta) {
-  try {
+  let intentos = 0;
+  const intentar = () => {
+    intentos++;
     const pc = conn.peerConnection;
-    if (!pc) return;
+    if (!pc) {
+      if (intentos < 20) setTimeout(intentar, 250);
+      else onlineDiag(`${etiqueta}: ⚠️ no se pudo acceder al RTCPeerConnection interno`);
+      return;
+    }
+    onlineDiag(`${etiqueta}: conexión interna lista (ICE=${pc.iceConnectionState}, estado=${pc.connectionState}, señal=${pc.signalingState})`);
     pc.oniceconnectionstatechange = () => onlineDiag(`${etiqueta}: ICE = ${pc.iceConnectionState}`);
+    pc.onconnectionstatechange = () => onlineDiag(`${etiqueta}: conexión = ${pc.connectionState}`);
+    pc.onsignalingstatechange = () => onlineDiag(`${etiqueta}: señal = ${pc.signalingState}`);
     pc.onicegatheringstatechange = () => onlineDiag(`${etiqueta}: gathering = ${pc.iceGatheringState}`);
     pc.onicecandidate = (e) => {
       if (e.candidate) onlineDiag(`${etiqueta}: candidato ${e.candidate.type} (${e.candidate.protocol})`);
     };
-  } catch (e) {}
+    // Sondeo de respaldo cada 3s por si algún evento no llega a disparar en este navegador
+    const poll = setInterval(() => {
+      if (!onlinePeer && !onlinePeer) { clearInterval(poll); return; }
+      onlineDiag(`${etiqueta}: [sondeo] ICE=${pc.iceConnectionState} conexión=${pc.connectionState}`);
+      if (pc.connectionState === 'connected' || pc.connectionState === 'closed' || pc.connectionState === 'failed') clearInterval(poll);
+    }, 3000);
+  };
+  intentar();
 }
 
 const ONLINE_METERED_APP = 'trivial_disney';
