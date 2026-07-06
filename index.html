@@ -2183,11 +2183,15 @@ async function onlineCrearSala() {
   mostrarScreen('screen-online-host-lobby');
   document.getElementById('online-codigo-grande').textContent = onlineCodigoSala;
   document.getElementById('online-host-nombre').value = 'Anfitrión';
-  if (!fichasElegidas[-1]) fichasElegidas[-1] = fichaAleatoria([]);
+  delete fichasElegidas[-1];
+  fichasElegidas[-1] = fichaAleatoria([]);
   document.getElementById('online-host-ficha-preview').innerHTML = fichaTag(fichasElegidas[-1], 32);
+  onlineElegirSubmodo(2);
   renderOnlineHostLobby();
 
   onlineDiagLog = [];
+  const diagHost = document.getElementById('online-diag-host');
+  if (diagHost) diagHost.textContent = '';
   onlineEngancharConsolaPeerJS();
   onlineDiag(`Creando sala con código ${onlineCodigoSala}…`);
   const iceServers = await onlineObtenerIceServers();
@@ -2325,6 +2329,8 @@ function onlineIrAPantallaUnirse() {
   if (err) err.style.display = 'none';
   const codigoInput = document.getElementById('online-join-codigo');
   if (codigoInput) codigoInput.value = '';
+  const nombreInput = document.getElementById('online-join-nombre');
+  if (nombreInput) nombreInput.value = '';
   onlineDiagLog = [];
   ['online-diag-join', 'online-diag-wait'].forEach(id => {
     const el = document.getElementById(id);
@@ -2338,6 +2344,20 @@ function onlineIrAPantallaUnirse() {
 function onlineCancelarYVolver() {
   onlineLimpiarConexionPrevia();
   modoOnline = null;
+  const codigoInput = document.getElementById('online-join-codigo');
+  if (codigoInput) codigoInput.value = '';
+  const nombreInput = document.getElementById('online-join-nombre');
+  if (nombreInput) nombreInput.value = '';
+  delete fichasElegidas[-2];
+  const err = document.getElementById('online-join-error');
+  if (err) err.style.display = 'none';
+  const btn = document.getElementById('online-btn-unirse');
+  if (btn) { btn.disabled = false; btn.textContent = 'Unirse →'; }
+  onlineDiagLog = [];
+  ['online-diag-join', 'online-diag-wait'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '';
+  });
   mostrarScreen('screen-online-menu');
 }
 
