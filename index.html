@@ -1602,7 +1602,7 @@ body > * { position: relative; z-index: 1; }
   <div id="rect-aviso-especial" style="display:none;text-align:center;font-weight:800;color:var(--gold);padding:0 0.8rem;font-size:0.85rem"></div>
 
   <!-- Tablero rectangular scrollable -->
-  <div id="rect-board" style="padding:0.5rem 0.8rem 2rem;overflow-y:auto;flex:1"></div>
+  <div id="rect-board" style="padding:0.5rem 0.8rem 2rem;overflow:auto;flex:1"></div>
 </div>
 
 <!-- ══════════════════════════════════════════════════
@@ -5587,7 +5587,7 @@ async function iniciarJuego() {
 // ════════════════════════════════════════════════════════
 // Pantallas "de juego" donde queremos que quepa todo sin scroll (reescalando si hace falta).
 // Las de configuración/menús se dejan con su scroll normal, porque pueden tener listas largas.
-const PANTALLAS_AUTOAJUSTABLES = new Set(['screen-preguntados', 'screen-rect', 'screen-game', 'screen-infinito', 'screen-fin']);
+const PANTALLAS_AUTOAJUSTABLES = new Set(['screen-preguntados', 'screen-game', 'screen-infinito', 'screen-fin']);
 
 function autoAjustarPantalla() {
   requestAnimationFrame(() => {
@@ -6474,58 +6474,102 @@ function rectRenderTopbar() {
   document.getElementById('rect-dado-btn').disabled = rectGame.esperandoMovimiento;
 }
 
+// Genera las coordenadas (columna,fila) de una espiral cuadrada de n casillas,
+// empezando por fuera (casilla 0) y terminando en el centro (casilla n-1) — como el tablero real de la Oca
+let _espiralCache = null;
+function generarEspiral(n) {
+  if (_espiralCache && _espiralCache.length === n) return _espiralCache;
+  const coords = [{ x: 0, y: 0 }];
+  let x = 0, y = 0, dx = 1, dy = 0;
+  let pasosEnSegmento = 1, pasosHechos = 0, segmentos = 0;
+  while (coords.length < n) {
+    x += dx; y += dy;
+    coords.push({ x, y });
+    pasosHechos++;
+    if (pasosHechos === pasosEnSegmento) {
+      pasosHechos = 0;
+      [dx, dy] = [-dy, dx];
+      segmentos++;
+      if (segmentos % 2 === 0) pasosEnSegmento++;
+    }
+  }
+  coords.reverse();
+  _espiralCache = coords;
+  return coords;
+}
+
 function rectRenderBoard() {
   const board = document.getElementById('rect-board');
   const casillas = rectGame.casillas;
-  const cols = RECT_COLS;
-  const rows = Math.ceil(casillas.length / cols);
+  const coords = generarEspiral(casillas.length);
+
+  const minX = Math.min(...coords.map(c => c.x)), maxX = Math.max(...coords.map(c => c.x));
+  const minY = Math.min(...coords.map(c => c.y)), maxY = Math.max(...coords.map(c => c.y));
+  const cell = 50, gap = 3;
+  const anchoPx = (maxX - minX + 1) * (cell + gap);
+  const altoPx = (maxY - minY + 1) * (cell + gap);
 
   const ICONOS = { oca:'🦢', puente:'🌉', posada:'🏨', pozo:'🕳️', laberinto:'🌀', carcel:'🔒', calavera:'💀', dados:'🎲', meta:'🏆', inicio:'🏁' };
   const NOMBRES = { oca:'Oca', puente:'Puente', posada:'Posada', pozo:'Pozo', laberinto:'Laberinto', carcel:'Cárcel', calavera:'Calavera', dados:'Dados', meta:'¡META!', inicio:'Salida' };
+  const FONDOS = {
+    oca:      'radial-gradient(circle at 35% 30%, #8BC34A, #33691E)',
+    puente:   'radial-gradient(circle at 35% 30%, #D7A86E, #8D6E3A)',
+    posada:   'radial-gradient(circle at 35% 30%, #FF8A65, #BF360C)',
+    pozo:     'radial-gradient(circle at 35% 30%, #4FC3F7, #01579B)',
+    laberinto:'radial-gradient(circle at 35% 30%, #BA68C8, #4A148C)',
+    carcel:   'radial-gradient(circle at 35% 30%, #78909C, #263238)',
+    calavera: 'radial-gradient(circle at 35% 30%, #616161, #000000)',
+    dados:    'radial-gradient(circle at 35% 30%, #FFD54F, #E65100)',
+    meta:     'radial-gradient(circle at 35% 30%, #FFF59D, #FF8F00)',
+    inicio:   'radial-gradient(circle at 35% 30%, #FFFFFF, #B0BEC5)',
+  };
 
-  let html = `<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:4px">`;
+  let html = `<div style="position:relative;width:${anchoPx}px;height:${altoPx}px;margin:0 auto">`;
 
-  for (let r = 0; r < rows; r++) {
-    const izqDer = r % 2 === 0;
-    const rowCasillas = [];
-    for (let c = 0; c < cols; c++) {
-      const idx = r * cols + c;
-      rowCasillas.push(idx < casillas.length ? casillas[idx] : null);
-    }
-    if (!izqDer) rowCasillas.reverse();
+  html += `<svg width="${anchoPx}" height="${altoPx}" style="position:absolute;top:0;left:0;pointer-events:none">
+    <polyline points="${coords.map(c => `${(c.x-minX)*(cell+gap)+cell/2},${(c.y-minY)*(cell+gap)+cell/2}`).join(' ')}"
+      fill="none" stroke="rgba(255,215,0,0.25)" stroke-width="${cell+gap}" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
 
-    for (const cas of rowCasillas) {
-      if (!cas) { html += '<div></div>'; continue; }
-      const especial = cas.tipo !== 'normal';
-      const info = especial ? null : CATS_INFO[cas.cat];
-      const jugadoresAqui = rectGame.jugadores.filter(j => j.pos === cas.id);
+  coords.forEach((coord, idx) => {
+    const cas = casillas[idx];
+    if (!cas) return;
+    const especial = cas.tipo !== 'normal';
+    const info = especial ? null : CATS_INFO[cas.cat];
+    const jugadoresAqui = rectGame.jugadores.filter(j => j.pos === cas.id);
+    const left = (coord.x - minX) * (cell + gap);
+    const top = (coord.y - minY) * (cell + gap);
 
-      let bg = info ? info.color + '22' : 'rgba(255,255,255,0.06)';
-      let border = info ? `2px solid ${info.color}55` : '2px solid rgba(255,255,255,0.18)';
-      if (cas.tipo === 'meta') { bg = 'linear-gradient(135deg,#FFD70044,#FFA50044)'; border = '3px solid var(--gold)'; }
-      if (cas.tipo === 'inicio') { bg = '#ffffff22'; border = '2px solid #ffffff44'; }
-      if (cas.tipo === 'calavera') { bg = '#00000055'; border = '2px solid #ffffff33'; }
-      if (cas.tipo === 'oca') { bg = '#4CAF5033'; border = '2px solid #4CAF50'; }
-      if (cas.tipo === 'pozo') { bg = '#03A9F433'; border = '2px solid #03A9F4'; }
+    const fondo = especial ? FONDOS[cas.tipo] : `radial-gradient(circle at 35% 30%, ${info.color}, ${info.color}99)`;
+    const anillo = cas.tipo === 'meta' ? '3px solid var(--gold)' : '2.5px solid rgba(255,255,255,0.55)';
+    const glow = cas.tipo === 'meta' ? '0 0 14px rgba(255,215,0,0.8)' : '0 2px 5px rgba(0,0,0,0.4)';
 
-      html += `<div style="
-        background:${bg};border:${border};border-radius:8px;
-        padding:3px;min-height:50px;display:flex;flex-direction:column;
-        align-items:center;justify-content:center;position:relative;
-      ">
-        <div style="font-size:0.6rem;font-weight:800;color:${info ? info.color : 'white'};text-align:center;line-height:1.2">
-          ${especial ? ICONOS[cas.tipo] : mascotaTag(cas.cat, 18)}
-        </div>
-        <div style="font-size:0.5rem;color:rgba(255,255,255,0.6);text-align:center;line-height:1.1">
-          ${especial ? NOMBRES[cas.tipo] : ''}
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:1px;justify-content:center;margin-top:2px">
-          ${jugadoresAqui.map(j=>`<div style="width:14px;height:14px;border-radius:50%;background:${j.color};font-size:0.55rem;display:flex;align-items:center;justify-content:center;overflow:hidden">${fichaTag(j, 13)}</div>`).join('')}
-        </div>
-        <div style="font-size:0.5rem;color:rgba(255,255,255,0.35);position:absolute;bottom:2px;right:3px">${cas.id}</div>
-      </div>`;
-    }
-  }
+    html += `<div style="
+      position:absolute;left:${left}px;top:${top}px;width:${cell}px;height:${cell}px;
+      background:${fondo};border:${anillo};border-radius:12px;box-shadow:${glow};
+      display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;
+    ">
+      <div style="font-size:${especial?'1.1rem':'0'};line-height:1">${especial ? ICONOS[cas.tipo] : ''}</div>
+      ${!especial ? mascotaTag(cas.cat, 26) : ''}
+      <div style="font-size:0.42rem;font-weight:800;color:white;text-shadow:0 1px 2px rgba(0,0,0,0.8);text-align:center;line-height:1;margin-top:1px">
+        ${especial ? NOMBRES[cas.tipo] : ''}
+      </div>
+      ${jugadoresAqui.length ? `<div style="position:absolute;bottom:1px;left:0;right:0;display:flex;flex-wrap:wrap;gap:1px;justify-content:center">
+        ${jugadoresAqui.map(j=>`<div style="width:13px;height:13px;border-radius:50%;background:${j.color};border:1px solid white;overflow:hidden">${fichaTag(j, 12)}</div>`).join('')}
+      </div>` : ''}
+      <div style="font-size:0.4rem;color:rgba(255,255,255,0.55);position:absolute;top:1px;right:2px">${cas.id}</div>
+    </div>`;
+  });
+
+  const cx = anchoPx / 2, cy = altoPx / 2;
+  html += `<div style="position:absolute;left:${cx-46}px;top:${cy-46}px;width:92px;height:92px;
+    background:radial-gradient(circle at 40% 30%, #FFF9C4, #F9A825 70%, #E65100);
+    border:3px solid var(--gold);border-radius:50%;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;box-shadow:0 0 22px rgba(255,215,0,0.6);text-align:center">
+    <div style="font-size:1.6rem;line-height:1">🦢🦢</div>
+    <div style="font-family:'Fredoka One',cursive;font-size:0.55rem;color:#4E2600;margin-top:2px">LA OCA</div>
+  </div>`;
+
   html += '</div>';
   board.innerHTML = html;
 }
