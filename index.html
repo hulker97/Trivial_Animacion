@@ -1539,12 +1539,6 @@ body > * { position: relative; z-index: 1; }
   <!-- VISTA PREGUNTA (ocupa toda la pantalla cuando está activa) -->
   <div id="pq-vista-pregunta" style="display:none;padding:0 0.8rem 1rem;max-width:480px;margin:0 auto;width:100%">
 
-    <!-- Indicador de categoría actual (grande) -->
-    <div id="pq-cat-indicator" style="text-align:center;margin-bottom:0.6rem;padding:0.8rem;border-radius:16px;transition:all 0.3s ease">
-      <div id="pq-cat-emoji-big" style="font-size:2rem;display:flex;align-items:center;justify-content:center"></div>
-      <div id="pq-cat-nombre-big" style="font-family:'Fredoka One',cursive;font-size:1.1rem;color:white"></div>
-    </div>
-
     <div class="question-modal" style="margin:0">
       <div class="q-header">
         <div class="q-header-top">
@@ -6095,14 +6089,6 @@ function pqRenderPreguntaUI(q, cat, esCorona) {
   pqRespondida = false;
   const catInfo = CATS_INFO[cat];
 
-  // Indicador grande de categoría
-  const catInd = document.getElementById('pq-cat-indicator');
-  catInd.style.background = `radial-gradient(ellipse at 50% 25%, ${catInfo.color}59, ${catInfo.color}22 65%, rgba(255,255,255,0.03) 100%)`;
-  catInd.style.border = `2px solid ${catInfo.color}`;
-  catInd.style.boxShadow = `0 0 28px ${catInfo.color}55, inset 0 1px 0 rgba(255,255,255,0.15)`;
-  document.getElementById('pq-cat-emoji-big').innerHTML = mascotaTag(esCorona ? 'corona' : cat, 68, `filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5))`);
-  document.getElementById('pq-cat-nombre-big').textContent = esCorona ? `👑 Corona · ${catInfo.nombre}` : catInfo.nombre;
-
   // Cabecera pregunta
   const badge = document.getElementById('pq-cat-badge');
   badge.innerHTML = `${mascotaTag(cat, 20, 'border-radius:50%;margin-right:0.3rem;box-shadow:0 1px 4px rgba(0,0,0,0.4)')}${catInfo.nombre}`;
@@ -6151,6 +6137,7 @@ function pqRenderPreguntaUI(q, cat, esCorona) {
   }
 
   // Cambiar a vista pregunta
+  document.getElementById('pq-cp-turn').textContent = '🤔 Respondiendo…';
   document.getElementById('pq-vista-ruleta').style.display = 'none';
   document.getElementById('pq-vista-pregunta').style.display = 'block';
   onlineActualizarBloqueoTurno();
