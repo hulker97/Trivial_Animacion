@@ -7018,6 +7018,7 @@ function rectMoverJugador(nuevaPos) {
         rectGame.esperandoMovimiento = false;
         if (rectGame.casillas[j.pos].tipo === 'meta') { rectGame.ganador = j; rectMostrarVictoria(j); }
         else if (rectGame.casillas[j.pos].tipo !== 'oca') rectResolverCasilla(j.pos);
+        else rectRenderTopbar(); // re-pintar para reactivar el botón cuando se cae en otra oca
       }, 700);
     }, 300);
     return;
