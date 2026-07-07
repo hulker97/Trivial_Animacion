@@ -6968,7 +6968,27 @@ function rectTirarDado() {
     destino = RECT_META - exceso;
   }
   rectGame.esperandoMovimiento = true;
-  rectMoverJugador(destino);
+  const desde = j.pos;
+  if (destino > desde) {
+    rectAnimarMovimiento(j, desde, destino, () => rectMoverJugador(destino));
+  } else {
+    rectMoverJugador(destino);
+  }
+}
+
+// Anima la ficha avanzando de casilla en casilla (en vez de saltar directa al destino),
+// para que se vea claramente el recorrido antes de resolver la casilla final
+function rectAnimarMovimiento(j, desde, hasta, callback) {
+  let actual = desde;
+  function paso() {
+    if (actual >= hasta) { callback(); return; }
+    actual++;
+    j.pos = actual;
+    rectRenderBoard();
+    rectRenderTopbar();
+    setTimeout(paso, 240);
+  }
+  setTimeout(paso, 240);
 }
 
 function rectMoverJugador(nuevaPos) {
@@ -7005,8 +7025,8 @@ function rectMoverJugador(nuevaPos) {
     setTimeout(() => {
       rectMostrarAviso('🌉 ¡Cruzas el puente!');
       j.pos = destino;
-      rectRenderBoard(); rectRenderTopbar();
       rectGame.esperandoMovimiento = false;
+      rectRenderBoard(); rectRenderTopbar();
       if (rectGame.casillas[j.pos].tipo === 'meta') { rectGame.ganador = j; rectMostrarVictoria(j); }
     }, 400);
     return;
@@ -7017,8 +7037,8 @@ function rectMoverJugador(nuevaPos) {
     setTimeout(() => {
       rectMostrarAviso('🎲 ¡Salto de dados!');
       j.pos = destino;
-      rectRenderBoard(); rectRenderTopbar();
       rectGame.esperandoMovimiento = false;
+      rectRenderBoard(); rectRenderTopbar();
       if (rectGame.casillas[j.pos].tipo === 'meta') { rectGame.ganador = j; rectMostrarVictoria(j); }
     }, 400);
     return;
@@ -7028,8 +7048,8 @@ function rectMoverJugador(nuevaPos) {
     setTimeout(() => {
       rectMostrarAviso('🌀 ¡Te pierdes en el laberinto!');
       j.pos = RECT_LABERINTO_DESTINO;
-      rectRenderBoard(); rectRenderTopbar();
       rectGame.esperandoMovimiento = false;
+      rectRenderBoard(); rectRenderTopbar();
     }, 400);
     return;
   }
@@ -7038,8 +7058,8 @@ function rectMoverJugador(nuevaPos) {
     setTimeout(() => {
       rectMostrarAviso('💀 ¡Vuelves a la salida!');
       j.pos = 0;
-      rectRenderBoard(); rectRenderTopbar();
       rectGame.esperandoMovimiento = false;
+      rectRenderBoard(); rectRenderTopbar();
     }, 400);
     return;
   }
