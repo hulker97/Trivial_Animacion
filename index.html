@@ -1600,7 +1600,7 @@ body > * { position: relative; z-index: 1; }
 
   <div id="rect-aviso-especial" style="display:none;text-align:center;font-weight:800;color:var(--gold);padding:0 0.8rem;font-size:0.85rem"></div>
   <div style="display:flex;gap:0.8rem;align-items:center;justify-content:center;padding:0.6rem 0.8rem 1rem">
-    <button class="btn btn-primary" id="rect-dado-btn" onclick="rectTirarDado()" style="font-size:1.1rem;max-width:280px;width:100%">🎲 Tirar dado</button>
+    <button class="btn btn-primary" id="rect-dado-btn" onclick="rectTirarDadoUI()" style="font-size:1.1rem;max-width:280px;width:100%">🎲 Tirar dado</button>
     <div id="rect-dado-result" style="font-size:1.8rem;min-width:2rem;text-align:center"></div>
   </div>
 </div>
@@ -1641,7 +1641,7 @@ body > * { position: relative; z-index: 1; }
       <div class="cell-type-label" style="color:var(--gold)">Tu turno</div>
       <div class="cat-name">Pulsa el dado para lanzar</div>
     </div>
-    <button class="btn btn-primary" id="btn-action" onclick="onActionBtn()">🎲 Lanzar</button>
+    <button class="btn btn-primary" id="btn-action" onclick="onActionBtnUI()">🎲 Lanzar</button>
   </div>
 </div>
 
@@ -1679,7 +1679,7 @@ body > * { position: relative; z-index: 1; }
     <div class="q-dato" id="q-dato"></div>
     <div class="q-result" id="q-result"></div>
     <div class="q-actions" id="q-actions">
-      <button class="btn btn-primary" id="q-continue-btn" onclick="onQuestionContinue()">Continuar →</button>
+      <button class="btn btn-primary" id="q-continue-btn" onclick="onQuestionContinueUI()">Continuar →</button>
     </div>
 
     <!-- Modo 3: botón táctil grande para revelar respuesta -->
@@ -1723,7 +1723,7 @@ body > * { position: relative; z-index: 1; }
   <div class="rollagain-modal">
     <h3>🎉 ¡Vuelves a lanzar!</h3>
     <p>Has caído en una casilla de turno extra.</p>
-    <button class="btn btn-primary" onclick="onRollAgainContinue()">🎲 Lanzar de nuevo</button>
+    <button class="btn btn-primary" onclick="onRollAgainContinueUI()">🎲 Lanzar de nuevo</button>
   </div>
 </div>
 
@@ -2095,9 +2095,27 @@ function onlinePrepararVotacion() {
   }
 }
 
+// Devuelve 'preguntados' | 'rectangular' | 'circular' | null según qué partida esté activa
+function onlineModoActivo() {
+  if (pqGame) return 'preguntados';
+  if (rectGame) return 'rectangular';
+  if (game) return 'circular';
+  return null;
+}
+
+// Jugador cuyo turno es ahora mismo, sea cual sea el modo activo
+function onlineJugadorTurnoGenerico() {
+  const modo = onlineModoActivo();
+  if (modo === 'preguntados') return pqGame.jugadores[pqGame.turno];
+  if (modo === 'rectangular') return rectGame.jugadores[rectGame.turno];
+  if (modo === 'circular') return game.players[game.currentPlayerIndex];
+  return null;
+}
+
 function onlineEsMiTurno() {
-  if (!modoOnline || !pqGame) return true; // partida local: siempre "tu turno" (se pasa el movil)
-  const jTurno = pqGame.jugadores[pqGame.turno];
+  const modo = onlineModoActivo();
+  if (!modoOnline || !modo) return true; // partida local: siempre "tu turno" (se pasa el movil)
+  const jTurno = onlineJugadorTurnoGenerico();
   if (modoOnline === 'host') return jTurno && jTurno._peerId === undefined; // el host no tiene _peerId
   return jTurno && jTurno._peerId === onlineMiPeerId;
 }
@@ -2295,13 +2313,18 @@ async function onlineHostRecibeSenal(msg, iceServers) {
 function onlineHostRecibe(conn, data) {
   if (data.type === 'JOIN') {
     // ¿La partida ya está en marcha? Comprobar si es una reconexión de alguien que ya jugaba
-    if (pqGame && modoOnline === 'host') {
-      const jExistente = pqGame.jugadores.find(j => j._guestId && j._guestId === data.guestId);
+    const modoActivo = onlineModoActivo();
+    if (modoActivo && modoOnline === 'host') {
+      const jugadoresActivos = modoActivo === 'preguntados' ? pqGame.jugadores
+        : modoActivo === 'rectangular' ? rectGame.jugadores : game.players;
+      const jExistente = jugadoresActivos.find(j => j._guestId && j._guestId === data.guestId);
       if (jExistente) {
         jExistente._peerId = conn.peer;
         onlineConexiones[conn.peer] = conn;
-        conn.send({ type: 'RECONECTADO', jugadores: pqGame.jugadores, modoSubtipo });
-        onlineBroadcastEstado(onlineUltimaFase || 'ruleta');
+        conn.send({ type: 'RECONECTADO', modo: modoActivo, jugadores: jugadoresActivos, modoSubtipo });
+        if (modoActivo === 'preguntados') onlineBroadcastEstado(onlineUltimaFase || 'ruleta');
+        else if (modoActivo === 'rectangular') onlineBroadcastEstadoRect(onlineUltimaFaseRect || 'tablero');
+        else onlineBroadcastEstadoGame(onlineUltimaFaseGame || 'tablero');
         return;
       }
       // Partida en marcha y no es nadie conocido: no se puede unir a mitad de partida
@@ -2392,7 +2415,7 @@ function onlineHostContinuarASetup() {
   numJugadores = jugadores.length;
   modoJuego = 'tablero';
   modoSubtipo = onlineModoSubtipoElegido; // elegido por el anfitrión: 2 (opciones) o 3 (viva voz)
-  setTipoTablero('preguntados');
+  setTipoTablero(tipoTablero); // refresca la pestaña activa sin forzar Preguntados: el anfitrión puede elegir cualquier tablero
   document.getElementById('panel-jugadores').style.display = 'none';
   document.getElementById('btn-iniciar').textContent = '🎲 Iniciar partida online';
   document.getElementById('btn-iniciar').onclick = iniciarJuego;
@@ -2555,7 +2578,7 @@ async function onlineGuestRecibeSenal(msg, pc) {
 let onlineIntentosReconexion = 0;
 function onlineGestionarDesconexion() {
   if (modoOnline !== 'guest') return;
-  if (!pqGame) {
+  if (!onlineModoActivo()) {
     // Aún en el lobby, sin partida en marcha: no tiene sentido reconectar solo, avisar y volver al inicio
     mostrarToast('Se perdió la conexión con la sala.');
     mostrarScreen('screen-inicio');
@@ -2633,11 +2656,23 @@ function onlineGuestRecibe(data) {
     return;
   } else if (data.type === 'RECONECTADO') {
     jugadores = data.jugadores;
-    modoSubtipo = data.modoSubtipo || modoSubtipo || 2;
-    if (!pqGame) pqGame = { jugadores: data.jugadores, turno: 0, pool: [], usadas: new Set() };
     onlineOcultarPantallaReconexion();
-    mostrarScreen('screen-preguntados');
-    pqRenderRuleta(-1);
+    if (data.modo === 'rectangular') {
+      if (!rectGame) rectGame = { casillas: generarCasillasOcaSiHacenFalta(), jugadores: data.jugadores, turno: 0, pool: [], usadas: new Set(), esperandoMovimiento: false, ganador: null, pozoOcupado: null };
+      mostrarScreen('screen-rect');
+      rectRenderTopbar();
+      rectRenderBoard();
+    } else if (data.modo === 'circular') {
+      if (!BOARD) BOARD = buildBoard();
+      if (!game) game = { players: data.jugadores, currentPlayerIndex: 0, diceValue: null, phase: 'roll', pendingQuestion: null, pendingWedgeCategoria: null, winner: null, validTargets: [] };
+      mostrarScreen('screen-game');
+      renderBoard(); renderPlayersPanel(); renderTopbar(); updateActionPanel();
+    } else {
+      modoSubtipo = data.modoSubtipo || modoSubtipo || 2;
+      if (!pqGame) pqGame = { jugadores: data.jugadores, turno: 0, pool: [], usadas: new Set() };
+      mostrarScreen('screen-preguntados');
+      pqRenderRuleta(-1);
+    }
     mostrarToast('¡Reconectado!');
     return;
   } else if (data.type === 'SPIN_START') {
@@ -2655,13 +2690,34 @@ function onlineGuestRecibe(data) {
     }
   } else if (data.type === 'GAME_START') {
     jugadores = data.jugadores;
-    modoSubtipo = data.modoSubtipo || 2;
-    pqGame = { jugadores: data.jugadores, turno: 0, pool: [], usadas: new Set() };
-    mostrarScreen('screen-preguntados');
-    pqRenderRuleta(-1);
+    if (data.modo === 'rectangular') {
+      rectGame = { casillas: generarCasillasOcaSiHacenFalta(), jugadores: data.jugadores, turno: 0, pool: [], usadas: new Set(), esperandoMovimiento: false, ganador: null, pozoOcupado: null };
+      mostrarScreen('screen-rect');
+      rectRenderTopbar();
+      rectRenderBoard();
+    } else if (data.modo === 'circular') {
+      BOARD = buildBoard();
+      game = { players: data.jugadores, currentPlayerIndex: 0, diceValue: null, phase: 'roll', pendingQuestion: null, pendingWedgeCategoria: null, winner: null, validTargets: [] };
+      mostrarScreen('screen-game');
+      renderBoard();
+      renderPlayersPanel();
+      renderTopbar();
+      updateActionPanel();
+    } else {
+      modoSubtipo = data.modoSubtipo || 2;
+      pqGame = { jugadores: data.jugadores, turno: 0, pool: [], usadas: new Set() };
+      mostrarScreen('screen-preguntados');
+      pqRenderRuleta(-1);
+    }
   } else if (data.type === 'STATE_UPDATE') {
     onlineOcultarPantallaReconexion();
     onlineAplicarEstadoRemoto(data.estado);
+  } else if (data.type === 'STATE_UPDATE_RECT') {
+    onlineOcultarPantallaReconexion();
+    onlineAplicarEstadoRemotoRect(data.estado);
+  } else if (data.type === 'STATE_UPDATE_GAME') {
+    onlineOcultarPantallaReconexion();
+    onlineAplicarEstadoRemotoGame(data.estado);
   } else if (data.type === 'REPLAY') {
     const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones };
     const fn = fns[data.fn];
@@ -2684,15 +2740,18 @@ function onlineEnviarAccion(action, payload) {
 
 // ── El host recibe una acción de un invitado y la ejecuta con la MISMA lógica local ──
 function onlineProcesarAccion(peerId, action, payload) {
-  const jTurno = pqJugadorActual();
-  // Votar: solo lo hacen los espectadores (nunca el jugador activo)
+  // Votar: solo aplica al modo Preguntados (viva voz), solo lo hacen los espectadores
   if (action === 'votar') {
-    if (jTurno && jTurno._peerId === peerId) return;
+    const jTurnoPQ = pqGame ? pqJugadorActual() : null;
+    if (jTurnoPQ && jTurnoPQ._peerId === peerId) return;
     onlineRegistrarVoto(peerId, payload.correcto);
     return;
   }
-  // El resto de acciones solo las procesa el jugador cuyo turno es
+  // El resto de acciones solo las procesa el jugador cuyo turno es, en el modo que esté activo
+  const jTurno = onlineJugadorTurnoGenerico();
   if (!jTurno || jTurno._peerId !== peerId) return;
+
+  // Preguntados
   if (action === 'girar') pqGirar();
   else if (action === 'elegirCat') pqElegirCat(payload.cat, payload.esCorona);
   else if (action === 'elegirQuesito') pqElegirQuesito(payload.cat);
@@ -2702,6 +2761,22 @@ function onlineProcesarAccion(peerId, action, payload) {
     const fn = fns[payload.fn];
     if (fn) fn(...(payload.args || []));
   }
+  // Tablero de la Oca (rectangular)
+  else if (action === 'tirarDado') rectTirarDado();
+  else if (action === 'continuarRect') {
+    document.getElementById('q-result').classList.toggle('correct', !!payload.correcto);
+    document.getElementById('q-result').dataset.correcto = payload.correcto ? '1' : '0';
+    rectOnContinue();
+  }
+  // Tablero circular
+  else if (action === 'rollDice') onActionBtn();
+  else if (action === 'moverCelda') onCellClick(payload.cellId);
+  else if (action === 'continuarCircular') {
+    document.getElementById('q-result').classList.toggle('correct', !!payload.correct);
+    document.getElementById('q-result').dataset.correcto = payload.correct ? '1' : '0';
+    onQuestionContinue();
+  }
+  else if (action === 'rollAgainContinuar') onRollAgainContinue();
 }
 
 // ── Puentes: si es mi turno y soy invitado, la acción viaja por red al host;
@@ -2789,28 +2864,165 @@ function onlineAplicarEstadoRemoto(estado) {
   autoAjustarPantalla();
 }
 
+// ── Estado online del tablero de la Oca (rectangular) ──
+let onlineUltimaFaseRect = 'tablero';
+function onlineBroadcastEstadoRect(faseExtra) {
+  if (modoOnline !== 'host' || !rectGame) return;
+  onlineUltimaFaseRect = faseExtra || 'tablero';
+  const estado = {
+    turno: rectGame.turno,
+    jugadores: rectGame.jugadores.map(j => ({
+      name:j.name, color:j.color, emoji:j.emoji, fichaId:j.fichaId, _peerId:j._peerId, _guestId:j._guestId,
+      pos:j.pos, turnosPerdidos:j.turnosPerdidos, atascado:j.atascado,
+    })),
+    pozoOcupado: rectGame.pozoOcupado,
+    ganador: rectGame.ganador ? rectGame.jugadores.indexOf(rectGame.ganador) : null,
+    pregunta: rectGame._preguntaActual || null,
+    fase: onlineUltimaFaseRect, // 'tablero' | 'pregunta' | 'victoria'
+  };
+  onlineBroadcast({ type: 'STATE_UPDATE_RECT', estado });
+}
+
+function onlineAplicarEstadoRemotoRect(estado) {
+  if (!rectGame) {
+    rectGame = { casillas: rectGame ? rectGame.casillas : generarCasillasOcaSiHacenFalta(), jugadores: estado.jugadores, turno: estado.turno, pool: [], usadas: new Set(), esperandoMovimiento: false, ganador: null, pozoOcupado: estado.pozoOcupado };
+  } else {
+    rectGame.jugadores = estado.jugadores;
+    rectGame.turno = estado.turno;
+    rectGame.pozoOcupado = estado.pozoOcupado;
+  }
+  rectGame._preguntaActual = estado.pregunta;
+  rectGame.ganador = estado.ganador !== null ? rectGame.jugadores[estado.ganador] : null;
+
+  rectRenderTopbar();
+  rectRenderBoard();
+
+  if (estado.fase === 'pregunta' && estado.pregunta) {
+    game = game || {};
+    game.pendingQuestion = estado.pregunta;
+    game.phase = 'normal';
+    showQuestionModal(false);
+    document.getElementById('q-continue-btn').onclick = rectOnContinueUI;
+  } else {
+    hideModal('modal-pregunta');
+  }
+  if (estado.fase === 'victoria' && rectGame.ganador) {
+    rectMostrarVictoria(rectGame.ganador);
+  }
+  onlineActualizarBloqueoTurno();
+  autoAjustarPantalla();
+}
+
+// Si un invitado recibe estado del tablero de la Oca antes de tener sus propias casillas
+// generadas (p.ej. tras recargar), las reconstruye con la misma lógica que el anfitrión
+function generarCasillasOcaSiHacenFalta() {
+  const especiales = {};
+  RECT_OCAS.forEach(i => especiales[i] = 'oca');
+  Object.keys(RECT_PUENTE).forEach(i => especiales[i] = 'puente');
+  especiales[RECT_POSADA] = 'posada';
+  especiales[RECT_POZO] = 'pozo';
+  especiales[RECT_LABERINTO] = 'laberinto';
+  especiales[RECT_CARCEL] = 'carcel';
+  especiales[RECT_CALAVERA] = 'calavera';
+  Object.keys(RECT_DADOS).forEach(i => especiales[i] = 'dados');
+  especiales[RECT_META] = 'meta';
+  const casillas = [];
+  let catIdx = 0;
+  for (let i = 0; i < RECT_TOTAL; i++) {
+    if (i === 0) { casillas.push({ tipo: 'inicio', id: i }); continue; }
+    if (especiales[i]) { casillas.push({ tipo: especiales[i], id: i }); continue; }
+    casillas.push({ tipo: 'normal', cat: RECT_CATS[catIdx % 6], id: i });
+    catIdx++;
+  }
+  return casillas;
+}
+
+// ── Estado online del tablero circular ──
+let onlineUltimaFaseGame = 'tablero';
+function onlineBroadcastEstadoGame(faseExtra) {
+  if (modoOnline !== 'host' || !game) return;
+  onlineUltimaFaseGame = faseExtra || 'tablero';
+  const estado = {
+    currentPlayerIndex: game.currentPlayerIndex,
+    diceValue: game.diceValue,
+    phase: game.phase,
+    validTargets: game.validTargets || [],
+    players: game.players.map(p => ({
+      name:p.name, color:p.color, emoji:p.emoji, fichaId:p.fichaId, _peerId:p._peerId, _guestId:p._guestId,
+      position:p.position, wedges:p.wedges, readyForFinal:p.readyForFinal,
+    })),
+    winner: game.winner ? game.players.indexOf(game.winner) : null,
+    pregunta: game.pendingQuestion || null,
+    pendingWedgeCategoria: game.pendingWedgeCategoria || null,
+    fase: onlineUltimaFaseGame, // 'tablero' | 'pregunta' | 'victoria'
+  };
+  onlineBroadcast({ type: 'STATE_UPDATE_GAME', estado });
+}
+
+function onlineAplicarEstadoRemotoGame(estado) {
+  if (!game) game = { players: estado.players };
+  game.players = estado.players;
+  game.currentPlayerIndex = estado.currentPlayerIndex;
+  game.diceValue = estado.diceValue;
+  game.phase = estado.phase;
+  game.validTargets = estado.validTargets;
+  game.pendingWedgeCategoria = estado.pendingWedgeCategoria;
+  game.pendingQuestion = estado.pregunta;
+  game.winner = estado.winner !== null ? game.players[estado.winner] : null;
+
+  renderBoard();
+  renderPlayersPanel();
+  renderTopbar();
+  updateActionPanel();
+
+  if (estado.fase === 'pregunta' && estado.pregunta) {
+    showQuestionModal(estado.phase === 'finalQuestion');
+  } else {
+    hideModal('modal-pregunta');
+  }
+  if (estado.fase === 'victoria' && game.winner) {
+    const ganador = game.winner;
+    const jObj = {
+      name: ganador.name, emoji: ganador.emoji, color: ganador.color, fichaId: ganador.fichaId,
+      quesitos: Object.fromEntries(CATS.map(c => [c, ganador.wedges.includes(c)]))
+    };
+    pqMostrarVictoria(jObj);
+  }
+  onlineActualizarBloqueoTurno();
+  autoAjustarPantalla();
+}
+
 // ── Bloquear/permitir la interacción según si es mi turno ──
 function onlineActualizarBloqueoTurno() {
   if (!modoOnline) return;
   const esMio = onlineEsMiTurno();
-  const btnGirar = document.getElementById('pq-btn-girar');
-  if (btnGirar) btnGirar.style.display = esMio ? '' : 'none';
+  const modo = onlineModoActivo();
+  const jTurno = onlineJugadorTurnoGenerico();
+
+  const BOTONES = { preguntados: 'pq-btn-girar', rectangular: 'rect-dado-btn', circular: 'btn-action' };
+  const CONTENEDORES_AVISO = { preguntados: 'pq-vista-ruleta', rectangular: 'rect-board', circular: 'action-panel' };
+
+  Object.entries(BOTONES).forEach(([m, id]) => {
+    const btn = document.getElementById(id);
+    if (btn && m === modo) btn.style.display = esMio ? '' : 'none';
+  });
+
   let aviso = document.getElementById('online-aviso-turno');
   if (!aviso) {
     aviso = document.createElement('div');
     aviso.id = 'online-aviso-turno';
     aviso.style.cssText = 'text-align:center;font-size:0.85rem;font-weight:800;color:var(--gold);margin-top:0.5rem';
-    document.getElementById('pq-vista-ruleta')?.appendChild(aviso);
   }
-  if (!esMio && pqGame) {
-    const j = pqJugadorActual();
-    aviso.textContent = `⏳ Esperando a ${j ? j.name : '...'}`;
+  const contenedor = document.getElementById(CONTENEDORES_AVISO[modo] || 'pq-vista-ruleta');
+  if (contenedor && aviso.parentElement !== contenedor) contenedor.prepend(aviso);
+  if (!esMio && jTurno) {
+    aviso.textContent = `⏳ Esperando a ${jTurno.name}`;
     aviso.style.display = 'block';
-  } else if (aviso) {
+  } else {
     aviso.style.display = 'none';
   }
-  // Bloquear opciones/botones de la vista de pregunta si no es mi turno
-  ['pq-options','pq-reveal-actions','pq-judge-btns','pq-actions','pq-reader-controls'].forEach(id => {
+  // Bloquear opciones/botones de la vista de pregunta si no es mi turno (compartido por los 3 modos)
+  ['pq-options','pq-reveal-actions','pq-judge-btns','pq-actions','pq-reader-controls','q-options','q-actions'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.pointerEvents = esMio ? '' : 'none';
     if (el) el.style.opacity = esMio ? '' : '0.5';
@@ -2921,7 +3133,7 @@ function createGame(players, questionPool) {
     players: players.map((p, i) => ({
       id:i, name:p.name, color:p.color, emoji:p.emoji, fichaId:p.fichaId,
       position:null, wedges:[], readyForFinal:false,
-      spokeIndex:undefined,
+      spokeIndex:undefined, _peerId:p._peerId, _guestId:p._guestId,
     })),
     currentPlayerIndex:0,
     diceValue:null,
@@ -4341,7 +4553,7 @@ function renderBoard() {
       if (isValid){
         s += `<ellipse cx="${sc.x.toFixed(1)}" cy="${sc.y.toFixed(1)}" rx="${W+7}" ry="${H+6}"
                fill="white" opacity="0.35" filter="url(#pulse)"
-               onclick="onCellClick(${sc.id})" style="cursor:pointer"/>`;
+               onclick="onCellClickUI(${sc.id})" style="cursor:pointer"/>`;
       }
       // Título de película para este spoke/casilla
       const _stitles = {
@@ -4358,7 +4570,7 @@ function renderBoard() {
 
       // Todo dentro del grupo rotado para que el clipPath funcione
       s += `<g transform="translate(${sc.x.toFixed(1)},${sc.y.toFixed(1)}) rotate(${rotDeg.toFixed(1)})"
-               onclick="${isValid?'onCellClick('+sc.id+')':''}"
+               onclick="${isValid?'onCellClickUI('+sc.id+')':''}"
                style="${isValid?'cursor:pointer':''}">
         <!-- marco negro -->
         <rect x="${-(W+2.5)}" y="${-(H+2.5)}" width="${(W+2.5)*2}" height="${(H+2.5)*2}" rx="5" fill="#111" filter="url(#sh)"/>
@@ -4482,11 +4694,11 @@ const RING_MOVIE_DATA = [
       s += `<ellipse cx="${cell.x.toFixed(1)}" cy="${cell.y.toFixed(1)}"
                rx="${W+8}" ry="${H+7}" fill="${isFinal?'#FFD700':'white'}"
                opacity="${isFinal?0.45:0.25}" filter="url(#pulse)"
-               onclick="onCellClick(${cell.id})" style="cursor:pointer"/>`;
+               onclick="onCellClickUI(${cell.id})" style="cursor:pointer"/>`;
     }
 
     s += `<g transform="translate(${cell.x.toFixed(1)},${cell.y.toFixed(1)}) rotate(${rotDeg.toFixed(1)})"
-             onclick="${isValid?'onCellClick('+cell.id+')':''}"
+             onclick="${isValid?'onCellClickUI('+cell.id+')':''}"
              style="${isValid?'cursor:pointer':''}" title="${cellTitle}">`;
 
     // Marco negro exterior
@@ -4734,6 +4946,10 @@ function renderTopbar() {
   // Cuñas
   const quesitosObj = Object.fromEntries(CATS.map(c => [c, p.wedges.includes(c)]));
   document.getElementById("cp-wedges").innerHTML = quesitosFila(quesitosObj, 26, 4);
+
+  if (modoOnline === 'host' && onlineUltimaFaseGame !== 'pregunta' && onlineUltimaFaseGame !== 'victoria') {
+    onlineBroadcastEstadoGame('tablero');
+  }
 }
 
 // ════════════════════════════════════════════════════════
@@ -4777,6 +4993,16 @@ function updateActionPanel() {
 // ════════════════════════════════════════════════════════
 //  BOTÓN ACCIÓN PRINCIPAL
 // ════════════════════════════════════════════════════════
+function onActionBtnUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') {
+    document.getElementById('btn-action').disabled = true;
+    onlineEnviarAccion('rollDice');
+    return;
+  }
+  onActionBtn();
+}
+
 function onActionBtn() {
   if (game.phase !== "roll") return;
 
@@ -4820,6 +5046,12 @@ function onActionBtn() {
   document.getElementById("btn-action").style.display = "none";
 }
 
+function onCellClickUI(cellId) {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('moverCelda', { cellId }); return; }
+  onCellClick(cellId);
+}
+
 function onCellClick(cellId) {
   if (game.phase !== "choose-direction") return;
   const isValid = game.validTargets.some(t => t.id === cellId);
@@ -4846,6 +5078,7 @@ function onCellClick(cellId) {
       name: p.name, emoji: p.emoji, color: p.color, fichaId: p.fichaId,
       quesitos: Object.fromEntries(CATS.map(c => [c, p.wedges.includes(c)]))
     }))};
+    if (modoOnline === 'host') onlineBroadcastEstadoGame('victoria');
     pqMostrarVictoria(jObj);
   }
 }
@@ -4853,6 +5086,12 @@ function onCellClick(cellId) {
 
 function onDir(dir) {
   // Ya no se usa — el movimiento es por clic en casilla
+}
+
+function onRollAgainContinueUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('rollAgainContinuar'); return; }
+  onRollAgainContinue();
 }
 
 function onRollAgainContinue() {
@@ -4974,6 +5213,7 @@ function showQuestionModal(isFinal) {
   }
 
   showModal("modal-pregunta");
+  if (modoOnline === 'host' && onlineModoActivo() === 'circular') onlineBroadcastEstadoGame('pregunta');
 }
 
 function toggleOpciones() {
@@ -5043,6 +5283,19 @@ function onOptionClick(idx) {
   document.getElementById("q-actions").classList.add("visible");
 }
 
+function onQuestionContinueUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') {
+    let correct;
+    if (modoSubtipo === 3) correct = document.getElementById("q-result").dataset.correcto === "1";
+    else correct = document.getElementById("q-result").classList.contains("correct");
+    hideModal('modal-pregunta');
+    onlineEnviarAccion('continuarCircular', { correct });
+    return;
+  }
+  onQuestionContinue();
+}
+
 function onQuestionContinue() {
   const q = game.pendingQuestion;
   let correct;
@@ -5053,12 +5306,14 @@ function onQuestionContinue() {
     correct = document.getElementById("q-result").classList.contains("correct");
   }
   hideModal("modal-pregunta");
+  onlineUltimaFaseGame = 'tablero';
 
   answerQuestion(correct);
 
   if (game.phase === "gameover") {
     document.getElementById("gameover-text").textContent = `¡${game.winner.name} ha ganado el Trivial de Animación!`;
     showModal("modal-gameover");
+    if (modoOnline === 'host') onlineBroadcastEstadoGame('victoria');
     return;
   }
 
@@ -5568,6 +5823,12 @@ async function iniciarJuego() {
       // circular
       BOARD = buildBoard();
       game = createGame(jugadores, pool);
+      if (modoOnline === 'host') {
+        onlineBroadcast({ type: 'GAME_START', modo: 'circular', jugadores: game.players.map(p => ({
+          name:p.name, color:p.color, emoji:p.emoji, fichaId:p.fichaId, _peerId:p._peerId,
+          position:p.position, wedges:p.wedges, readyForFinal:p.readyForFinal
+        })) });
+      }
       mostrarScreen("screen-game");
       renderBoard();
       renderPlayersPanel();
@@ -5882,7 +6143,7 @@ function iniciarPreguntados() {
     usadas: new Set(),
   };
   if (modoOnline === 'host') {
-    onlineBroadcast({ type: 'GAME_START', modoSubtipo, jugadores: pqGame.jugadores.map(j => ({
+    onlineBroadcast({ type: 'GAME_START', modo: 'preguntados', modoSubtipo, jugadores: pqGame.jugadores.map(j => ({
       name:j.name, color:j.color, emoji:j.emoji, fichaId:j.fichaId, _peerId:j._peerId,
       quesitos:j.quesitos, aciertosAcumulados:j.aciertosAcumulados
     })) });
@@ -6455,6 +6716,13 @@ function iniciarTableroRect() {
     pozoOcupado: null, // id del jugador atascado en el pozo (indice)
   };
 
+  if (modoOnline === 'host') {
+    onlineBroadcast({ type: 'GAME_START', modo: 'rectangular', jugadores: rectGame.jugadores.map(j => ({
+      name:j.name, color:j.color, emoji:j.emoji, fichaId:j.fichaId, _peerId:j._peerId,
+      pos:j.pos, turnosPerdidos:j.turnosPerdidos, atascado:j.atascado
+    })) });
+  }
+
   mostrarScreen("screen-rect");
   rectRenderTopbar();
   rectRenderBoard();
@@ -6624,6 +6892,9 @@ function rectRenderBoard() {
 
   html += '</div></div>';
   board.innerHTML = html;
+  if (modoOnline === 'host' && onlineUltimaFaseRect !== 'pregunta' && onlineUltimaFaseRect !== 'victoria') {
+    onlineBroadcastEstadoRect('tablero');
+  }
 }
 
 function rectMostrarAviso(texto) {
@@ -6637,6 +6908,16 @@ function rectPasarTurno() {
   rectGame.turno = (rectGame.turno + 1) % rectGame.jugadores.length;
   rectRenderTopbar();
   rectRenderBoard();
+}
+
+function rectTirarDadoUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') {
+    document.getElementById('rect-dado-btn').disabled = true;
+    onlineEnviarAccion('tirarDado');
+    return;
+  }
+  rectTirarDado();
 }
 
 function rectTirarDado() {
@@ -6800,7 +7081,20 @@ function rectResolverCasilla(pos) {
   game.pendingQuestion = q;
   game.phase = 'normal';
   showQuestionModal(false);
-  document.getElementById('q-continue-btn').onclick = rectOnContinue;
+  document.getElementById('q-continue-btn').onclick = rectOnContinueUI;
+  if (modoOnline === 'host') onlineBroadcastEstadoRect('pregunta');
+}
+
+function rectOnContinueUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') {
+    const correcto = document.getElementById('q-result').classList.contains('correct') ||
+      document.getElementById('q-result').dataset.correcto === '1';
+    hideModal('modal-pregunta');
+    onlineEnviarAccion('continuarRect', { correcto });
+    return;
+  }
+  rectOnContinue();
 }
 
 function rectOnContinue() {
@@ -6808,6 +7102,7 @@ function rectOnContinue() {
     document.getElementById('q-result').dataset.correcto === '1';
   hideModal('modal-pregunta');
   rectGame.esperandoMovimiento = false;
+  onlineUltimaFaseRect = 'tablero';
 
   if (correcto) {
     rectMostrarAviso('✅ ¡Correcto! Tira otra vez');
@@ -6824,6 +7119,7 @@ function rectMostrarVictoria(j) {
   document.getElementById('gameover-text').innerHTML =
     `${fichaTag(j, 40, 'border-radius:50%;vertical-align:middle;margin-right:0.4rem')} <b>${j.name}</b> ha llegado antes a la meta 🏆`;
   showModal('modal-gameover');
+  if (modoOnline === 'host') onlineBroadcastEstadoRect('victoria');
 }
 
 // ════════════════════════════════════════════════════════
