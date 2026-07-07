@@ -7059,9 +7059,9 @@ function rectMoverJugador(nuevaPos) {
     setTimeout(() => {
       rectMostrarAviso('🌉 ¡Cruzas el puente!');
       j.pos = destino;
-      rectGame.esperandoMovimiento = false;
       rectRenderBoard(); rectRenderTopbar();
-      if (rectGame.casillas[j.pos].tipo === 'meta') { rectGame.ganador = j; rectMostrarVictoria(j); }
+      if (rectGame.casillas[j.pos].tipo === 'meta') { rectGame.ganador = j; rectGame.esperandoMovimiento = true; rectMostrarVictoria(j); }
+      else { rectGame.esperandoMovimiento = false; setTimeout(rectPasarTurno, 500); }
     }, 400);
     return;
   }
@@ -7071,9 +7071,9 @@ function rectMoverJugador(nuevaPos) {
     setTimeout(() => {
       rectMostrarAviso('🎲 ¡Salto de dados!');
       j.pos = destino;
-      rectGame.esperandoMovimiento = false;
       rectRenderBoard(); rectRenderTopbar();
-      if (rectGame.casillas[j.pos].tipo === 'meta') { rectGame.ganador = j; rectMostrarVictoria(j); }
+      if (rectGame.casillas[j.pos].tipo === 'meta') { rectGame.ganador = j; rectGame.esperandoMovimiento = true; rectMostrarVictoria(j); }
+      else { rectGame.esperandoMovimiento = false; setTimeout(rectPasarTurno, 500); }
     }, 400);
     return;
   }
@@ -7082,8 +7082,9 @@ function rectMoverJugador(nuevaPos) {
     setTimeout(() => {
       rectMostrarAviso('🌀 ¡Te pierdes en el laberinto!');
       j.pos = RECT_LABERINTO_DESTINO;
-      rectGame.esperandoMovimiento = false;
       rectRenderBoard(); rectRenderTopbar();
+      rectGame.esperandoMovimiento = false;
+      setTimeout(rectPasarTurno, 500);
     }, 400);
     return;
   }
@@ -7092,8 +7093,9 @@ function rectMoverJugador(nuevaPos) {
     setTimeout(() => {
       rectMostrarAviso('💀 ¡Vuelves a la salida!');
       j.pos = 0;
-      rectGame.esperandoMovimiento = false;
       rectRenderBoard(); rectRenderTopbar();
+      rectGame.esperandoMovimiento = false;
+      setTimeout(rectPasarTurno, 500);
     }, 400);
     return;
   }
