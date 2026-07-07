@@ -2707,6 +2707,11 @@ function onlineGuestRecibe(data) {
         <span style="font-size:1.3rem">${fichaTag({fichaId:j.fichaId, emoji:'🎮'}, 30)}</span>
         <div style="flex:1;font-weight:800">${j.nombre}${j.peerId===onlineMiPeerId?' (tú)':''}</div></div>`).join('');
     }
+  } else if (data.type === 'VOLVER_LOBBY') {
+    pqGame = null; rectGame = null; game = null;
+    hideModal('modal-gameover');
+    mostrarScreen('screen-online-wait');
+    mostrarToast('El anfitrión va a preparar otra partida…');
   } else if (data.type === 'GAME_START') {
     jugadores = data.jugadores;
     if (data.modo === 'rectangular') {
@@ -6677,6 +6682,27 @@ function pqMostrarVictoria(j) {
 }
 
 function volverASetup() {
+  if (modoOnline === 'host') {
+    // Reconstruir el lobby a partir de los jugadores de la partida que acaba de terminar,
+    // manteniendo las conexiones ya establecidas (no hace falta reconectar a nadie)
+    const modo = onlineModoActivo();
+    const jugadoresPartida = modo === 'preguntados' ? pqGame.jugadores
+      : modo === 'rectangular' ? rectGame.jugadores
+      : modo === 'circular' ? game.players : [];
+    onlineJugadoresLobby = jugadoresPartida.filter(j => j._peerId).map(j => ({
+      peerId: j._peerId, nombre: j.name, fichaId: j.fichaId, guestId: j._guestId
+    }));
+    pqGame = null; rectGame = null; game = null;
+    mostrarScreen('screen-online-host-lobby');
+    document.getElementById('online-codigo-grande').textContent = onlineCodigoSala;
+    renderOnlineHostLobby();
+    onlineBroadcast({ type: 'VOLVER_LOBBY' });
+    return;
+  }
+  if (modoOnline === 'guest') {
+    mostrarToast('Esperando a que el anfitrión inicie otra partida…');
+    return;
+  }
   if (modoJuego === 'infinito') irASetupInfinito();
   else irASetup();
 }
