@@ -1069,6 +1069,14 @@ body > * { position: relative; z-index: 1; }
     </div>
   </div>
   <div class="panel">
+    <h3>🗺️ Tipo de tablero</h3>
+    <div style="display:flex;gap:0.5rem">
+      <button class="filtro-tab active" id="online-tab-tablero-preguntados" onclick="onlineElegirTipoTablero('preguntados')">🎯 Preguntados</button>
+      <button class="filtro-tab" id="online-tab-tablero-rect" onclick="onlineElegirTipoTablero('rectangular')">🦢 Oca</button>
+      <button class="filtro-tab" id="online-tab-tablero-circular" onclick="onlineElegirTipoTablero('circular')">⭕ Circular</button>
+    </div>
+  </div>
+  <div class="panel" id="online-panel-submodo">
     <h3>🗣️ Cómo se responde</h3>
     <div style="display:flex;gap:0.5rem">
       <button class="filtro-tab active" id="online-tab-opciones" onclick="onlineElegirSubmodo(2)">🔢 Con opciones</button>
@@ -2137,6 +2145,16 @@ function onlineElegirSubmodo(n) {
     : 'El jugador activo dice la respuesta en voz alta; los demás votan si acertó';
 }
 
+let onlineTipoTableroElegido = 'preguntados';
+function onlineElegirTipoTablero(tipo) {
+  onlineTipoTableroElegido = tipo;
+  document.getElementById('online-tab-tablero-preguntados').classList.toggle('active', tipo === 'preguntados');
+  document.getElementById('online-tab-tablero-rect').classList.toggle('active', tipo === 'rectangular');
+  document.getElementById('online-tab-tablero-circular').classList.toggle('active', tipo === 'circular');
+  // El submodo (con opciones/viva voz) solo tiene sentido en Preguntados
+  document.getElementById('online-panel-submodo').style.display = tipo === 'preguntados' ? '' : 'none';
+}
+
 const LS_GUEST_ID_KEY = 'trivial_online_guest_id';
 function onlineObtenerGuestId() {
   let id = localStorage.getItem(LS_GUEST_ID_KEY);
@@ -2246,6 +2264,7 @@ async function onlineCrearSala() {
   fichasElegidas[-1] = fichaAleatoria([]);
   document.getElementById('online-host-ficha-preview').innerHTML = fichaTag(fichasElegidas[-1], 32);
   onlineElegirSubmodo(2);
+  onlineElegirTipoTablero('preguntados');
   renderOnlineHostLobby();
 
   onlineDiagLog = [];
@@ -2415,7 +2434,7 @@ function onlineHostContinuarASetup() {
   numJugadores = jugadores.length;
   modoJuego = 'tablero';
   modoSubtipo = onlineModoSubtipoElegido; // elegido por el anfitrión: 2 (opciones) o 3 (viva voz)
-  setTipoTablero(tipoTablero); // refresca la pestaña activa sin forzar Preguntados: el anfitrión puede elegir cualquier tablero
+  setTipoTablero(onlineTipoTableroElegido); // el que haya elegido el anfitrión en el lobby
   document.getElementById('panel-jugadores').style.display = 'none';
   document.getElementById('btn-iniciar').textContent = '🎲 Iniciar partida online';
   document.getElementById('btn-iniciar').onclick = iniciarJuego;
