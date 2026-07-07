@@ -2738,7 +2738,7 @@ function onlineGuestRecibe(data) {
     onlineOcultarPantallaReconexion();
     onlineAplicarEstadoRemotoGame(data.estado);
   } else if (data.type === 'REPLAY') {
-    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones };
+    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick };
     const fn = fns[data.fn];
     if (fn) fn(...(data.args || []));
   } else if (data.type === 'VOTOS_UPDATE') {
@@ -2776,7 +2776,7 @@ function onlineProcesarAccion(peerId, action, payload) {
   else if (action === 'elegirQuesito') pqElegirQuesito(payload.cat);
   else if (action === 'continuar') pqContinuar(payload.correcto);
   else if (action === 'relay') {
-    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones };
+    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick };
     const fn = fns[payload.fn];
     if (fn) fn(...(payload.args || []));
   }
@@ -5234,6 +5234,7 @@ function showQuestionModal(isFinal) {
 
   showModal("modal-pregunta");
   if (modoOnline === 'host' && onlineModoActivo() === 'circular') onlineBroadcastEstadoGame('pregunta');
+  if (modoOnline) onlineActualizarBloqueoTurno();
 }
 
 function toggleOpciones() {
@@ -5301,6 +5302,8 @@ function onOptionClick(idx) {
   r.textContent = correct ? "✅ ¡Correcto!" : "❌ Incorrecto";
   r.classList.add("visible", correct ? "correct" : "wrong");
   document.getElementById("q-actions").classList.add("visible");
+
+  onlineNotificarReplay('onOptionClick', [idx]);
 }
 
 function onQuestionContinueUI() {
