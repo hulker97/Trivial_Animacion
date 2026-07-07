@@ -6576,21 +6576,23 @@ function rectRenderBoard() {
     const fondo = especial ? FONDOS[cas.tipo] : `radial-gradient(circle at 35% 30%, ${info.color}, ${info.color}99)`;
     const anillo = '3px solid rgba(255,255,255,0.75)';
     const glow = '0 2px 6px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.6)';
+    const hayJugadores = jugadoresAqui.length > 0;
+    const tamFicha = jugadoresAqui.length === 1 ? tam * 0.82 : tam * 0.5;
 
     html += `<div style="
-      position:absolute;left:${left}px;top:${top}px;width:${tam}px;height:${tam}px;z-index:1;
+      position:absolute;left:${left}px;top:${top}px;width:${tam}px;height:${tam}px;z-index:${hayJugadores?3:1};
       background:${fondo};border:${anillo};border-radius:10px;box-shadow:${glow};
       display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;
     ">
-      <div style="font-size:${especial?'1.05rem':'0'};line-height:1">${especial ? ICONOS[cas.tipo] : ''}</div>
-      ${!especial ? mascotaTag(cas.cat, 24) : ''}
-      <div style="font-size:0.4rem;font-weight:800;color:white;text-shadow:0 1px 2px rgba(0,0,0,0.8);text-align:center;line-height:1;margin-top:1px">
+      <div style="font-size:${especial&&!hayJugadores?'1.05rem':'0'};line-height:1">${especial && !hayJugadores ? ICONOS[cas.tipo] : ''}</div>
+      ${!especial && !hayJugadores ? mascotaTag(cas.cat, 24) : ''}
+      <div style="font-size:0.4rem;font-weight:800;color:white;text-shadow:0 1px 2px rgba(0,0,0,0.8);text-align:center;line-height:1;margin-top:1px;opacity:${hayJugadores?0.55:1}">
         ${especial ? NOMBRES[cas.tipo] : ''}
       </div>
-      ${jugadoresAqui.length ? `<div style="position:absolute;bottom:1px;left:0;right:0;display:flex;flex-wrap:wrap;gap:1px;justify-content:center">
-        ${jugadoresAqui.map(j=>`<div style="width:12px;height:12px;border-radius:50%;background:${j.color};border:1px solid white;overflow:hidden">${fichaTag(j, 11)}</div>`).join('')}
+      ${hayJugadores ? `<div style="position:absolute;inset:0;display:flex;flex-wrap:wrap;gap:1px;align-items:center;justify-content:center">
+        ${jugadoresAqui.map(j=>`<div style="width:${tamFicha}px;height:${tamFicha}px;border-radius:50%;background:${j.color};border:2.5px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.6);overflow:hidden;flex-shrink:0">${fichaTag(j, tamFicha-4)}</div>`).join('')}
       </div>` : ''}
-      <div style="font-size:0.36rem;color:rgba(255,255,255,0.55);position:absolute;top:1px;right:2px">${cas.id}</div>
+      <div style="font-size:0.36rem;color:rgba(255,255,255,0.55);position:absolute;top:1px;right:2px;z-index:4">${cas.id}</div>
     </div>`;
   });
 
@@ -6614,8 +6616,8 @@ function rectRenderBoard() {
     ">
       <div style="font-size:2rem;line-height:1">🦢🦢</div>
       <div style="font-size:0.6rem;font-weight:800;color:#4E2600;margin-top:2px">¡META!</div>
-      ${jugadoresMeta.length ? `<div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:3px">
-        ${jugadoresMeta.map(j=>`<div style="width:16px;height:16px;border-radius:50%;background:${j.color};border:1px solid white;overflow:hidden">${fichaTag(j, 15)}</div>`).join('')}
+      ${jugadoresMeta.length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-top:3px">
+        ${jugadoresMeta.map(j=>`<div style="width:28px;height:28px;border-radius:50%;background:${j.color};border:2.5px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.6);overflow:hidden">${fichaTag(j, 24)}</div>`).join('')}
       </div>` : ''}
     </div>`;
   }
