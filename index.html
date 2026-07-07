@@ -6975,6 +6975,8 @@ function rectTirarDado() {
 
   // ¿Está en el pozo? Se queda sin tirar hasta que le rescaten
   if (j.atascado) {
+    rectGame.esperandoMovimiento = true;
+    rectRenderTopbar();
     rectMostrarAviso(`🕳️ ${j.name} sigue atascado en el pozo…`);
     setTimeout(rectPasarTurno, 900);
     return;
@@ -6982,6 +6984,8 @@ function rectTirarDado() {
   // ¿Tiene turnos perdidos pendientes (posada/cárcel)?
   if (j.turnosPerdidos > 0) {
     j.turnosPerdidos--;
+    rectGame.esperandoMovimiento = true;
+    rectRenderTopbar();
     rectMostrarAviso(`⏳ ${j.name} pierde el turno`);
     setTimeout(rectPasarTurno, 900);
     return;
@@ -7097,7 +7101,8 @@ function rectMoverJugador(nuevaPos) {
   if (cas.tipo === 'posada') {
     j.turnosPerdidos = 1;
     rectMostrarAviso('🏨 Posada: pierdes el próximo turno');
-    rectGame.esperandoMovimiento = false;
+    rectGame.esperandoMovimiento = true; // bloqueado hasta que se pase el turno, evita dobles clics
+    rectRenderTopbar();
     setTimeout(rectPasarTurno, 900);
     return;
   }
@@ -7105,7 +7110,8 @@ function rectMoverJugador(nuevaPos) {
   if (cas.tipo === 'carcel') {
     j.turnosPerdidos = 2;
     rectMostrarAviso('🔒 ¡A la cárcel! Pierdes 2 turnos');
-    rectGame.esperandoMovimiento = false;
+    rectGame.esperandoMovimiento = true;
+    rectRenderTopbar();
     setTimeout(rectPasarTurno, 900);
     return;
   }
@@ -7121,13 +7127,15 @@ function rectMoverJugador(nuevaPos) {
     }
     j.atascado = true;
     rectGame.pozoOcupado = rectGame.jugadores.indexOf(j);
-    rectGame.esperandoMovimiento = false;
+    rectGame.esperandoMovimiento = true;
+    rectRenderTopbar();
     setTimeout(rectPasarTurno, 1000);
     return;
   }
 
   if (cas.tipo === 'inicio') {
-    rectGame.esperandoMovimiento = false;
+    rectGame.esperandoMovimiento = true;
+    rectRenderTopbar();
     setTimeout(rectPasarTurno, 400);
     return;
   }
