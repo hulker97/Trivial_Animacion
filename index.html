@@ -2872,7 +2872,7 @@ function onlineAplicarEstadoRemoto(estado) {
     document.getElementById('pq-vista-ruleta').style.display = 'flex';
     document.getElementById('pq-vista-pregunta').style.display = 'none';
     pqRenderRuleta(-1);
-    pqMostrarSelectorQuesitoUI();
+    pqMostrarSelectorQuesito();
   } else if (estado.fase === 'pregunta' && estado.pregunta) {
     pqRenderPreguntaUI(estado.pregunta, pqCatElegida, pqEsCorona);
   } else if (estado.fase === 'victoria') {
@@ -3021,9 +3021,10 @@ function onlineActualizarBloqueoTurno() {
   const BOTONES = { preguntados: 'pq-btn-girar', rectangular: 'rect-dado-btn', circular: 'btn-action' };
   const CONTENEDORES_AVISO = { preguntados: 'pq-vista-ruleta', rectangular: 'rect-board', circular: 'action-panel' };
 
+  const selectorVisible = document.getElementById('pq-corona-selector')?.style.display === 'block';
   Object.entries(BOTONES).forEach(([m, id]) => {
     const btn = document.getElementById(id);
-    if (btn && m === modo) btn.style.display = esMio ? '' : 'none';
+    if (btn && m === modo) btn.style.display = (esMio && !(m === 'preguntados' && selectorVisible)) ? '' : 'none';
   });
 
   let aviso = document.getElementById('online-aviso-turno');
