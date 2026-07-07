@@ -6577,7 +6577,7 @@ function rectRenderBoard() {
     const anillo = '3px solid rgba(255,255,255,0.75)';
     const glow = '0 2px 6px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.6)';
     const hayJugadores = jugadoresAqui.length > 0;
-    const tamFicha = jugadoresAqui.length === 1 ? tam * 0.82 : tam * 0.5;
+    const tamFicha = jugadoresAqui.length === 1 ? tam * 0.82 : jugadoresAqui.length === 2 ? tam * 0.42 : tam * 0.36;
 
     html += `<div style="
       position:absolute;left:${left}px;top:${top}px;width:${tam}px;height:${tam}px;z-index:${hayJugadores?3:1};
@@ -6589,7 +6589,7 @@ function rectRenderBoard() {
       <div style="font-size:0.4rem;font-weight:800;color:white;text-shadow:0 1px 2px rgba(0,0,0,0.8);text-align:center;line-height:1;margin-top:1px;opacity:${hayJugadores?0.55:1}">
         ${especial ? NOMBRES[cas.tipo] : ''}
       </div>
-      ${hayJugadores ? `<div style="position:absolute;inset:0;display:flex;flex-wrap:wrap;gap:1px;align-items:center;justify-content:center">
+      ${hayJugadores ? `<div style="position:absolute;inset:0;display:flex;flex-wrap:nowrap;gap:2px;align-items:center;justify-content:center">
         ${jugadoresAqui.map(j=>`<div style="width:${tamFicha}px;height:${tamFicha}px;border-radius:50%;background:${j.color};border:2.5px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.6);overflow:hidden;flex-shrink:0">${fichaTag(j, tamFicha-4)}</div>`).join('')}
       </div>` : ''}
       <div style="font-size:0.36rem;color:rgba(255,255,255,0.55);position:absolute;top:1px;right:2px;z-index:4">${cas.id}</div>
