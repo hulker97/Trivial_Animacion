@@ -84,7 +84,7 @@ body::before {
 body > * { position: relative; z-index: 1; }
 
 /* ═══ PANTALLAS ═══ */
-.screen { display: none; min-height: 100vh; }
+.screen { display: none; min-height: 100vh; min-height: 100dvh; }
 .screen.active { display: flex; flex-direction: column; align-items: stretch; justify-content: center; }
 
 /* ═══ PANTALLA INICIO ═══ */
@@ -138,6 +138,7 @@ body > * { position: relative; z-index: 1; }
 
 .logo-stars {
   display: flex;
+  justify-content: center;
   gap: 1rem;
   font-size: 1.8rem;
   animation: starPulse 2s ease-in-out infinite alternate;
@@ -191,6 +192,7 @@ body > * { position: relative; z-index: 1; }
   background: rgba(255,255,255,0.1);
   color: var(--gold);
   border: 2px solid rgba(255,215,0,0.5);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 .btn-secondary:hover {
@@ -232,6 +234,7 @@ body > * { position: relative; z-index: 1; }
   max-width: 600px;
   width: 100%;
   margin: 0 auto;
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
 .panel h3 {
@@ -268,7 +271,7 @@ body > * { position: relative; z-index: 1; }
   border-bottom: 1.5px solid rgba(255,215,0,0.3);
   color: var(--text);
   font-family: 'Nunito', sans-serif;
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
   padding: 0.2rem 0.4rem;
   outline: none;
@@ -288,7 +291,7 @@ body > * { position: relative; z-index: 1; }
   border-radius: 50px;
   color: var(--text);
   font-family: 'Nunito', sans-serif;
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: 700;
   padding: 0.45rem 0.9rem;
 }
@@ -330,6 +333,7 @@ body > * { position: relative; z-index: 1; }
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.5rem;
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   width: 100%;
   box-sizing: border-box;
@@ -387,6 +391,7 @@ body > * { position: relative; z-index: 1; }
   padding: 0.8rem 0.7rem;
   overflow-y: auto;
   flex-shrink: 0;
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
 .player-card {
@@ -433,6 +438,7 @@ body > * { position: relative; z-index: 1; }
   gap: 1rem;
   flex-wrap: wrap;
   min-height: 88px;
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   width: 100%;
   box-sizing: border-box;
@@ -448,6 +454,7 @@ body > * { position: relative; z-index: 1; }
   font-size: 2.2rem;
   font-weight: 900;
   box-shadow: 0 4px 16px rgba(0,0,0,0.6), 0 0 0 3px rgba(255,215,0,0.4), inset 0 2px 4px rgba(255,255,255,0.8);
+  -webkit-user-select: none;
   user-select: none;
   flex-shrink: 0;
   transition: transform 0.1s;
@@ -476,6 +483,7 @@ body > * { position: relative; z-index: 1; }
   display: flex; align-items: center; justify-content: center;
   z-index: 100;
   padding: 1rem;
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
 .modal-overlay.hidden { display: none; }
@@ -662,6 +670,7 @@ body > * { position: relative; z-index: 1; }
   font-weight: 800;
   cursor: pointer;
   transition: all 0.2s;
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 .spoke-btn:hover { transform: scale(1.06); background: rgba(255,255,255,0.12); box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
@@ -804,6 +813,7 @@ body > * { position: relative; z-index: 1; }
   font-weight: 800;
   cursor: pointer;
   transition: all 0.18s;
+  -webkit-user-select: none;
   user-select: none;
 }
 .estudio-chip.activo {
@@ -855,6 +865,7 @@ body > * { position: relative; z-index: 1; }
   padding: 0.7rem 0.9rem;
   background: rgba(255,255,255,0.04);
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   transition: background 0.15s;
 }
@@ -941,6 +952,7 @@ body > * { position: relative; z-index: 1; }
   border: 3px solid transparent;
   opacity: 0.45;
   cursor: default;
+  -webkit-user-select: none;
   user-select: none;
 }
 .pq-sector.iluminado {
@@ -1799,11 +1811,11 @@ const PLAYER_EMOJIS = ["🦁","🤠","🐉","🐧","🕸️","❄️","🐯","�
 // Catálogo de fichas de jugador: 2 personajes por cada una de las 20 películas más presentes en el banco
 const FICHAS_JUGADOR = [
   {id:"shrek", nombre:"Shrek", pelicula:"Shrek", emoji:"🟢", img:"images/fichas/shrek.png"},
-  {id:"burro", nombre:"Burro", pelicula:"Shrek", emoji:"🫏", img:"images/fichas/burro.png"},
+  {id:"burro", nombre:"Asno", pelicula:"Shrek", emoji:"🫏", img:"images/fichas/burro.png"},
   {id:"woody", nombre:"Woody", pelicula:"Toy Story", emoji:"🤠", img:"images/fichas/woody.png"},
   {id:"buzz", nombre:"Buzz Lightyear", pelicula:"Toy Story", emoji:"🚀", img:"images/fichas/buzz.png"},
   {id:"hipo", nombre:"Hipo", pelicula:"Cómo Entrenar a tu Dragón", emoji:"🛡️", img:"images/fichas/hipo.png"},
-  {id:"chimuelo", nombre:"Chimuelo", pelicula:"Cómo Entrenar a tu Dragón", emoji:"🐉", img:"images/fichas/chimuelo.png"},
+  {id:"chimuelo", nombre:"Desdentado", pelicula:"Cómo Entrenar a tu Dragón", emoji:"🐉", img:"images/fichas/chimuelo.png"},
   {id:"elsa", nombre:"Elsa", pelicula:"Frozen", emoji:"❄️", img:"images/fichas/elsa.png"},
   {id:"olaf", nombre:"Olaf", pelicula:"Frozen", emoji:"⛄", img:"images/fichas/olaf.png"},
   {id:"coraline", nombre:"Coraline", pelicula:"Coraline", emoji:"🔑", img:"images/fichas/coraline.png"},
@@ -5766,7 +5778,16 @@ function cargarPerfil(nombre) {
   const p = perfiles[nombre];
   if (!p) return;
 
-  filtroPelisSeleccionadas = p.peliculas === null ? null : new Set(p.peliculas || []);
+  const todasLasPeliculasActuales = new Set(Object.values(peliculasPorEstudio).flatMap(s => [...s]));
+  let descartadas = 0;
+  if (p.peliculas === null) {
+    filtroPelisSeleccionadas = null;
+  } else {
+    // Descartar peliculas guardadas que ya no existan (p.ej. tras corregir un titulo)
+    const validas = p.peliculas.filter(nombrePeli => todasLasPeliculasActuales.has(nombrePeli));
+    descartadas = p.peliculas.length - validas.length;
+    filtroPelisSeleccionadas = new Set(validas);
+  }
   if (document.getElementById('filtro-dificultad')) {
     document.getElementById('filtro-dificultad').value = p.dificultad || '';
   }
@@ -5777,7 +5798,11 @@ function cargarPerfil(nombre) {
   });
   renderFiltrosPantalla();
   actualizarResumenFiltros();
-  mostrarToast(`Perfil "${nombre}" cargado`);
+  if (descartadas > 0) {
+    mostrarToast(`Perfil "${nombre}" cargado (${descartadas} película(s) descartadas por título desactualizado)`);
+  } else {
+    mostrarToast(`Perfil "${nombre}" cargado`);
+  }
 }
 
 function guardarPerfil() {
