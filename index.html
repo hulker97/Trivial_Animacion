@@ -85,7 +85,7 @@ body > * { position: relative; z-index: 1; }
 
 /* ═══ PANTALLAS ═══ */
 .screen { display: none; min-height: 100vh; }
-.screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.screen.active { display: flex; flex-direction: column; align-items: stretch; justify-content: center; }
 
 /* ═══ PANTALLA INICIO ═══ */
 #screen-inicio {
@@ -331,6 +331,8 @@ body > * { position: relative; z-index: 1; }
   flex-wrap: wrap;
   gap: 0.5rem;
   backdrop-filter: blur(8px);
+  width: 100%;
+  box-sizing: border-box;
 }
 .current-player-info { display: flex; align-items: center; gap: 0.7rem; }
 .cp-icon {
@@ -364,7 +366,7 @@ body > * { position: relative; z-index: 1; }
 }
 
 /* Layout juego */
-.game-layout { flex: 1; display: flex; overflow: hidden; }
+.game-layout { flex: 1; display: flex; overflow: hidden; width: 100%; box-sizing: border-box; }
 
 .board-wrap {
   flex: 1;
@@ -432,6 +434,8 @@ body > * { position: relative; z-index: 1; }
   flex-wrap: wrap;
   min-height: 88px;
   backdrop-filter: blur(8px);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Dado */
@@ -1604,10 +1608,10 @@ body > * { position: relative; z-index: 1; }
   </div>
 
   <!-- Tablero rectangular scrollable -->
-  <div id="rect-board" style="padding:0.5rem 0.8rem 0.5rem;overflow:auto;flex:1;display:flex;justify-content:center"></div>
+  <div id="rect-board" style="padding:0.5rem 0.8rem 0.5rem;overflow:auto;flex:1;display:flex;justify-content:center;width:100%;box-sizing:border-box"></div>
 
-  <div id="rect-aviso-especial" style="display:none;text-align:center;font-weight:800;color:var(--gold);padding:0 0.8rem;font-size:0.85rem"></div>
-  <div style="display:flex;gap:0.8rem;align-items:center;justify-content:center;padding:0.6rem 0.8rem 1rem">
+  <div id="rect-aviso-especial" style="display:none;text-align:center;font-weight:800;color:var(--gold);padding:0 0.8rem;font-size:0.85rem;width:100%;box-sizing:border-box"></div>
+  <div style="display:flex;gap:0.8rem;align-items:center;justify-content:center;padding:0.6rem 0.8rem 1rem;width:100%;box-sizing:border-box">
     <button class="btn btn-primary" id="rect-dado-btn" onclick="rectTirarDadoUI()" style="font-size:1.1rem;max-width:280px;width:100%">🎲 Tirar dado</button>
     <div id="rect-dado-result" style="font-size:1.8rem;min-width:2rem;text-align:center"></div>
   </div>
