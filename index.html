@@ -1027,7 +1027,7 @@ body > * { position: relative; z-index: 1; }
   <!-- Selección de categoría de juego -->
   <div style="display:flex;flex-direction:column;gap:1rem;width:100%;max-width:420px;margin:0.5rem auto 0">
     <button class="btn btn-primary" style="font-size:1.1rem;padding:1rem 1.5rem" onclick="seleccionarModo('tablero')">
-      🎲 Trivial con Tablero
+      🎲 Trivial
       <div style="font-size:0.75rem;font-weight:600;opacity:0.85;margin-top:0.2rem">2-8 jugadores · Quesitos · Casillas HQ</div>
     </button>
     <button class="btn btn-secondary" style="font-size:1.1rem;padding:1rem 1.5rem" onclick="seleccionarModo('infinito')">
@@ -1183,7 +1183,7 @@ body > * { position: relative; z-index: 1; }
 <div id="screen-modo" class="screen">
   <div class="logo-wrap" style="margin-bottom:1rem">
     <div class="logo-icon" style="font-size:2.5rem" id="modo-icon">🎬</div>
-    <div class="logo-title" style="font-size:1.8rem" id="modo-titulo">Trivial con Tablero</div>
+    <div class="logo-title" style="font-size:1.8rem" id="modo-titulo">Trivial</div>
     <div class="logo-sub">¿Cómo vais a jugar?</div>
   </div>
 
@@ -6011,7 +6011,7 @@ function seleccionarModo(modo) {
   } else {
     // Para tablero: mostrar selección de submodo
     document.getElementById("modo-icon").textContent = "🎲";
-    document.getElementById("modo-titulo").textContent = "Trivial con Tablero";
+    document.getElementById("modo-titulo").textContent = "Trivial";
     mostrarScreen("screen-modo");
   }
 }
