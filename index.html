@@ -1717,31 +1717,6 @@ body > * { position: relative; z-index: 1; }
 </div>
 
 <!-- ══════════════════════════════════════════════════
-     MODAL: ELEGIR DIRECCIÓN
-══════════════════════════════════════════════════ -->
-<div class="modal-overlay hidden" id="modal-dir">
-  <div class="dir-modal">
-    <h3>🎲 Has sacado <span id="dir-dice">–</span></h3>
-    <p>¿En qué dirección quieres moverte?</p>
-    <div class="dir-buttons">
-      <button class="btn btn-secondary" onclick="onDir(1)">↻ Horario</button>
-      <button class="btn btn-secondary" onclick="onDir(-1)">↺ Antihorario</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════
-     MODAL: ELEGIR SPOKE (salida del hub)
-══════════════════════════════════════════════════ -->
-<div class="modal-overlay hidden" id="modal-spoke">
-  <div class="spoke-modal">
-    <h3>🎯 ¡Empieza la aventura!</h3>
-    <p>Elige por qué categoría quieres salir del hub central:</p>
-    <div class="spoke-grid" id="spoke-grid"></div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════════════
      MODAL: ROLL AGAIN
 ══════════════════════════════════════════════════ -->
 <div class="modal-overlay hidden" id="modal-rollagain">
@@ -5126,10 +5101,6 @@ function onCellClick(cellId) {
 }
 
 
-function onDir(dir) {
-  // Ya no se usa — el movimiento es por clic en casilla
-}
-
 function onRollAgainContinueUI() {
   if (!onlineEsMiTurno()) return;
   if (modoOnline === 'guest') { onlineEnviarAccion('rollAgainContinuar'); return; }
@@ -5142,42 +5113,6 @@ function onRollAgainContinue() {
   game.diceValue = null;
   updateActionPanel();
   renderTopbar();
-}
-
-// ════════════════════════════════════════════════════════
-//  MODAL SPOKE
-// ════════════════════════════════════════════════════════
-function showSpokeModal() {
-  hideModal("modal-dir");
-  const grid = document.getElementById("spoke-grid");
-  let s = "";
-  BOARD.spokes.forEach((sp, si) => {
-    const cat = sp.categoria;
-    const info = CATS_INFO[cat];
-    s += `<button class="spoke-btn" style="border-color:${info.color};background:${info.color}22" onclick="onSpokeChoice(${si})">
-      <div>${mascotaTag(cat, 48)}</div>
-      <div style="font-size:0.73rem;margin-top:0.3rem;color:#fff;font-weight:700">${info.nombre}</div>
-    </button>`;
-  });
-  grid.innerHTML = s;
-  showModal("modal-spoke");
-}
-
-function onSpokeChoice(spokeIndex) {
-  hideModal("modal-spoke");
-  // Mover a la primera casilla del spoke elegido
-  const firstCellId = BOARD.spokes[spokeIndex].cells[0].id;
-  movePlayerToCell(firstCellId);
-  game.validTargets = [];
-  renderBoard();
-  renderPlayersPanel();
-  updateActionPanel();
-  renderTopbar();
-  if (game.phase === "question" || game.phase === "wedge-question") {
-    showQuestionModal(false);
-  } else if (game.phase === "roll_again") {
-    showModal("modal-rollagain");
-  }
 }
 
 // ════════════════════════════════════════════════════════
@@ -7224,12 +7159,18 @@ function rectOnContinue() {
 }
 
 function rectMostrarVictoria(j) {
-  lanzarConfetti();
-  const overlay = document.getElementById('modal-gameover');
-  document.getElementById('gameover-text').innerHTML =
-    `${fichaTag(j, 40, 'border-radius:50%;vertical-align:middle;margin-right:0.4rem')} <b>${j.name}</b> ha llegado antes a la meta 🏆`;
-  showModal('modal-gameover');
+  // Unificado con Preguntados/Circular: misma pantalla con clasificación,
+  // confetti, y "Revancha" que NO desconecta la partida online.
+  pqGame = { jugadores: rectGame.jugadores.map(p => ({
+    name: p.name, emoji: p.emoji, color: p.color, fichaId: p.fichaId,
+    quesitos: { heroes:false, historia:false, villanos:false, secundarios:false, lugares:false, mundo:false }
+  }))};
+  const jObj = {
+    name: j.name, emoji: j.emoji, color: j.color, fichaId: j.fichaId,
+    quesitos: { heroes:false, historia:false, villanos:false, secundarios:false, lugares:false, mundo:false }
+  };
   if (modoOnline === 'host') onlineBroadcastEstadoRect('victoria');
+  pqMostrarVictoria(jObj);
 }
 
 // ════════════════════════════════════════════════════════
