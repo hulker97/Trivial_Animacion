@@ -1381,6 +1381,8 @@ body > * { position: relative; z-index: 1; }
         <div id="fin-clasificacion"></div>
       </div>
 
+      <button class="btn btn-secondary btn-sm" style="margin-bottom:1rem" onclick="mostrarHistorialPartidas()">🏅 Ver historial de partidas</button>
+
       <!-- Botones -->
       <div style="display:flex;flex-direction:column;gap:0.7rem;width:100%">
         <button class="btn btn-primary" style="font-size:1.1rem;padding:1rem" onclick="volverASetup()">
@@ -1761,6 +1763,21 @@ body > * { position: relative; z-index: 1; }
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════
+     MODAL: HISTORIAL DE PARTIDAS (guardado en este dispositivo)
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-historial">
+  <div class="spoke-modal" style="max-width:420px;max-height:80vh;overflow-y:auto">
+    <h3>🏅 Historial en este dispositivo</h3>
+    <p style="font-size:0.78rem">Se guarda solo en este móvil/PC, por nombre de jugador</p>
+    <div id="historial-lista" style="display:flex;flex-direction:column;gap:0.4rem;text-align:left"></div>
+    <div style="display:flex;gap:0.6rem;margin-top:1rem">
+      <button class="btn btn-secondary btn-sm" style="flex:1;color:#F44336" onclick="borrarHistorialPartidas()">🗑️ Borrar historial</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="hideModal('modal-historial')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ════════════════════════════════════════════════════════
 //  CONSTANTES / CATEGORÍAS
@@ -2107,9 +2124,14 @@ function onlinePrepararVotacion() {
 
 // Devuelve 'preguntados' | 'rectangular' | 'circular' | null según qué partida esté activa
 function onlineModoActivo() {
-  if (pqGame) return 'preguntados';
+  // IMPORTANTE: el orden importa. rectGame primero (durante una pregunta de la Oca
+  // también se usa "game" para la modal compartida, así que rectGame debe comprobarse
+  // antes). pqGame se comprueba el último porque la pantalla de victoria compartida
+  // (pqMostrarVictoria) pisa temporalmente esta variable solo para poder reutilizar
+  // su UI, incluso cuando el modo real jugado era rectangular o circular.
   if (rectGame) return 'rectangular';
   if (game) return 'circular';
+  if (pqGame) return 'preguntados';
   return null;
 }
 
@@ -5783,6 +5805,62 @@ function borrarPerfil() {
 }
 
 // ════════════════════════════════════════════════════════
+//  HISTORIAL DE PARTIDAS — guardado local (localStorage), por nombre de jugador
+// ════════════════════════════════════════════════════════
+const LS_HISTORIAL_KEY = 'trivial_historial_partidas';
+
+function _cargarHistorial() {
+  try { return JSON.parse(localStorage.getItem(LS_HISTORIAL_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+function _guardarHistorial(data) {
+  try { localStorage.setItem(LS_HISTORIAL_KEY, JSON.stringify(data)); }
+  catch(e) { /* si falla (modo privado, cuota llena...) no rompemos nada */ }
+}
+
+// Registra el resultado de una partida: +1 partida a todos los participantes, +1 victoria al ganador
+function registrarResultadoPartida(nombreGanador, nombresJugadores) {
+  try {
+    const historial = _cargarHistorial();
+    (nombresJugadores || []).forEach(nombre => {
+      if (!nombre) return;
+      if (!historial[nombre]) historial[nombre] = { partidas: 0, victorias: 0 };
+      historial[nombre].partidas++;
+      if (nombre === nombreGanador) historial[nombre].victorias++;
+    });
+    _guardarHistorial(historial);
+  } catch(e) { /* nunca dejar que el historial rompa el flujo del juego */ }
+}
+
+function mostrarHistorialPartidas() {
+  const historial = _cargarHistorial();
+  const nombres = Object.keys(historial).sort((a,b) => historial[b].victorias - historial[a].victorias);
+  const lista = document.getElementById('historial-lista');
+  if (!nombres.length) {
+    lista.innerHTML = '<div style="color:var(--text2);font-size:0.85rem;text-align:center;padding:1rem 0">Todavía no hay partidas registradas en este dispositivo.</div>';
+  } else {
+    lista.innerHTML = nombres.map((nombre, i) => {
+      const h = historial[nombre];
+      const pct = h.partidas ? Math.round((h.victorias / h.partidas) * 100) : 0;
+      return `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.3rem;border-bottom:1px solid rgba(255,255,255,0.06)">
+        <div style="font-family:'Fredoka One',cursive;font-size:0.9rem;color:var(--text2);min-width:20px">${i+1}º</div>
+        <div style="flex:1;font-weight:700;font-size:0.9rem">${nombre}</div>
+        <div style="font-size:0.78rem;color:var(--gold);font-weight:800">🏆 ${h.victorias}</div>
+        <div style="font-size:0.72rem;color:var(--text2)">/ ${h.partidas} (${pct}%)</div>
+      </div>`;
+    }).join('');
+  }
+  showModal('modal-historial');
+}
+
+function borrarHistorialPartidas() {
+  if (!confirm('¿Borrar todo el historial de partidas de este dispositivo?')) return;
+  _guardarHistorial({});
+  mostrarHistorialPartidas();
+  mostrarToast('Historial borrado');
+}
+
+// ════════════════════════════════════════════════════════
 //  SONIDO — generado con Web Audio API, sin archivos externos
 // ════════════════════════════════════════════════════════
 let _audioCtx = null;
@@ -6698,6 +6776,9 @@ function pqMostrarVictoria(j) {
   }
   lanzarConfetti();
   sfxVictoria();
+  if (pqGame?.jugadores) {
+    registrarResultadoPartida(j.name, pqGame.jugadores.map(jg => jg.name));
+  }
   mostrarScreen('screen-fin');
   if (modoOnline === 'host') onlineBroadcastEstado('victoria');
 }
