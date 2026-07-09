@@ -1016,28 +1016,52 @@ body > * { position: relative; z-index: 1; }
 <!-- ══════════════════════════════════════════════════
      PANTALLA 1: INICIO
 ══════════════════════════════════════════════════ -->
-<div id="screen-inicio" class="screen active">
-  <div class="logo-wrap">
+<div id="screen-inicio" class="screen active" style="position:relative;overflow:hidden">
+  <!-- Fichas decorativas flotando de fondo, muy sutiles, puramente ambientales -->
+  <img src="images/fichas/simba.png" alt="" style="position:absolute;top:6%;left:1%;width:82px;opacity:0.16;transform:rotate(-11deg);pointer-events:none;z-index:0" onerror="this.style.display='none'"/>
+  <img src="images/fichas/elsa.png" alt="" style="position:absolute;top:9%;right:2%;width:72px;opacity:0.14;transform:rotate(9deg);pointer-events:none;z-index:0" onerror="this.style.display='none'"/>
+  <img src="images/fichas/woody.png" alt="" style="position:absolute;bottom:7%;left:3%;width:76px;opacity:0.15;transform:rotate(7deg);pointer-events:none;z-index:0" onerror="this.style.display='none'"/>
+  <img src="images/fichas/shrek.png" alt="" style="position:absolute;bottom:11%;right:1%;width:70px;opacity:0.14;transform:rotate(-9deg);pointer-events:none;z-index:0" onerror="this.style.display='none'"/>
+
+  <div class="logo-wrap" style="position:relative;z-index:1">
     <div class="logo-icon">🎬</div>
     <div class="logo-title">Trivial de Animación</div>
     <div class="logo-sub">¿Cuánto sabes del cine de animación?</div>
   </div>
-  <div class="logo-stars">✨ ⭐ 🌟 ⭐ ✨</div>
 
-  <!-- Selección de categoría de juego -->
-  <div style="display:flex;flex-direction:column;gap:1rem;width:100%;max-width:420px;margin:0.5rem auto 0">
-    <button class="btn btn-primary" style="font-size:1.1rem;padding:1rem 1.5rem" onclick="seleccionarModo('tablero')">
-      🎲 Trivial
-      <div style="font-size:0.75rem;font-weight:600;opacity:0.85;margin-top:0.2rem">2-8 jugadores · Quesitos · Casillas HQ</div>
-    </button>
-    <button class="btn btn-secondary" style="font-size:1.1rem;padding:1rem 1.5rem" onclick="seleccionarModo('infinito')">
-      ♾️ Preguntas Infinitas
-      <div style="font-size:0.75rem;font-weight:600;opacity:0.85;margin-top:0.2rem">Sin tablero · Hasta que os canséis</div>
-    </button>
-    <button class="btn btn-secondary" style="font-size:1.1rem;padding:1rem 1.5rem;border-color:#4CAF50;color:#69F0AE" onclick="mostrarScreen('screen-online-menu')">
-      🌐 Jugar Online
-      <div style="font-size:0.75rem;font-weight:600;opacity:0.85;margin-top:0.2rem">Un móvil de anfitrión · Los demás se unen desde el suyo</div>
-    </button>
+  <!-- Fila de mascotas de categoría, a modo de "elenco" decorativo -->
+  <div style="display:flex;justify-content:center;gap:0.7rem;position:relative;z-index:1">
+    <img src="images/mascotas/heroes.png" alt="⭐" style="width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4))" onerror="this.replaceWith(document.createTextNode('⭐'))"/>
+    <img src="images/mascotas/historia.png" alt="🎬" style="width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4))" onerror="this.replaceWith(document.createTextNode('🎬'))"/>
+    <img src="images/mascotas/villanos.png" alt="💀" style="width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4))" onerror="this.replaceWith(document.createTextNode('💀'))"/>
+    <img src="images/mascotas/secundarios.png" alt="🎭" style="width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4))" onerror="this.replaceWith(document.createTextNode('🎭'))"/>
+    <img src="images/mascotas/lugares.png" alt="🗺️" style="width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4))" onerror="this.replaceWith(document.createTextNode('🗺️'))"/>
+    <img src="images/mascotas/mundo.png" alt="🌍" style="width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4))" onerror="this.replaceWith(document.createTextNode('🌍'))"/>
+  </div>
+
+  <!-- Selección de modo de juego, como tarjetas (mismo lenguaje visual que el resto de la app) -->
+  <div style="display:flex;flex-direction:column;gap:0.9rem;width:100%;max-width:460px;margin:0.6rem auto 0;position:relative;z-index:1">
+    <div class="modo-card" onclick="seleccionarModo('tablero')">
+      <div class="modo-card-icon">🎲</div>
+      <div class="modo-card-body">
+        <div class="modo-card-title">Trivial</div>
+        <div class="modo-card-desc">2-8 jugadores · Quesitos · Casillas HQ</div>
+      </div>
+    </div>
+    <div class="modo-card" onclick="seleccionarModo('infinito')">
+      <div class="modo-card-icon">♾️</div>
+      <div class="modo-card-body">
+        <div class="modo-card-title">Preguntas Infinitas</div>
+        <div class="modo-card-desc">Sin tablero · Hasta que os canséis</div>
+      </div>
+    </div>
+    <div class="modo-card" onclick="mostrarScreen('screen-online-menu')" style="border-color:rgba(76,175,80,0.35)">
+      <div class="modo-card-icon">🌐</div>
+      <div class="modo-card-body">
+        <div class="modo-card-title" style="color:#69F0AE">Jugar Online</div>
+        <div class="modo-card-desc">Un móvil de anfitrión · Los demás se unen desde el suyo</div>
+      </div>
+    </div>
   </div>
 </div>
 
