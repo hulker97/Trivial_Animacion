@@ -6919,6 +6919,7 @@ function rectMostrarAviso(texto) {
 }
 
 function rectPasarTurno() {
+  rectGame.esperandoMovimiento = false;
   rectGame.turno = (rectGame.turno + 1) % rectGame.jugadores.length;
   rectRenderTopbar();
   rectRenderBoard();
