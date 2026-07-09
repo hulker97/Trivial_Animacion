@@ -1136,6 +1136,16 @@ body > * { position: relative; z-index: 1; }
       Cada uno ve 4 opciones en su móvil y toca la suya
     </div>
   </div>
+  <div class="panel" id="online-panel-modo-oca" style="display:none">
+    <h3>🎲 ¿Cómo jugáis a la Oca?</h3>
+    <div style="display:flex;gap:0.5rem">
+      <button class="filtro-tab active" id="online-tab-oca-preguntas" onclick="onlineElegirModoOca(false)">🧠 Con preguntas</button>
+      <button class="filtro-tab" id="online-tab-oca-clasica" onclick="onlineElegirModoOca(true)">🦢 Oca clásica</button>
+    </div>
+    <div style="font-size:0.75rem;color:var(--text2);margin-top:0.4rem;font-weight:600" id="online-oca-modo-desc">
+      Las casillas normales lanzan una pregunta de cine de animación
+    </div>
+  </div>
   <div class="panel">
     <h3>👥 Jugadores en la sala (<span id="online-num-jugadores">1</span>)</h3>
     <div id="online-lista-jugadores"></div>
@@ -1256,6 +1266,18 @@ body > * { position: relative; z-index: 1; }
     </div>
     <div style="font-size:0.75rem;color:var(--text2);margin-top:0.4rem;font-weight:600" id="tablero-tipo-desc">
       Rueda de categorías · Ideal para móvil · Rápido y visual
+    </div>
+  </div>
+
+  <!-- Solo para la Oca: preguntas de trivial o juego clásico sin preguntas -->
+  <div id="rect-panel-modo-oca" style="display:none;width:100%;max-width:440px;margin:0.8rem auto 0;text-align:left">
+    <div class="filtro-label" style="margin-bottom:0.5rem">🎲 ¿Cómo jugáis a la Oca?</div>
+    <div style="display:flex;gap:0.5rem">
+      <button class="filtro-tab active" id="tab-oca-preguntas" onclick="setRectModoClasico(false)">🧠 Con preguntas</button>
+      <button class="filtro-tab" id="tab-oca-clasica" onclick="setRectModoClasico(true)">🦢 Oca clásica</button>
+    </div>
+    <div style="font-size:0.75rem;color:var(--text2);margin-top:0.4rem;font-weight:600" id="oca-modo-desc">
+      Las casillas normales lanzan una pregunta de cine de animación
     </div>
   </div>
 
@@ -2201,6 +2223,19 @@ function onlineElegirTipoTablero(tipo) {
   document.getElementById('online-tab-tablero-circular').classList.toggle('active', tipo === 'circular');
   // El submodo (con opciones/viva voz) solo tiene sentido en Preguntados
   document.getElementById('online-panel-submodo').style.display = tipo === 'preguntados' ? '' : 'none';
+  // El modo clásico (sin preguntas) solo tiene sentido en la Oca
+  document.getElementById('online-panel-modo-oca').style.display = tipo === 'rectangular' ? '' : 'none';
+}
+
+let onlineModoOcaClasicoElegido = false;
+function onlineElegirModoOca(clasico) {
+  onlineModoOcaClasicoElegido = clasico;
+  document.getElementById('online-tab-oca-preguntas').classList.toggle('active', !clasico);
+  document.getElementById('online-tab-oca-clasica').classList.toggle('active', clasico);
+  const descEl = document.getElementById('online-oca-modo-desc');
+  if (descEl) descEl.textContent = clasico
+    ? 'Solo tiráis el dado y os movéis, como el Juego de la Oca de toda la vida'
+    : 'Las casillas normales lanzan una pregunta de cine de animación';
 }
 
 const LS_GUEST_ID_KEY = 'trivial_online_guest_id';
@@ -2388,7 +2423,7 @@ function onlineHostRecibe(conn, data) {
       if (jExistente) {
         jExistente._peerId = conn.peer;
         onlineConexiones[conn.peer] = conn;
-        conn.send({ type: 'RECONECTADO', modo: modoActivo, jugadores: jugadoresActivos, modoSubtipo });
+        conn.send({ type: 'RECONECTADO', modo: modoActivo, jugadores: jugadoresActivos, modoSubtipo, modoClasico: modoActivo === 'rectangular' ? rectGame.modoClasico : undefined });
         if (modoActivo === 'preguntados') onlineBroadcastEstado(onlineUltimaFase || 'ruleta');
         else if (modoActivo === 'rectangular') onlineBroadcastEstadoRect(onlineUltimaFaseRect || 'tablero');
         else onlineBroadcastEstadoGame(onlineUltimaFaseGame || 'tablero');
@@ -2482,6 +2517,7 @@ function onlineHostContinuarASetup() {
   numJugadores = jugadores.length;
   modoJuego = 'tablero';
   modoSubtipo = onlineModoSubtipoElegido; // elegido por el anfitrión: 2 (opciones) o 3 (viva voz)
+  rectModoClasico = onlineModoOcaClasicoElegido; // elegido por el anfitrión: con preguntas o Oca clásica
   setTipoTablero(onlineTipoTableroElegido); // el que haya elegido el anfitrión en el lobby
   document.getElementById('panel-jugadores').style.display = 'none';
   document.getElementById('btn-iniciar').textContent = '🎲 Iniciar partida online';
@@ -2725,7 +2761,7 @@ function onlineGuestRecibe(data) {
     jugadores = data.jugadores;
     onlineOcultarPantallaReconexion();
     if (data.modo === 'rectangular') {
-      if (!rectGame) rectGame = { casillas: generarCasillasOcaSiHacenFalta(), jugadores: data.jugadores, turno: 0, pool: [], usadas: new Set(), esperandoMovimiento: false, ganador: null, pozoOcupado: null };
+      if (!rectGame) rectGame = { casillas: generarCasillasOcaSiHacenFalta(), jugadores: data.jugadores, turno: 0, pool: [], usadas: new Set(), esperandoMovimiento: false, ganador: null, pozoOcupado: null, modoClasico: data.modoClasico || false };
       mostrarScreen('screen-rect');
       rectRenderTopbar();
       rectRenderBoard();
@@ -2763,7 +2799,7 @@ function onlineGuestRecibe(data) {
   } else if (data.type === 'GAME_START') {
     jugadores = data.jugadores;
     if (data.modo === 'rectangular') {
-      rectGame = { casillas: generarCasillasOcaSiHacenFalta(), jugadores: data.jugadores, turno: 0, pool: [], usadas: new Set(), esperandoMovimiento: false, ganador: null, pozoOcupado: null };
+      rectGame = { casillas: generarCasillasOcaSiHacenFalta(), jugadores: data.jugadores, turno: 0, pool: [], usadas: new Set(), esperandoMovimiento: false, ganador: null, pozoOcupado: null, modoClasico: data.modoClasico || false };
       mostrarScreen('screen-rect');
       rectRenderTopbar();
       rectRenderBoard();
@@ -2957,7 +2993,7 @@ function onlineBroadcastEstadoRect(faseExtra) {
 
 function onlineAplicarEstadoRemotoRect(estado) {
   if (!rectGame) {
-    rectGame = { casillas: rectGame ? rectGame.casillas : generarCasillasOcaSiHacenFalta(), jugadores: estado.jugadores, turno: estado.turno, pool: [], usadas: new Set(), esperandoMovimiento: false, ganador: null, pozoOcupado: estado.pozoOcupado };
+    rectGame = { casillas: rectGame ? rectGame.casillas : generarCasillasOcaSiHacenFalta(), jugadores: estado.jugadores, turno: estado.turno, pool: [], usadas: new Set(), esperandoMovimiento: false, ganador: null, pozoOcupado: estado.pozoOcupado, modoClasico: false };
   } else {
     rectGame.jugadores = estado.jugadores;
     rectGame.turno = estado.turno;
@@ -3126,9 +3162,22 @@ function setTipoTablero(tipo) {
   };
   const descEl = document.getElementById('tablero-tipo-desc');
   if (descEl) descEl.textContent = descs[tipo];
+  const panelOca = document.getElementById('rect-panel-modo-oca');
+  if (panelOca) panelOca.style.display = tipo === 'rectangular' ? '' : 'none';
 }
 // Submodo local: 1 (lee una persona) | 2 (pasan, con opciones) | 3 (pasan, sin opciones)
 let modoSubtipo = 2;
+// Oca: si se juega con preguntas de trivial o al juego clásico sin preguntas
+let rectModoClasico = false;
+function setRectModoClasico(clasico) {
+  rectModoClasico = clasico;
+  document.getElementById('tab-oca-preguntas')?.classList.toggle('active', !clasico);
+  document.getElementById('tab-oca-clasica')?.classList.toggle('active', clasico);
+  const descEl = document.getElementById('oca-modo-desc');
+  if (descEl) descEl.textContent = clasico
+    ? 'Solo tiráis el dado y os movéis, como el Juego de la Oca de toda la vida'
+    : 'Las casillas normales lanzan una pregunta de cine de animación';
+}
 // En modo 1: si las opciones están visibles o no
 let opcionesVisibles = false;
 
@@ -6889,10 +6938,11 @@ function iniciarTableroRect() {
     esperandoMovimiento: false,
     ganador: null,
     pozoOcupado: null, // id del jugador atascado en el pozo (indice)
+    modoClasico: rectModoClasico,
   };
 
   if (modoOnline === 'host') {
-    onlineBroadcast({ type: 'GAME_START', modo: 'rectangular', jugadores: rectGame.jugadores.map(j => ({
+    onlineBroadcast({ type: 'GAME_START', modo: 'rectangular', modoClasico: rectGame.modoClasico, jugadores: rectGame.jugadores.map(j => ({
       name:j.name, color:j.color, emoji:j.emoji, fichaId:j.fichaId, _peerId:j._peerId,
       pos:j.pos, turnosPerdidos:j.turnosPerdidos, atascado:j.atascado
     })) });
@@ -7289,6 +7339,7 @@ function rectMoverJugador(nuevaPos) {
 function rectResolverCasilla(pos) {
   const cas = rectGame.casillas[pos];
   if (cas.tipo !== 'normal') { rectGame.esperandoMovimiento = false; rectPasarTurno(); return; }
+  if (rectGame.modoClasico) { rectGame.esperandoMovimiento = false; rectPasarTurno(); return; }
   const disponibles = rectGame.pool.filter(q => q.categoria === cas.cat && !rectGame.usadas.has(q));
   const q = disponibles.length > 0
     ? disponibles[Math.floor(Math.random() * disponibles.length)]
