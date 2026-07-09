@@ -2,7 +2,16 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<meta name="theme-color" content="#0a0e2e"/>
+<!-- PWA: permite "Añadir a pantalla de inicio" y que se abra a pantalla completa como una app -->
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Trivial Animación"/>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230a0e2e'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%8E%AC%3C/text%3E%3C/svg%3E"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230a0e2e'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%8E%AC%3C/text%3E%3C/svg%3E"/>
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Trivial%20de%20Animaci%C3%B3n%22%2C%22short_name%22%3A%22Trivial%20Animaci%C3%B3n%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230a0e2e%22%2C%22theme_color%22%3A%22%230a0e2e%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%3D%2522http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%2522%2520viewBox%3D%25220%25200%2520100%2520100%2522%253E%253Crect%2520width%3D%2522100%2522%2520height%3D%2522100%2522%2520rx%3D%252220%2522%2520fill%3D%2522%25230a0e2e%2522%2F%253E%253Ctext%2520x%3D%252250%2522%2520y%3D%252268%2522%2520font-size%3D%252258%2522%2520text-anchor%3D%2522middle%2522%253E%25F0%259F%258E%25AC%253C%2Ftext%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <title>Trivial de Animación 🎬</title>
@@ -1623,6 +1632,7 @@ body > * { position: relative; z-index: 1; }
   <!-- Tablero rectangular scrollable -->
   <div id="rect-board" style="padding:0.5rem 0.8rem 0.5rem;overflow:auto;flex:1;display:flex;justify-content:center;width:100%;box-sizing:border-box"></div>
 
+  <div id="rect-banner-pozo" style="display:none;text-align:center;font-weight:800;color:#4FC3F7;background:rgba(79,195,247,0.12);border:1px solid rgba(79,195,247,0.4);border-radius:12px;margin:0 0.8rem;padding:0.5rem 0.8rem;font-size:0.8rem"></div>
   <div id="rect-aviso-especial" style="display:none;text-align:center;font-weight:800;color:var(--gold);padding:0 0.8rem;font-size:0.85rem;width:100%;box-sizing:border-box"></div>
   <div style="display:flex;gap:0.8rem;align-items:center;justify-content:center;padding:0.6rem 0.8rem 1rem;width:100%;box-sizing:border-box">
     <button class="btn btn-primary" id="rect-dado-btn" onclick="rectTirarDadoUI()" style="font-size:1.1rem;max-width:280px;width:100%">🎲 Tirar dado</button>
@@ -5228,6 +5238,7 @@ function juzgarRespuesta(correcto) {
   document.getElementById("q-actions").classList.add("visible");
   // Guardamos el resultado para onQuestionContinue
   document.getElementById("q-result").dataset.correcto = correcto ? "1" : "0";
+  correcto ? sfxCorrecto() : sfxIncorrecto();
 }
 
 function onOptionClick(idx) {
@@ -5259,6 +5270,7 @@ function onOptionClick(idx) {
   r.textContent = correct ? "✅ ¡Correcto!" : "❌ Incorrecto";
   r.classList.add("visible", correct ? "correct" : "wrong");
   document.getElementById("q-actions").classList.add("visible");
+  correct ? sfxCorrecto() : sfxIncorrecto();
 
   onlineNotificarReplay('onOptionClick', [idx]);
 }
@@ -5770,6 +5782,39 @@ function borrarPerfil() {
   mostrarToast(`Perfil "${nombre}" borrado`);
 }
 
+// ════════════════════════════════════════════════════════
+//  SONIDO — generado con Web Audio API, sin archivos externos
+// ════════════════════════════════════════════════════════
+let _audioCtx = null;
+function _getAudioCtx() {
+  if (!_audioCtx) {
+    try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e) { return null; }
+  }
+  if (_audioCtx.state === 'suspended') _audioCtx.resume().catch(()=>{});
+  return _audioCtx;
+}
+function _tono(freq, inicio, duracion, tipo, volumen) {
+  const ctx = _getAudioCtx();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = tipo || 'sine';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0, ctx.currentTime + inicio);
+  gain.gain.linearRampToValueAtTime(volumen || 0.14, ctx.currentTime + inicio + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + duracion);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start(ctx.currentTime + inicio);
+  osc.stop(ctx.currentTime + inicio + duracion + 0.02);
+}
+function sfxCorrecto() { _tono(660, 0, 0.12, 'sine'); _tono(880, 0.1, 0.18, 'sine'); }
+function sfxIncorrecto() { _tono(180, 0, 0.28, 'sawtooth', 0.1); }
+function sfxVictoria() {
+  [523, 659, 784, 1047].forEach((f, i) => _tono(f, i * 0.14, 0.22, 'triangle', 0.13));
+}
+function sfxClic() { _tono(440, 0, 0.06, 'sine', 0.06); }
+
 function mostrarToast(msg) {
   let toast = document.getElementById('toast-msg');
   if (!toast) {
@@ -6048,6 +6093,7 @@ function infOpcion(idx) {
   r.textContent = correct ? "✅ ¡Correcto!" : "❌ Incorrecto";
   r.classList.add("visible", correct ? "correct" : "wrong");
   document.getElementById("inf-actions").classList.add("visible");
+  correct ? sfxCorrecto() : sfxIncorrecto();
 }
 
 function infRevelar() {
@@ -6103,6 +6149,7 @@ function infJuzgar(correcto) {
   r.textContent = correcto ? "✅ ¡Correcto!" : "❌ Incorrecto";
   r.classList.add("visible", correcto ? "correct" : "wrong");
   document.getElementById("inf-actions").classList.add("visible");
+  correcto ? sfxCorrecto() : sfxIncorrecto();
 }
 
 function infSiguiente() {
@@ -6541,6 +6588,7 @@ function pqOpcion(idx) {
   r.classList.add('visible', correct ? 'correct' : 'wrong');
   document.getElementById('pq-actions').classList.add('visible');
   document.getElementById('pq-actions').dataset.correcto = correct ? '1' : '0';
+  correct ? sfxCorrecto() : sfxIncorrecto();
   onlineNotificarReplay('pqOpcion', [idx]);
 }
 
@@ -6564,6 +6612,7 @@ function pqJuzgar(correcto) {
   r.classList.add('visible', correcto ? 'correct' : 'wrong');
   document.getElementById('pq-actions').classList.add('visible');
   document.getElementById('pq-actions').dataset.correcto = correcto ? '1' : '0';
+  correcto ? sfxCorrecto() : sfxIncorrecto();
   onlineNotificarReplay('pqJuzgar', [correcto]);
 }
 
@@ -6619,29 +6668,36 @@ function pqRenderAllPlayers() {
 function pqMostrarVictoria(j) {
   document.getElementById('fin-winner').innerHTML = `${fichaTag(j, 44, 'border-radius:50%;vertical-align:middle;margin-right:0.4rem')} ${j.name}`;
   document.getElementById('fin-winner').style.color = j.color;
+  const esOca = pqGame?.jugadores?.some(jg => jg._ocaPos !== undefined);
   const qDiv = document.getElementById('fin-wedges');
   if (qDiv) {
-    qDiv.innerHTML = Object.entries(CATS_INFO).map(([cat, info]) =>
+    // En la Oca no hay quesitos: no tiene sentido mostrar la fila de categorías
+    qDiv.innerHTML = esOca ? '' : Object.entries(CATS_INFO).map(([cat, info]) =>
       `<div style="width:36px;height:36px;border-radius:50%;background:${info.color};display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);overflow:hidden">${mascotaTag(cat, 30)}</div>`
     ).join('');
   }
   const clasiDiv = document.getElementById('fin-clasificacion');
   if (clasiDiv && pqGame?.jugadores) {
-    const sorted = [...pqGame.jugadores].sort((a,b) =>
-      Object.values(b.quesitos||{}).filter(Boolean).length - Object.values(a.quesitos||{}).filter(Boolean).length
-    );
+    const sorted = esOca
+      ? [...pqGame.jugadores].sort((a,b) => (b._ocaPos||0) - (a._ocaPos||0))
+      : [...pqGame.jugadores].sort((a,b) =>
+          Object.values(b.quesitos||{}).filter(Boolean).length - Object.values(a.quesitos||{}).filter(Boolean).length
+        );
     clasiDiv.innerHTML = sorted.map((jug,i) => {
-      const nQ = Object.values(jug.quesitos||{}).filter(Boolean).length;
       const esG = jug.name===j.name && jug.emoji===j.emoji;
+      const colDerecha = esOca
+        ? `<div style="font-size:0.82rem;font-weight:800;color:var(--text2)">🏁 Casilla ${jug._ocaPos}/${RECT_META}</div>`
+        : quesitosFila(jug.quesitos, 20, 3);
       return `<div style="display:flex;align-items:center;gap:0.7rem;padding:0.5rem 0.3rem;border-bottom:1px solid rgba(255,255,255,0.06)">
         <div style="font-family:'Fredoka One',cursive;font-size:1rem;color:var(--text2);min-width:22px;text-align:center">${i+1}º</div>
         <div style="width:26px;height:26px;border-radius:50%;background:${jug.color};display:flex;align-items:center;justify-content:center;font-size:0.95rem;flex-shrink:0;overflow:hidden">${fichaTag(jug, 24)}</div>
         <div style="font-size:0.88rem;font-weight:700;flex:1;color:${esG?'var(--gold)':'var(--text)'}">${jug.name}${esG?' 🏆':''}</div>
-        ${quesitosFila(jug.quesitos, 20, 3)}
+        ${colDerecha}
       </div>`;
     }).join('');
   }
   lanzarConfetti();
+  sfxVictoria();
   mostrarScreen('screen-fin');
   if (modoOnline === 'host') onlineBroadcastEstado('victoria');
 }
@@ -6754,6 +6810,19 @@ function rectRenderTopbar() {
     : 'Tira el dado';
   document.getElementById('rect-cp-wedges').textContent = `🏁 Casilla ${j.pos}/${RECT_META}`;
   document.getElementById('rect-dado-btn').disabled = rectGame.esperandoMovimiento;
+
+  // Aviso persistente: mientras alguien siga atascado en el pozo, que se vea SIEMPRE
+  // (no solo en su turno), para que el resto sepa que tiene que caer ahí para liberarle
+  const bannerPozo = document.getElementById('rect-banner-pozo');
+  if (bannerPozo) {
+    if (rectGame.pozoOcupado !== null && rectGame.jugadores[rectGame.pozoOcupado]?.atascado) {
+      const atrapado = rectGame.jugadores[rectGame.pozoOcupado];
+      bannerPozo.textContent = `🕳️ ${atrapado.name} está atascada/o en el pozo — alguien tiene que caer ahí para liberarla/o`;
+      bannerPozo.style.display = 'block';
+    } else {
+      bannerPozo.style.display = 'none';
+    }
+  }
 }
 
 // El tablero real de la Oca: una espiral cuadrada continua de ~3 vueltas, empezando
@@ -7162,13 +7231,17 @@ function rectOnContinue() {
 function rectMostrarVictoria(j) {
   // Unificado con Preguntados/Circular: misma pantalla con clasificación,
   // confetti, y "Revancha" que NO desconecta la partida online.
+  // La Oca no usa quesitos, así que pasamos la posición real de cada jugador
+  // para que la clasificación final muestre "casilla X/63" en vez de una fila vacía.
   pqGame = { jugadores: rectGame.jugadores.map(p => ({
     name: p.name, emoji: p.emoji, color: p.color, fichaId: p.fichaId,
-    quesitos: { heroes:false, historia:false, villanos:false, secundarios:false, lugares:false, mundo:false }
+    quesitos: { heroes:false, historia:false, villanos:false, secundarios:false, lugares:false, mundo:false },
+    _ocaPos: p.pos,
   }))};
   const jObj = {
     name: j.name, emoji: j.emoji, color: j.color, fichaId: j.fichaId,
-    quesitos: { heroes:false, historia:false, villanos:false, secundarios:false, lugares:false, mundo:false }
+    quesitos: { heroes:false, historia:false, villanos:false, secundarios:false, lugares:false, mundo:false },
+    _ocaPos: j.pos,
   };
   if (modoOnline === 'host') onlineBroadcastEstadoRect('victoria');
   pqMostrarVictoria(jObj);
