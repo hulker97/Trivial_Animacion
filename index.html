@@ -8756,6 +8756,13 @@ window.addEventListener("DOMContentLoaded", () => {
   // Esperar a que el script de Supabase esté listo
   initSupabase();
 
+  // Precargar el banco de preguntas (sin filtro de dificultad, el caso más habitual)
+  // en segundo plano desde el primer segundo, aprovechando el rato que se tarda en
+  // navegar por los menús. Así, cuando se llega a "Elegir modo", normalmente ya está
+  // lista (o casi) gracias a la caché de cargarPreguntas(), en vez de tener que
+  // esperar ahí a que se descargue entera por primera vez.
+  cargarPreguntas({ dificultad: '' }).catch(e => console.error('Precarga de preguntas fallida (no es grave, se reintentará cuando haga falta):', e));
+
   // La pantalla de inicio ya sale "activa" directamente en el HTML (no pasa por
   // mostrarScreen() al cargar la página), así que hay que inyectar aquí el fondo
   // decorativo a mano para que también se vea desde el primer segundo.
