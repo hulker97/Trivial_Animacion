@@ -275,6 +275,7 @@ body > * { position: relative; z-index: 1; }
 }
 .jugador-row input[type="text"] {
   flex: 1;
+  min-width: 0;
   background: transparent;
   border: none;
   border-bottom: 1.5px solid rgba(255,215,0,0.3);
@@ -1664,7 +1665,7 @@ body > * { position: relative; z-index: 1; }
 <!-- ══════════════════════════════════════════════════
      PANTALLA: TABLERO RECTANGULAR
 ══════════════════════════════════════════════════ -->
-<div id="screen-rect" class="screen">
+<div id="screen-rect" class="screen" style="height:100dvh;overflow:hidden">
   <div class="game-topbar">
     <div class="current-player-info">
       <div class="cp-icon" id="rect-cp-icon">?</div>
@@ -1678,7 +1679,7 @@ body > * { position: relative; z-index: 1; }
   </div>
 
   <!-- Tablero rectangular scrollable -->
-  <div id="rect-board" style="padding:0.5rem 0.8rem 0.5rem;overflow:auto;flex:1;display:flex;justify-content:center;width:100%;box-sizing:border-box"></div>
+  <div id="rect-board" style="padding:0.5rem 0.8rem 0.5rem;overflow:auto;flex:1;min-height:0;display:flex;justify-content:center;width:100%;box-sizing:border-box"></div>
 
   <div id="rect-banner-pozo" style="display:none;text-align:center;font-weight:800;color:#4FC3F7;background:rgba(79,195,247,0.12);border:1px solid rgba(79,195,247,0.4);border-radius:12px;margin:0 0.8rem;padding:0.5rem 0.8rem;font-size:0.8rem"></div>
   <div id="rect-aviso-especial" style="display:none;text-align:center;font-weight:800;color:var(--gold);padding:0 0.8rem;font-size:0.85rem;width:100%;box-sizing:border-box"></div>
@@ -6037,7 +6038,12 @@ async function iniciarJuego() {
 // ════════════════════════════════════════════════════════
 // Pantallas "de juego" donde queremos que quepa todo sin scroll (reescalando si hace falta).
 // Las de configuración/menús se dejan con su scroll normal, porque pueden tener listas largas.
-const PANTALLAS_AUTOAJUSTABLES = new Set(['screen-preguntados', 'screen-game', 'screen-rect', 'screen-infinito', 'screen-fin']);
+const PANTALLAS_AUTOAJUSTABLES = new Set([
+  'screen-inicio', 'screen-online-menu', 'screen-online-host-lobby', 'screen-online-join',
+  'screen-online-wait', 'screen-modo', 'screen-setup', 'screen-submodo-infinito',
+  'screen-preguntados', 'screen-game', 'screen-rect', 'screen-infinito', 'screen-fin',
+  // screen-filtros queda fuera a propósito: es una lista larga de películas, pensada para hacer scroll.
+]);
 
 function autoAjustarPantalla() {
   requestAnimationFrame(() => {
@@ -7148,7 +7154,19 @@ function rectRenderBoard() {
   }
 
   html += '</div></div>';
-  board.innerHTML = html;
+
+  // El tablero tiene tamaño fijo en píxeles (no es un SVG con viewBox como el circular),
+  // así que lo escalamos nosotros mismos para que quepa entero en el espacio disponible
+  // sin necesitar scroll, sea cual sea el tamaño de la pantalla del móvil.
+  const anchoTotal = anchoPx + marco*2, altoTotal = altoPx + marco*2;
+  const contW = board.clientWidth || 360, contH = board.clientHeight || 420;
+  const escala = Math.min(1, (contW - 8) / anchoTotal, (contH - 8) / altoTotal);
+  board.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:flex-start;justify-content:center;overflow:hidden">
+    <div style="width:${anchoTotal}px;height:${altoTotal}px;transform:scale(${escala});transform-origin:top center;flex-shrink:0">
+      ${html}
+    </div>
+  </div>`;
+
   if (modoOnline === 'host' && onlineUltimaFaseRect !== 'pregunta' && onlineUltimaFaseRect !== 'victoria') {
     onlineBroadcastEstadoRect('tablero');
   }
