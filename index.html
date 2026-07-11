@@ -986,6 +986,10 @@ body > * { position: relative; z-index: 1; }
   from { transform: translateY(0) scale(1); }
   to   { transform: translateY(-12px) scale(1.1); }
 }
+@keyframes dadoOcaPulso {
+  0%, 100% { transform: scale(1); box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+  50%      { transform: scale(1.12); box-shadow: 0 2px 18px rgba(255,215,0,0.6); }
+}
 @keyframes confetti-fall {
   0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
   100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
@@ -1783,6 +1787,21 @@ body > * { position: relative; z-index: 1; }
     <h3>🎉 ¡Vuelves a lanzar!</h3>
     <p>Has caído en una casilla de turno extra.</p>
     <button class="btn btn-primary" onclick="onRollAgainContinueUI()">🎲 Lanzar de nuevo</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL: ANIMACIÓN DEL DADO (Oca)
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-dado-oca">
+  <div class="rollagain-modal" style="max-width:300px">
+    <h3 id="dado-oca-titulo">🎲 Girando…</h3>
+    <div id="dado-oca-cubo" style="width:88px;height:88px;margin:1rem auto;background:linear-gradient(135deg,#fff,#e8e8e8);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:3rem;font-weight:900;color:#1a0050;box-shadow:0 4px 16px rgba(0,0,0,0.6),0 0 0 3px rgba(255,215,0,0.4)">🎲</div>
+    <div id="dado-oca-ficha-wrap" style="display:none;flex-direction:column;align-items:center;gap:0.6rem">
+      <div id="dado-oca-ficha" style="width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:3px solid white;box-shadow:0 2px 10px rgba(0,0,0,0.5);animation:dadoOcaPulso 1s ease-in-out infinite"></div>
+      <div style="font-size:0.85rem;color:var(--text2);font-weight:700">Toca tu ficha para avanzar</div>
+    </div>
+    <div id="dado-oca-espera" style="display:none;color:var(--text2);font-size:0.85rem;font-weight:700"></div>
   </div>
 </div>
 
@@ -2872,6 +2891,7 @@ function onlineProcesarAccion(peerId, action, payload) {
   }
   // Tablero de la Oca (rectangular)
   else if (action === 'tirarDado') rectTirarDado();
+  else if (action === 'confirmarDado') rectConfirmarDado();
   else if (action === 'continuarRect') {
     document.getElementById('q-result').classList.toggle('correct', !!payload.correcto);
     document.getElementById('q-result').dataset.correcto = payload.correcto ? '1' : '0';
@@ -2987,7 +3007,8 @@ function onlineBroadcastEstadoRect(faseExtra) {
     pozoOcupado: rectGame.pozoOcupado,
     ganador: rectGame.ganador ? rectGame.jugadores.indexOf(rectGame.ganador) : null,
     pregunta: rectGame._preguntaActual || null,
-    fase: onlineUltimaFaseRect, // 'tablero' | 'pregunta' | 'victoria'
+    dadoPendiente: rectGame.dadoPendiente || null,
+    fase: onlineUltimaFaseRect, // 'tablero' | 'dado-pendiente' | 'pregunta' | 'victoria'
   };
   onlineBroadcast({ type: 'STATE_UPDATE_RECT', estado });
 }
@@ -3001,11 +3022,17 @@ function onlineAplicarEstadoRemotoRect(estado) {
     rectGame.pozoOcupado = estado.pozoOcupado;
   }
   rectGame._preguntaActual = estado.pregunta;
+  rectGame.dadoPendiente = estado.dadoPendiente || null;
   rectGame.ganador = estado.ganador !== null ? rectGame.jugadores[estado.ganador] : null;
 
   rectRenderTopbar();
   rectRenderBoard();
 
+  if (estado.fase === 'dado-pendiente' && estado.dadoPendiente != null) {
+    rectMostrarAnimacionSiProcede();
+  } else {
+    hideModal('modal-dado-oca');
+  }
   if (estado.fase === 'pregunta' && estado.pregunta) {
     game = game || {};
     game.pendingQuestion = estado.pregunta;
@@ -7219,6 +7246,44 @@ function rectTirarDado() {
   }
 
   const dado = Math.floor(Math.random() * 6) + 1;
+  rectGame.esperandoMovimiento = true;
+  rectGame.dadoPendiente = dado;
+  rectRenderTopbar();
+
+  if (modoOnline === 'host') onlineBroadcastEstadoRect('dado-pendiente');
+  rectMostrarAnimacionSiProcede();
+}
+
+// Cada dispositivo decide qué ver: si es mi turno, la animación del dado +
+// mi ficha para tocar; si es el turno de otro, un aviso de que están tirando.
+function rectMostrarAnimacionSiProcede() {
+  const j = rectJugadorActual();
+  const valor = rectGame.dadoPendiente;
+  if (valor == null) return;
+  if (onlineEsMiTurno()) {
+    rectMostrarAnimacionDado(valor, j, rectConfirmarDadoUI);
+  } else if (modoOnline) {
+    rectMostrarEsperaDado(valor, j);
+  }
+}
+
+function rectConfirmarDadoUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') {
+    onlineEnviarAccion('confirmarDado', {});
+    return;
+  }
+  rectConfirmarDado();
+}
+
+// Ejecuta el movimiento real una vez el jugador ha tocado su ficha
+function rectConfirmarDado() {
+  hideModal('modal-dado-oca');
+  const j = rectJugadorActual();
+  const dado = rectGame.dadoPendiente;
+  rectGame.dadoPendiente = null;
+  if (dado == null) return;
+
   document.getElementById('rect-dado-result').textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][dado-1];
 
   let destino = j.pos + dado;
@@ -7227,13 +7292,55 @@ function rectTirarDado() {
     const exceso = destino - RECT_META;
     destino = RECT_META - exceso;
   }
-  rectGame.esperandoMovimiento = true;
   const desde = j.pos;
   if (destino > desde) {
     rectAnimarMovimiento(j, desde, destino, () => rectMoverJugador(destino));
   } else {
     rectMoverJugador(destino);
   }
+}
+
+// ── Animación visual del dado (solo local a este dispositivo, no requiere red) ──
+let _rectAnimDadoInterval = null;
+function rectMostrarAnimacionDado(valor, jugador, alConfirmar) {
+  showModal('modal-dado-oca');
+  const cubo = document.getElementById('dado-oca-cubo');
+  const fichaWrap = document.getElementById('dado-oca-ficha-wrap');
+  const esperaEl = document.getElementById('dado-oca-espera');
+  const tituloEl = document.getElementById('dado-oca-titulo');
+  const caras = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+  tituloEl.textContent = '🎲 Girando…';
+  fichaWrap.style.display = 'none';
+  esperaEl.style.display = 'none';
+  let tick = 0;
+  if (_rectAnimDadoInterval) clearInterval(_rectAnimDadoInterval);
+  _rectAnimDadoInterval = setInterval(() => {
+    cubo.textContent = caras[Math.floor(Math.random() * 6)];
+    tick++;
+    if (tick > 10) {
+      clearInterval(_rectAnimDadoInterval);
+      cubo.textContent = caras[valor - 1];
+      tituloEl.textContent = `¡Sale ${valor}!`;
+      const fichaEl = document.getElementById('dado-oca-ficha');
+      fichaEl.style.background = jugador.color;
+      fichaEl.innerHTML = fichaTag(jugador, 44);
+      fichaWrap.style.display = 'flex';
+      fichaEl.onclick = () => { if (alConfirmar) alConfirmar(); };
+    }
+  }, 90);
+}
+
+// Lo que ven los demás jugadores (o el otro dispositivo) mientras alguien confirma su tirada
+function rectMostrarEsperaDado(valor, jugador) {
+  showModal('modal-dado-oca');
+  clearInterval(_rectAnimDadoInterval);
+  const caras = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+  document.getElementById('dado-oca-titulo').textContent = `¡Ha sacado ${valor}!`;
+  document.getElementById('dado-oca-cubo').textContent = caras[valor - 1];
+  document.getElementById('dado-oca-ficha-wrap').style.display = 'none';
+  const esperaEl = document.getElementById('dado-oca-espera');
+  esperaEl.style.display = 'block';
+  esperaEl.textContent = `⏳ Esperando a que ${jugador.name} avance su ficha…`;
 }
 
 // Anima la ficha avanzando de casilla en casilla (en vez de saltar directa al destino),
@@ -7284,11 +7391,11 @@ function rectMoverJugador(nuevaPos) {
   if (cas.tipo === 'puente') {
     const destino = RECT_PUENTE[nuevaPos];
     setTimeout(() => {
-      rectMostrarAviso('🌉 ¡Cruzas el puente!');
+      rectMostrarAviso('🌉 ¡De puente en puente, y tiro porque me lleva la corriente!');
       j.pos = destino;
       rectRenderBoard(); rectRenderTopbar();
       if (rectGame.casillas[j.pos].tipo === 'meta') { rectGame.ganador = j; rectGame.esperandoMovimiento = true; rectMostrarVictoria(j); }
-      else { rectGame.esperandoMovimiento = false; setTimeout(rectPasarTurno, 500); }
+      else { rectGame.esperandoMovimiento = false; } // turno extra: no se pasa turno, como con la oca
     }, 400);
     return;
   }
