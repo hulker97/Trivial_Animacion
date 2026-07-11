@@ -6333,12 +6333,71 @@ function inyectarFondoDecorativoSiHaceFalta(screenId) {
   el.innerHTML = fondoDecorativoHTML(cantidad) + el.innerHTML;
 }
 
+// ── Detección del botón/gesto de "atrás" del móvil ──
+// Cada vez que se cambia de pantalla se añade una entrada al historial del navegador,
+// para que el botón físico o el gesto de "atrás" del móvil tengan algo que "deshacer"
+// en vez de cerrar la app de golpe. Al detectarlo (evento popstate), se reutiliza
+// exactamente la misma acción que ya tiene el botón "← Volver" / "✕ Salir" de esa pantalla.
+let _historialNavegandoInterno = false;
+
 function mostrarScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   inyectarFondoDecorativoSiHaceFalta(id);
   autoAjustarPantalla();
+  if (!_historialNavegandoInterno) {
+    try { history.pushState({ pantalla: id }, ''); } catch (e) {}
+  }
 }
+
+// Vuelve a añadir una entrada al historial para la pantalla actual (se usa cuando
+// el usuario cancela una confirmación de salida, para "deshacer" el atrás del navegador
+// y que la siguiente pulsación de atrás vuelva a preguntar).
+function _repushPantallaActual() {
+  const id = document.querySelector('.screen.active')?.id;
+  if (id) { try { history.pushState({ pantalla: id }, ''); } catch (e) {} }
+}
+
+// Qué hacer al detectar el botón/gesto de atrás según la pantalla activa en ese momento.
+function _accionAtrasParaPantalla(id) {
+  const conConfirmacion = (mensaje, accion) => {
+    if (confirm(mensaje)) accion();
+    else _repushPantallaActual();
+  };
+  switch (id) {
+    case 'screen-online-menu': mostrarScreen('screen-inicio'); break;
+    case 'screen-online-host-lobby': onlineSalir(); break;
+    case 'screen-online-join': onlineCancelarYVolver(); break;
+    case 'screen-online-wait': onlineSalir(); break;
+    case 'screen-modo': mostrarScreen('screen-inicio'); break;
+    case 'screen-setup':
+      if (modoJuego === 'infinito') mostrarScreen('screen-infinito-modo');
+      else { resetearConfigJugadores(); mostrarScreen('screen-modo'); }
+      break;
+    case 'screen-filtros': cerrarPantallaFiltros(); break;
+    case 'screen-infinito-modo': mostrarScreen('screen-inicio'); break;
+    case 'screen-submodo-infinito': mostrarScreen('screen-setup'); break;
+    case 'screen-infinito':
+      conConfirmacion('¿Salir de las preguntas?', () => mostrarScreen('screen-inicio'));
+      break;
+    case 'screen-preguntados':
+    case 'screen-rect':
+    case 'screen-game':
+      conConfirmacion('¿Abandonar la partida?', () => location.reload());
+      break;
+    // screen-inicio (u otra no contemplada): se deja el comportamiento nativo del
+    // navegador/móvil, que es salir de la app — no hay "atrás" dentro del juego.
+    default: break;
+  }
+}
+
+window.addEventListener('popstate', () => {
+  const pantallaActual = document.querySelector('.screen.active')?.id;
+  if (!pantallaActual || pantallaActual === 'screen-inicio') return;
+  _historialNavegandoInterno = true;
+  try { _accionAtrasParaPantalla(pantallaActual); }
+  finally { _historialNavegandoInterno = false; }
+});
 
 // Empezar de cero la configuración de jugadores (número y fichas asignadas)
 function resetearConfigJugadores() {
