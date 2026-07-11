@@ -991,24 +991,38 @@ body > * { position: relative; z-index: 1; }
   50%      { transform: scale(1.12); box-shadow: 0 2px 18px rgba(255,215,0,0.6); }
 }
 
-/* ── Fondo decorativo: fichas y mascotas difuminadas y en movimiento suave ── */
+/* ── Fondo decorativo: fichas y mascotas cayendo, girando y difuminándose ── */
 .bg-decor { position: absolute; inset: 0; overflow: hidden; z-index: -1; pointer-events: none; }
 .bg-decor img {
   position: absolute;
-  filter: blur(1.5px) saturate(0.85);
+  top: -70px;
+  filter: blur(1.3px) saturate(0.85);
   -webkit-user-select: none; user-select: none;
+  opacity: 0;
 }
-@keyframes bgDecorFloatA {
-  0%,100% { transform: translateY(0) rotate(-4deg); }
-  50%     { transform: translateY(-22px) rotate(4deg); }
+/* Caen girando en sentido horario */
+@keyframes bgDecorCaidaCW {
+  0%   { opacity: 0; transform: translateY(0) rotate(0deg); }
+  10%  { opacity: 0.9; }
+  85%  { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(112vh) rotate(340deg); }
 }
-@keyframes bgDecorFloatB {
-  0%,100% { transform: translateY(0) translateX(0) rotate(3deg); }
-  50%     { transform: translateY(18px) translateX(10px) rotate(-3deg); }
+/* Caen girando en sentido antihorario, con un poco de balanceo lateral */
+@keyframes bgDecorCaidaCCW {
+  0%   { opacity: 0; transform: translateY(0) translateX(0) rotate(0deg); }
+  10%  { opacity: 0.9; }
+  50%  { transform: translateY(56vh) translateX(24px) rotate(-170deg); }
+  85%  { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(112vh) translateX(-14px) rotate(-340deg); }
 }
-@keyframes bgDecorFloatC {
-  0%,100% { transform: translateY(0) rotate(0deg) scale(1); }
-  50%     { transform: translateY(-14px) rotate(-5deg) scale(1.05); }
+/* Caen con más balanceo tipo hoja, para dar variedad */
+@keyframes bgDecorCaidaHoja {
+  0%   { opacity: 0; transform: translateY(0) translateX(0) rotate(0deg); }
+  10%  { opacity: 0.85; }
+  30%  { transform: translateY(34vh) translateX(-30px) rotate(120deg); }
+  60%  { transform: translateY(67vh) translateX(20px) rotate(240deg); }
+  85%  { opacity: 0.85; }
+  100% { opacity: 0; transform: translateY(112vh) translateX(-10px) rotate(360deg); }
 }
 @keyframes rectDadoGirando {
   0%   { transform: rotate(0deg) scale(1); }
@@ -6283,30 +6297,29 @@ function _solicitarAutoAjuste() {
 }
 new MutationObserver(_solicitarAutoAjuste).observe(document.body, { childList: true, subtree: true, characterData: true });
 
-// Fichas de personajes + mascotas, difuminadas y flotando suavemente de fondo
-// en las pantallas de menú (no en las de juego activo, para no distraer).
+// Fichas de personajes + mascotas, cayendo lentamente desde arriba mientras giran
+// y se difuminan (aparecen y desaparecen), de fondo en las pantallas de menú
+// (no en las de juego activo, para no distraer).
 function fondoDecorativoHTML(cantidad) {
   const imgs = [...FICHAS_JUGADOR.map(f => f.img), ...Object.values(MASCOTAS)];
-  const variantes = ['bgDecorFloatA', 'bgDecorFloatB', 'bgDecorFloatC'];
+  const variantes = ['bgDecorCaidaCW', 'bgDecorCaidaCCW', 'bgDecorCaidaHoja'];
   let html = '';
   for (let i = 0; i < cantidad; i++) {
     const src = imgs[Math.floor(Math.random() * imgs.length)];
-    const top = Math.random() * 82;
-    const left = Math.random() * 86;
-    const size = 55 + Math.random() * 55;
-    const opacity = (0.08 + Math.random() * 0.10).toFixed(2);
+    const left = Math.random() * 90;
+    const size = 50 + Math.random() * 55;
     const anim = variantes[Math.floor(Math.random() * variantes.length)];
-    const dur = (7 + Math.random() * 6).toFixed(1);
-    const delay = (Math.random() * -dur).toFixed(1);
-    const rot = Math.round(Math.random() * 20 - 10);
-    html += `<img src="${src}" alt="" style="top:${top}%;left:${left}%;width:${size}px;height:${size}px;object-fit:contain;opacity:${opacity};animation:${anim} ${dur}s ease-in-out infinite;animation-delay:${delay}s;transform:rotate(${rot}deg)" onerror="this.remove()">`;
+    const dur = (12 + Math.random() * 14).toFixed(1); // caída lenta, 12-26s
+    const delay = (Math.random() * -dur).toFixed(1); // repartidas por todo el ciclo desde el principio
+    html += `<img src="${src}" alt="" style="left:${left}%;width:${size}px;height:${size}px;object-fit:contain;animation:${anim} ${dur}s linear infinite;animation-delay:${delay}s" onerror="this.remove()">`;
   }
   return `<div class="bg-decor">${html}</div>`;
 }
 
 // Pantallas de menú/espera donde tiene sentido el fondo decorativo (se deja fuera
 // de las pantallas de juego activo -preguntados/oca/circular/infinitas en curso-
-// para no distraer durante la partida).
+// para no distraer durante la partida). La pantalla de inicio lleva más cantidad,
+// al ser la carta de presentación del juego.
 const PANTALLAS_CON_FONDO_DECORATIVO = new Set([
   'screen-inicio', 'screen-online-menu', 'screen-modo', 'screen-infinito-modo',
   'screen-submodo-infinito', 'screen-setup', 'screen-online-host-lobby',
@@ -6316,7 +6329,8 @@ function inyectarFondoDecorativoSiHaceFalta(screenId) {
   if (!PANTALLAS_CON_FONDO_DECORATIVO.has(screenId)) return;
   const el = document.getElementById(screenId);
   if (!el || el.innerHTML.indexOf('class="bg-decor"') !== -1) return;
-  el.innerHTML = fondoDecorativoHTML(9) + el.innerHTML;
+  const cantidad = screenId === 'screen-inicio' ? 16 : 9;
+  el.innerHTML = fondoDecorativoHTML(cantidad) + el.innerHTML;
 }
 
 function mostrarScreen(id) {
