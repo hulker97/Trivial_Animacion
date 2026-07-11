@@ -2226,37 +2226,55 @@ async function supabaseCount(table, filters) {
   return total ? parseInt(total) : 0;
 }
 
+// Caché en memoria de sesión: cargar las ~3746 preguntas por HTTP (varias tandas de 1000)
+// puede tardar unos segundos en una conexión de móvil, y antes se repetía la descarga
+// entera cada vez que se entraba a elegir modo. Ahora, con los mismos filtros, se
+// reutiliza la petición ya en curso o ya terminada, en vez de volver a pedirla.
+const _cachePreguntas = {};
 async function cargarPreguntas(filtros) {
-  const params = new URLSearchParams({ select: 'categoria,pelicula,estudio,dificultad,pregunta,opcion_0,opcion_1,opcion_2,opcion_3,correcta,dato' });
-  if (filtros.estudio)    params.append('estudio',    'eq.' + filtros.estudio);
-  if (filtros.dificultad) params.append('dificultad', 'eq.' + filtros.dificultad);
+  const clave = JSON.stringify(filtros || {});
+  if (_cachePreguntas[clave]) return _cachePreguntas[clave];
 
-  const pageSize = 1000;
-  let offset = 0;
-  let allData = [];
+  const promesa = (async () => {
+    const params = new URLSearchParams({ select: 'categoria,pelicula,estudio,dificultad,pregunta,opcion_0,opcion_1,opcion_2,opcion_3,correcta,dato' });
+    if (filtros.estudio)    params.append('estudio',    'eq.' + filtros.estudio);
+    if (filtros.dificultad) params.append('dificultad', 'eq.' + filtros.dificultad);
 
-  while (true) {
-    const url = `${SUPABASE_URL}/rest/v1/preguntas?${params}&limit=${pageSize}&offset=${offset}`;
-    const res = await fetch(url, {
-      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY }
-    });
-    if (!res.ok) throw new Error("Supabase error " + res.status);
-    const data = await res.json();
-    allData = allData.concat(data);
-    if (data.length < pageSize) break;
-    offset += pageSize;
+    const pageSize = 1000;
+    let offset = 0;
+    let allData = [];
+
+    while (true) {
+      const url = `${SUPABASE_URL}/rest/v1/preguntas?${params}&limit=${pageSize}&offset=${offset}`;
+      const res = await fetch(url, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY }
+      });
+      if (!res.ok) throw new Error("Supabase error " + res.status);
+      const data = await res.json();
+      allData = allData.concat(data);
+      if (data.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    return allData.map(r => ({
+      categoria:  r.categoria,
+      pelicula:   r.pelicula,
+      estudio:    r.estudio,
+      dificultad: r.dificultad,
+      pregunta:   r.pregunta,
+      opciones:   [r.opcion_0, r.opcion_1, r.opcion_2, r.opcion_3],
+      correcta:   r.correcta,
+      dato:       r.dato,
+    }));
+  })();
+
+  _cachePreguntas[clave] = promesa;
+  try {
+    return await promesa;
+  } catch (e) {
+    delete _cachePreguntas[clave]; // si falla, no dejamos la petición fallida en caché: se puede reintentar
+    throw e;
   }
-
-  return allData.map(r => ({
-    categoria:  r.categoria,
-    pelicula:   r.pelicula,
-    estudio:    r.estudio,
-    dificultad: r.dificultad,
-    pregunta:   r.pregunta,
-    opciones:   [r.opcion_0, r.opcion_1, r.opcion_2, r.opcion_3],
-    correcta:   r.correcta,
-    dato:       r.dato,
-  }));
 }
 
 // ════════════════════════════════════════════════════════
@@ -6642,6 +6660,10 @@ async function iniciarJuego() {
   }
 
   mostrarScreen("screen-loading");
+  const avisoLento = setTimeout(() => {
+    const el = document.querySelector('#screen-loading div:last-child');
+    if (el) el.textContent = 'Cargando el banco de preguntas… puede tardar unos segundos la primera vez';
+  }, 2500);
 
   try {
     pool = await cargarPreguntasConFiltros();
@@ -6677,6 +6699,8 @@ async function iniciarJuego() {
     console.error(e);
     alert("Error al cargar preguntas: " + e.message);
     mostrarScreen("screen-setup");
+  } finally {
+    clearTimeout(avisoLento);
   }
 }
 
@@ -6903,6 +6927,10 @@ let infMiPropiaPuntuacion = { aciertos: 0, fallos: 0 }; // marcador para el modo
 
 async function irASubmodoInfinito() {
   mostrarScreen("screen-loading");
+  const avisoLento = setTimeout(() => {
+    const el = document.querySelector('#screen-loading div:last-child');
+    if (el) el.textContent = 'Cargando el banco de preguntas… puede tardar unos segundos la primera vez';
+  }, 2500);
   try {
     infPool = await cargarPreguntasConFiltros();
     if (infPool.length < 5) {
@@ -6917,6 +6945,8 @@ async function irASubmodoInfinito() {
     console.error('Error en irASubmodoInfinito:', e);
     alert("Error al cargar preguntas: " + e.message + "\n\n(Si ves este mensaje, dile a quien te hizo el juego el texto exacto de este error)");
     mostrarScreen("screen-setup");
+  } finally {
+    clearTimeout(avisoLento);
   }
 }
 
