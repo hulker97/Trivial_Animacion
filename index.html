@@ -6840,25 +6840,35 @@ function seleccionarModo(modo) {
 
 let infMultijugador = false;
 function elegirModoInfinitasJugadores(multi) {
-  infMultijugador = multi;
-  if (multi) resetearConfigJugadores();
-  irASetupInfinito();
+  try {
+    infMultijugador = multi;
+    if (multi) resetearConfigJugadores();
+    irASetupInfinito();
+  } catch (e) {
+    console.error('Error en elegirModoInfinitasJugadores:', e);
+    alert('Error al preparar la partida: ' + e.message + '\n\n(Dile a quien te hizo el juego el texto exacto de este error)');
+  }
 }
 
 async function irASetupInfinito() {
-  if (infMultijugador) {
-    document.getElementById("panel-jugadores").style.display = "";
-    renderJugadores();
-  } else {
-    document.getElementById("panel-jugadores").style.display = "none";
+  try {
+    if (infMultijugador) {
+      document.getElementById("panel-jugadores").style.display = "";
+      renderJugadores();
+    } else {
+      document.getElementById("panel-jugadores").style.display = "none";
+    }
+    document.getElementById("btn-iniciar").textContent = "▶ Elegir modo →";
+    document.getElementById("btn-iniciar").onclick = irASubmodoInfinito;
+    mostrarScreen("screen-setup");
+    renderSelectPerfiles();
+    actualizarResumenFiltros();
+    // Cargar películas en segundo plano
+    cargarListaPeliculas().then(() => actualizarResumenFiltros()).catch(console.error);
+  } catch (e) {
+    console.error('Error en irASetupInfinito:', e);
+    alert('Error al preparar la configuración: ' + e.message + '\n\n(Dile a quien te hizo el juego el texto exacto de este error)');
   }
-  document.getElementById("btn-iniciar").textContent = "▶ Elegir modo →";
-  document.getElementById("btn-iniciar").onclick = irASubmodoInfinito;
-  mostrarScreen("screen-setup");
-  renderSelectPerfiles();
-  actualizarResumenFiltros();
-  // Cargar películas en segundo plano
-  cargarListaPeliculas().then(() => actualizarResumenFiltros()).catch(console.error);
 }
 
 function seleccionarSubmodo(subtipo) {
@@ -6904,7 +6914,8 @@ async function irASubmodoInfinito() {
     infContador = 0;
     mostrarScreen("screen-submodo-infinito");
   } catch(e) {
-    alert("Error al cargar preguntas: " + e.message);
+    console.error('Error en irASubmodoInfinito:', e);
+    alert("Error al cargar preguntas: " + e.message + "\n\n(Si ves este mensaje, dile a quien te hizo el juego el texto exacto de este error)");
     mostrarScreen("screen-setup");
   }
 }
