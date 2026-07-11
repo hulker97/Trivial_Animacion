@@ -1134,17 +1134,19 @@ body > * { position: relative; z-index: 1; }
   </div>
   <div class="panel">
     <h3>🗺️ Tipo de tablero</h3>
-    <div style="display:flex;gap:0.5rem">
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
       <button class="filtro-tab active" id="online-tab-tablero-preguntados" onclick="onlineElegirTipoTablero('preguntados')">🎯 Preguntados</button>
       <button class="filtro-tab" id="online-tab-tablero-rect" onclick="onlineElegirTipoTablero('rectangular')">🦢 Oca</button>
       <button class="filtro-tab" id="online-tab-tablero-circular" onclick="onlineElegirTipoTablero('circular')">⭕ Circular</button>
+      <button class="filtro-tab" id="online-tab-tablero-infinitas" onclick="onlineElegirTipoTablero('infinitas')">♾️ Infinitas</button>
     </div>
   </div>
   <div class="panel" id="online-panel-submodo">
     <h3>🗣️ Cómo se responde</h3>
-    <div style="display:flex;gap:0.5rem">
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
       <button class="filtro-tab active" id="online-tab-opciones" onclick="onlineElegirSubmodo(2)">🔢 Con opciones</button>
       <button class="filtro-tab" id="online-tab-vivavoz" onclick="onlineElegirSubmodo(3)">🗣️ Viva voz</button>
+      <button class="filtro-tab" id="online-tab-escribir" style="display:none" onclick="onlineElegirSubmodo(4)">✍️ Escribir</button>
     </div>
     <div style="font-size:0.75rem;color:var(--text2);margin-top:0.4rem;font-weight:600" id="online-submodo-desc">
       Cada uno ve 4 opciones en su móvil y toca la suya
@@ -1357,7 +1359,7 @@ body > * { position: relative; z-index: 1; }
 
   <!-- Botones -->
   <div style="display:flex;gap:1rem;justify-content:center;max-width:600px;width:100%;margin:0 auto;">
-    <button class="btn btn-secondary" onclick="if(modoJuego==='infinito'){mostrarScreen('screen-inicio');}else{resetearConfigJugadores();mostrarScreen('screen-modo');}">← Volver</button>
+    <button class="btn btn-secondary" onclick="if(modoJuego==='infinito'){mostrarScreen('screen-infinito-modo');}else{resetearConfigJugadores();mostrarScreen('screen-modo');}">← Volver</button>
     <button class="btn btn-primary" id="btn-iniciar" onclick="iniciarJuego()">🎲 Iniciar juego</button>
   </div>
 </div>
@@ -1459,6 +1461,34 @@ body > * { position: relative; z-index: 1; }
 <!-- ══════════════════════════════════════════════════
      PANTALLA: SELECCIÓN SUBMODO INFINITO
 ══════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════
+     PANTALLA: PREGUNTAS INFINITAS — ¿SOLO O EN GRUPO?
+══════════════════════════════════════════════════ -->
+<div id="screen-infinito-modo" class="screen">
+  <div class="logo-wrap" style="margin-bottom:1rem">
+    <div class="logo-icon" style="font-size:2.5rem">♾️</div>
+    <div class="logo-title" style="font-size:1.8rem">Preguntas Infinitas</div>
+    <div class="logo-sub">¿Jugáis solos o en grupo?</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:0.9rem;width:100%;max-width:440px;margin:0 auto">
+    <div class="modo-card" onclick="elegirModoInfinitasJugadores(false)">
+      <div class="modo-card-icon">🧑</div>
+      <div class="modo-card-body">
+        <div class="modo-card-title">Solo (1 jugador)</div>
+        <div class="modo-card-desc">Preguntas seguidas para ti, con tu propio marcador de aciertos.</div>
+      </div>
+    </div>
+    <div class="modo-card" onclick="elegirModoInfinitasJugadores(true)">
+      <div class="modo-card-icon">👥</div>
+      <div class="modo-card-body">
+        <div class="modo-card-title">Multijugador local</div>
+        <div class="modo-card-desc">Os vais turnando el móvil, cada uno con su propio marcador.</div>
+      </div>
+    </div>
+  </div>
+  <button class="btn btn-secondary" style="margin-top:1.5rem" onclick="mostrarScreen('screen-inicio')">← Volver</button>
+</div>
+
 <div id="screen-submodo-infinito" class="screen">
   <div class="logo-wrap" style="margin-bottom:1rem">
     <div class="logo-icon" style="font-size:2.5rem">♾️</div>
@@ -1483,8 +1513,8 @@ body > * { position: relative; z-index: 1; }
     <div class="modo-card" onclick="iniciarInfinito(4)">
       <div class="modo-card-icon">✍️</div>
       <div class="modo-card-body">
-        <div class="modo-card-title">Escribir la respuesta · Modo solitario</div>
-        <div class="modo-card-desc">Escribe tu respuesta antes de ver la correcta. Ideal para jugar solo.</div>
+        <div class="modo-card-title">Escribir la respuesta</div>
+        <div class="modo-card-desc">Escribe tu respuesta antes de ver la correcta.</div>
       </div>
     </div>
   </div>
@@ -1510,6 +1540,21 @@ body > * { position: relative; z-index: 1; }
       </div>
     </div>
 
+    <!-- Turno y marcador (solo en modo multijugador local) -->
+    <div id="inf-multi-header" style="display:none;flex-direction:column;gap:0.5rem">
+      <div style="display:flex;align-items:center;gap:0.6rem;background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.25);border-radius:50px;padding:0.4rem 0.9rem">
+        <div id="inf-turno-icono" style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0"></div>
+        <div style="font-size:0.85rem;font-weight:800;color:var(--gold)">Turno de <span id="inf-turno-nombre">–</span></div>
+      </div>
+      <div id="inf-marcador" style="display:flex;flex-wrap:wrap;gap:0.4rem;justify-content:center"></div>
+    </div>
+
+    <!-- Marcador simple (modo solo) -->
+    <div id="inf-solo-header" style="display:none;justify-content:center;gap:0.8rem">
+      <div style="font-size:0.8rem;font-weight:800;color:#69F0AE">✓ <span id="inf-solo-aciertos">0</span> aciertos</div>
+      <div style="font-size:0.8rem;font-weight:800;color:#F44336">✗ <span id="inf-solo-fallos">0</span> fallos</div>
+    </div>
+
     <!-- Tarjeta de pregunta -->
     <div class="question-modal" style="position:relative;margin:0;max-height:none">
 
@@ -1527,7 +1572,7 @@ body > * { position: relative; z-index: 1; }
 
       <!-- Botón revelar (submodo 3) -->
       <div id="inf-reveal-wrap" style="display:none;margin-bottom:0.5rem">
-        <button class="btn btn-secondary" style="width:100%;padding:1.1rem;font-size:1.05rem" onclick="infRevelar()">
+        <button class="btn btn-secondary" style="width:100%;padding:1.1rem;font-size:1.05rem" onclick="infRevelarUI()">
           👆 Toca para revelar la respuesta
         </button>
       </div>
@@ -1536,8 +1581,8 @@ body > * { position: relative; z-index: 1; }
       <div id="inf-write-wrap" style="display:none;margin-bottom:0.5rem">
         <input type="text" class="q-answer-input" id="inf-write-input"
           placeholder="Escribe tu respuesta..."
-          onkeydown="if(event.key==='Enter') infRevelarEscrito()"/>
-        <button class="btn btn-secondary" style="width:100%;padding:0.9rem;font-size:1rem;margin-top:0.5rem" onclick="infRevelarEscrito()">
+          onkeydown="if(event.key==='Enter') infRevelarEscritoUI()"/>
+        <button class="btn btn-secondary" style="width:100%;padding:0.9rem;font-size:1rem;margin-top:0.5rem" onclick="infRevelarEscritoUI()">
           🔍 Ver respuesta correcta
         </button>
       </div>
@@ -1555,10 +1600,15 @@ body > * { position: relative; z-index: 1; }
       <!-- Respuesta correcta (submodo 3) -->
       <div class="q-respuesta-correcta" id="inf-respuesta-correcta"></div>
 
+      <div id="inf-esperando-votos" style="display:none;text-align:center;color:var(--text2);font-weight:700;font-size:0.85rem;margin-bottom:0.5rem">
+        ⏳ Esperando a que los demás digan si acertaste…
+      </div>
+      <div id="inf-votos-tally" style="display:none;text-align:center;color:var(--gold);font-weight:700;font-size:0.78rem;margin-bottom:0.4rem"></div>
+
       <!-- Botones juez (submodo 3) -->
       <div class="q-judge-btns" id="inf-judge-btns">
-        <button class="btn btn-sm" style="background:#4CAF50;color:white;border:none;padding:0.8rem 1.5rem;font-size:1rem" onclick="infJuzgar(true)">✅ Correcto</button>
-        <button class="btn btn-sm" style="background:#F44336;color:white;border:none;padding:0.8rem 1.5rem;font-size:1rem" onclick="infJuzgar(false)">❌ Incorrecto</button>
+        <button class="btn btn-sm" style="background:#4CAF50;color:white;border:none;padding:0.8rem 1.5rem;font-size:1rem" onclick="infJuzgarUI(true)">✅ Correcto</button>
+        <button class="btn btn-sm" style="background:#F44336;color:white;border:none;padding:0.8rem 1.5rem;font-size:1rem" onclick="infJuzgarUI(false)">❌ Incorrecto</button>
       </div>
 
       <!-- Dato curioso -->
@@ -1569,7 +1619,7 @@ body > * { position: relative; z-index: 1; }
 
       <!-- Botón siguiente -->
       <div class="q-actions" id="inf-actions">
-        <button class="btn btn-primary" onclick="infSiguiente()">Siguiente pregunta →</button>
+        <button class="btn btn-primary" onclick="infSiguienteUI()">Siguiente pregunta →</button>
       </div>
     </div>
 
@@ -2186,6 +2236,8 @@ function onlinePrepararVotacion() {
 }
 
 // Devuelve 'preguntados' | 'rectangular' | 'circular' | null según qué partida esté activa
+let infGameActivo = false; // true mientras haya una partida online de Preguntas Infinitas en curso
+
 function onlineModoActivo() {
   // IMPORTANTE: el orden importa. rectGame primero (durante una pregunta de la Oca
   // también se usa "game" para la modal compartida, así que rectGame debe comprobarse
@@ -2194,6 +2246,7 @@ function onlineModoActivo() {
   // su UI, incluso cuando el modo real jugado era rectangular o circular.
   if (rectGame) return 'rectangular';
   if (game) return 'circular';
+  if (infGameActivo) return 'infinitas';
   if (pqGame) return 'preguntados';
   return null;
 }
@@ -2204,6 +2257,7 @@ function onlineJugadorTurnoGenerico() {
   if (modo === 'preguntados') return pqGame.jugadores[pqGame.turno];
   if (modo === 'rectangular') return rectGame.jugadores[rectGame.turno];
   if (modo === 'circular') return game.players[game.currentPlayerIndex];
+  if (modo === 'infinitas') return infJugadores ? infJugadores[infTurno] : null;
   return null;
 }
 
@@ -2227,9 +2281,11 @@ function onlineElegirSubmodo(n) {
   onlineModoSubtipoElegido = n;
   document.getElementById('online-tab-opciones').classList.toggle('active', n === 2);
   document.getElementById('online-tab-vivavoz').classList.toggle('active', n === 3);
-  document.getElementById('online-submodo-desc').textContent = n === 2
-    ? 'Cada uno ve 4 opciones en su móvil y toca la suya'
-    : 'El jugador activo dice la respuesta en voz alta; los demás votan si acertó';
+  document.getElementById('online-tab-escribir')?.classList.toggle('active', n === 4);
+  const desc = { 2: 'Cada uno ve 4 opciones en su móvil y toca la suya',
+    3: 'El jugador activo dice la respuesta en voz alta; los demás votan si acertó',
+    4: 'El jugador activo escribe su respuesta; los demás votan si acertó' };
+  document.getElementById('online-submodo-desc').textContent = desc[n] || desc[2];
 }
 
 let onlineTipoTableroElegido = 'preguntados';
@@ -2238,8 +2294,13 @@ function onlineElegirTipoTablero(tipo) {
   document.getElementById('online-tab-tablero-preguntados').classList.toggle('active', tipo === 'preguntados');
   document.getElementById('online-tab-tablero-rect').classList.toggle('active', tipo === 'rectangular');
   document.getElementById('online-tab-tablero-circular').classList.toggle('active', tipo === 'circular');
-  // El submodo (con opciones/viva voz) solo tiene sentido en Preguntados
-  document.getElementById('online-panel-submodo').style.display = tipo === 'preguntados' ? '' : 'none';
+  document.getElementById('online-tab-tablero-infinitas').classList.toggle('active', tipo === 'infinitas');
+  // El submodo (con opciones/viva voz/escribir) tiene sentido en Preguntados e Infinitas
+  document.getElementById('online-panel-submodo').style.display = (tipo === 'preguntados' || tipo === 'infinitas') ? '' : 'none';
+  // La opción "escribir" solo se ofrece en Infinitas (en Preguntados no existía antes)
+  const tabEscribir = document.getElementById('online-tab-escribir');
+  if (tabEscribir) tabEscribir.style.display = tipo === 'infinitas' ? '' : 'none';
+  if (tipo === 'preguntados' && onlineModoSubtipoElegido === 4) onlineElegirSubmodo(2);
   // El modo clásico (sin preguntas) solo tiene sentido en la Oca
   document.getElementById('online-panel-modo-oca').style.display = tipo === 'rectangular' ? '' : 'none';
 }
@@ -2435,14 +2496,18 @@ function onlineHostRecibe(conn, data) {
     const modoActivo = onlineModoActivo();
     if (modoActivo && modoOnline === 'host') {
       const jugadoresActivos = modoActivo === 'preguntados' ? pqGame.jugadores
-        : modoActivo === 'rectangular' ? rectGame.jugadores : game.players;
+        : modoActivo === 'rectangular' ? rectGame.jugadores
+        : modoActivo === 'infinitas' ? infJugadores : game.players;
       const jExistente = jugadoresActivos.find(j => j._guestId && j._guestId === data.guestId);
       if (jExistente) {
         jExistente._peerId = conn.peer;
         onlineConexiones[conn.peer] = conn;
-        conn.send({ type: 'RECONECTADO', modo: modoActivo, jugadores: jugadoresActivos, modoSubtipo, modoClasico: modoActivo === 'rectangular' ? rectGame.modoClasico : undefined });
+        conn.send({ type: 'RECONECTADO', modo: modoActivo, jugadores: jugadoresActivos, modoSubtipo,
+          modoClasico: modoActivo === 'rectangular' ? rectGame.modoClasico : undefined,
+          submodo: modoActivo === 'infinitas' ? infSubmodo : undefined });
         if (modoActivo === 'preguntados') onlineBroadcastEstado(onlineUltimaFase || 'ruleta');
         else if (modoActivo === 'rectangular') onlineBroadcastEstadoRect(onlineUltimaFaseRect || 'tablero');
+        else if (modoActivo === 'infinitas') onlineBroadcastEstadoInf(onlineUltimaFaseInf || 'pregunta');
         else onlineBroadcastEstadoGame(onlineUltimaFaseGame || 'tablero');
         return;
       }
@@ -2532,13 +2597,21 @@ function onlineHostContinuarASetup() {
     jugadores.push({ name: j.nombre, color: PLAYER_COLORS[i+1], emoji: PLAYER_EMOJIS[i+1], fichaId: j.fichaId || null, _peerId: j.peerId, _guestId: j.guestId });
   });
   numJugadores = jugadores.length;
-  modoJuego = 'tablero';
-  modoSubtipo = onlineModoSubtipoElegido; // elegido por el anfitrión: 2 (opciones) o 3 (viva voz)
-  rectModoClasico = onlineModoOcaClasicoElegido; // elegido por el anfitrión: con preguntas o Oca clásica
-  setTipoTablero(onlineTipoTableroElegido); // el que haya elegido el anfitrión en el lobby
+  if (onlineTipoTableroElegido === 'infinitas') {
+    modoJuego = 'infinito';
+    infMultijugador = true;
+    infSubmodo = onlineModoSubtipoElegido; // 2 (opciones), 3 (viva voz) o 4 (escribir)
+    document.getElementById('btn-iniciar').textContent = '▶ Iniciar partida online';
+    document.getElementById('btn-iniciar').onclick = irASubmodoInfinitoOnline;
+  } else {
+    modoJuego = 'tablero';
+    modoSubtipo = onlineModoSubtipoElegido; // elegido por el anfitrión: 2 (opciones) o 3 (viva voz)
+    rectModoClasico = onlineModoOcaClasicoElegido; // elegido por el anfitrión: con preguntas o Oca clásica
+    setTipoTablero(onlineTipoTableroElegido); // el que haya elegido el anfitrión en el lobby
+    document.getElementById('btn-iniciar').textContent = '🎲 Iniciar partida online';
+    document.getElementById('btn-iniciar').onclick = iniciarJuego;
+  }
   document.getElementById('panel-jugadores').style.display = 'none';
-  document.getElementById('btn-iniciar').textContent = '🎲 Iniciar partida online';
-  document.getElementById('btn-iniciar').onclick = iniciarJuego;
   mostrarScreen('screen-setup');
   renderSelectPerfiles();
   actualizarResumenFiltros();
@@ -2787,6 +2860,13 @@ function onlineGuestRecibe(data) {
       if (!game) game = { players: data.jugadores, currentPlayerIndex: 0, diceValue: null, phase: 'roll', pendingQuestion: null, pendingWedgeCategoria: null, winner: null, validTargets: [] };
       mostrarScreen('screen-game');
       renderBoard(); renderPlayersPanel(); renderTopbar(); updateActionPanel();
+    } else if (data.modo === 'infinitas') {
+      infGameActivo = true;
+      infJugadores = data.jugadores;
+      infSubmodo = data.submodo || infSubmodo || 2;
+      document.getElementById('inf-multi-header').style.display = 'flex';
+      document.getElementById('inf-solo-header').style.display = 'none';
+      mostrarScreen('screen-infinito');
     } else {
       modoSubtipo = data.modoSubtipo || modoSubtipo || 2;
       if (!pqGame) pqGame = { jugadores: data.jugadores, turno: 0, pool: [], usadas: new Set() };
@@ -2828,6 +2908,15 @@ function onlineGuestRecibe(data) {
       renderPlayersPanel();
       renderTopbar();
       updateActionPanel();
+    } else if (data.modo === 'infinitas') {
+      infGameActivo = true;
+      infJugadores = data.jugadores;
+      infSubmodo = data.submodo || 2;
+      infTurno = 0;
+      infContador = 0;
+      document.getElementById('inf-multi-header').style.display = 'flex';
+      document.getElementById('inf-solo-header').style.display = 'none';
+      mostrarScreen('screen-infinito');
     } else {
       modoSubtipo = data.modoSubtipo || 2;
       pqGame = { jugadores: data.jugadores, turno: 0, pool: [], usadas: new Set() };
@@ -2843,12 +2932,17 @@ function onlineGuestRecibe(data) {
   } else if (data.type === 'STATE_UPDATE_GAME') {
     onlineOcultarPantallaReconexion();
     onlineAplicarEstadoRemotoGame(data.estado);
+  } else if (data.type === 'STATE_UPDATE_INF') {
+    onlineOcultarPantallaReconexion();
+    onlineAplicarEstadoRemotoInf(data.estado);
   } else if (data.type === 'REPLAY') {
     const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick };
     const fn = fns[data.fn];
     if (fn) fn(...(data.args || []));
   } else if (data.type === 'VOTOS_UPDATE') {
     onlineActualizarTallyVotos(data.emitidos, data.total);
+  } else if (data.type === 'INF_VOTOS_UPDATE') {
+    infActualizarTallyVotos(data.emitidos, data.total);
   }
 }
 
@@ -2870,6 +2964,13 @@ function onlineProcesarAccion(peerId, action, payload) {
     const jTurnoPQ = pqGame ? pqJugadorActual() : null;
     if (jTurnoPQ && jTurnoPQ._peerId === peerId) return;
     onlineRegistrarVoto(peerId, payload.correcto);
+    return;
+  }
+  // Votar en Preguntas Infinitas (viva voz / escribir): solo lo hacen los espectadores
+  if (action === 'infVotar') {
+    const jTurnoInf = infJugadores ? infJugadores[infTurno] : null;
+    if (jTurnoInf && jTurnoInf._peerId === peerId) return;
+    infRegistrarVoto(peerId, payload.correcto);
     return;
   }
   // El resto de acciones solo las procesa el jugador cuyo turno es, en el modo que esté activo
@@ -2903,6 +3004,11 @@ function onlineProcesarAccion(peerId, action, payload) {
     onQuestionContinue();
   }
   else if (action === 'rollAgainContinuar') onRollAgainContinue();
+  // Preguntas Infinitas
+  else if (action === 'infOpcion') infOpcion(payload.idx);
+  else if (action === 'infRevelar') infRevelar();
+  else if (action === 'infRevelarEscrito') infRevelarEscritoConTexto(payload.texto || '(sin respuesta)');
+  else if (action === 'infSiguiente') infSiguiente();
 }
 
 // ── Puentes: si es mi turno y soy invitado, la acción viaja por red al host;
@@ -3155,8 +3261,9 @@ function onlineActualizarBloqueoTurno() {
   } else {
     aviso.style.display = 'none';
   }
-  // Bloquear opciones/botones de la vista de pregunta si no es mi turno (compartido por los 3 modos)
-  ['pq-options','pq-reveal-actions','pq-judge-btns','pq-actions','pq-reader-controls','q-options','q-actions'].forEach(id => {
+  // Bloquear opciones/botones de la vista de pregunta si no es mi turno (compartido por todos los modos)
+  ['pq-options','pq-reveal-actions','pq-judge-btns','pq-actions','pq-reader-controls','q-options','q-actions',
+   'inf-options','inf-reveal-wrap','inf-write-wrap','inf-actions'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.pointerEvents = esMio ? '' : 'none';
     if (el) el.style.opacity = esMio ? '' : '0.5';
@@ -6094,7 +6201,7 @@ async function iniciarJuego() {
 // Las de configuración/menús se dejan con su scroll normal, porque pueden tener listas largas.
 const PANTALLAS_AUTOAJUSTABLES = new Set([
   'screen-inicio', 'screen-online-menu', 'screen-online-host-lobby', 'screen-online-join',
-  'screen-online-wait', 'screen-modo', 'screen-setup', 'screen-submodo-infinito',
+  'screen-online-wait', 'screen-modo', 'screen-setup', 'screen-infinito-modo', 'screen-submodo-infinito',
   'screen-preguntados', 'screen-game', 'screen-rect', 'screen-infinito', 'screen-fin',
   // screen-filtros queda fuera a propósito: es una lista larga de películas, pensada para hacer scroll.
 ]);
@@ -6139,8 +6246,7 @@ function seleccionarModo(modo) {
     resetearConfigJugadores();
   }
   if (modo === 'infinito') {
-    // Para infinito: ir directo a setup pero ocultando la sección de jugadores
-    irASetupInfinito();
+    mostrarScreen('screen-infinito-modo');
   } else {
     // Para tablero: mostrar selección de submodo
     document.getElementById("modo-icon").textContent = "🎲";
@@ -6149,8 +6255,20 @@ function seleccionarModo(modo) {
   }
 }
 
+let infMultijugador = false;
+function elegirModoInfinitasJugadores(multi) {
+  infMultijugador = multi;
+  if (multi) resetearConfigJugadores();
+  irASetupInfinito();
+}
+
 async function irASetupInfinito() {
-  document.getElementById("panel-jugadores").style.display = "none";
+  if (infMultijugador) {
+    document.getElementById("panel-jugadores").style.display = "";
+    renderJugadores();
+  } else {
+    document.getElementById("panel-jugadores").style.display = "none";
+  }
   document.getElementById("btn-iniciar").textContent = "▶ Elegir modo →";
   document.getElementById("btn-iniciar").onclick = irASubmodoInfinito;
   mostrarScreen("screen-setup");
@@ -6186,6 +6304,9 @@ let infContador = 0;
 let infSubmodo = 2; // 2 = con opciones, 3 = sin opciones
 let infRespondida = false;
 let infPreguntaActual = null;
+let infJugadores = null; // array de jugadores si es multijugador local, null si es solo
+let infTurno = 0;
+let infMiPropiaPuntuacion = { aciertos: 0, fallos: 0 }; // marcador para el modo "solo"
 
 async function irASubmodoInfinito() {
   mostrarScreen("screen-loading");
@@ -6205,12 +6326,87 @@ async function irASubmodoInfinito() {
   }
 }
 
+// Variante online: el submodo ya se eligió en el lobby, así que se carga el banco
+// de preguntas y se arranca la partida directamente (sin pasar por la pantalla de submodo)
+async function irASubmodoInfinitoOnline() {
+  mostrarScreen("screen-loading");
+  try {
+    infPool = await cargarPreguntasConFiltros();
+    if (infPool.length < 5) {
+      alert(`Solo hay ${infPool.length} preguntas con esos filtros. Amplía el filtro.`);
+      mostrarScreen("screen-setup");
+      return;
+    }
+    infUsadas = new Set();
+    infContador = 0;
+    iniciarInfinitoOnlineHost();
+  } catch(e) {
+    alert("Error al cargar preguntas: " + e.message);
+    mostrarScreen("screen-setup");
+  }
+}
+
+// El anfitrión arranca la partida: construye infJugadores a partir de jugadores[]
+// (que ya trae los _peerId de los invitados conectados) y avisa a todo el mundo
+function iniciarInfinitoOnlineHost() {
+  infGameActivo = true;
+  infJugadores = jugadores.map(j => ({
+    name: j.name, color: j.color, emoji: j.emoji, fichaId: j.fichaId,
+    _peerId: j._peerId, _guestId: j._guestId, aciertos: 0, fallos: 0,
+  }));
+  infTurno = 0;
+  infContador = 0;
+  infUsadas = new Set();
+  onlineBroadcast({ type: 'GAME_START', modo: 'infinitas', submodo: infSubmodo, jugadores: infJugadores.map(j => ({
+    name:j.name, color:j.color, emoji:j.emoji, fichaId:j.fichaId, _peerId:j._peerId, aciertos:j.aciertos, fallos:j.fallos,
+  })) });
+  document.getElementById('inf-multi-header').style.display = 'flex';
+  document.getElementById('inf-solo-header').style.display = 'none';
+  mostrarScreen("screen-infinito");
+  infMostrarPregunta();
+}
+
 function iniciarInfinito(submodo) {
   infSubmodo = submodo;
   infContador = 0;
   infUsadas = new Set();
+  infMiPropiaPuntuacion = { aciertos: 0, fallos: 0 };
+  if (infMultijugador) {
+    infJugadores = [];
+    for (let i = 0; i < numJugadores; i++) {
+      const name = document.getElementById(`jname-${i}`)?.value.trim() || `Jugador ${i+1}`;
+      infJugadores.push({ name, color: PLAYER_COLORS[i], emoji: PLAYER_EMOJIS[i], fichaId: fichasElegidas[i] || null, aciertos: 0, fallos: 0 });
+    }
+    infTurno = 0;
+    document.getElementById('inf-multi-header').style.display = 'flex';
+    document.getElementById('inf-solo-header').style.display = 'none';
+  } else {
+    infJugadores = null;
+    document.getElementById('inf-multi-header').style.display = 'none';
+    document.getElementById('inf-solo-header').style.display = 'flex';
+  }
   mostrarScreen("screen-infinito");
   infMostrarPregunta();
+}
+
+// Pinta quién tiene el turno y el marcador de todos (o el marcador propio en modo solo)
+function infRenderMarcador() {
+  if (infJugadores) {
+    const jActual = infJugadores[infTurno];
+    document.getElementById('inf-turno-icono').innerHTML = fichaTag(jActual, 24);
+    document.getElementById('inf-turno-icono').style.background = jActual.color;
+    document.getElementById('inf-turno-nombre').textContent = jActual.name;
+    const marcador = document.getElementById('inf-marcador');
+    marcador.innerHTML = infJugadores.map((j, i) => `
+      <div style="display:flex;align-items:center;gap:0.3rem;background:rgba(255,255,255,0.05);border:1px solid ${i===infTurno?'var(--gold)':'rgba(255,255,255,0.12)'};border-radius:50px;padding:0.25rem 0.6rem 0.25rem 0.25rem;opacity:${i===infTurno?'1':'0.65'}">
+        <div style="width:20px;height:20px;border-radius:50%;background:${j.color};display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:0.7rem">${fichaTag(j,18)}</div>
+        <span style="font-size:0.72rem;font-weight:800;color:var(--text)">${j.name}</span>
+        <span style="font-size:0.72rem;font-weight:800;color:#69F0AE">✓${j.aciertos}</span>
+      </div>`).join('');
+  } else {
+    document.getElementById('inf-solo-aciertos').textContent = infMiPropiaPuntuacion.aciertos;
+    document.getElementById('inf-solo-fallos').textContent = infMiPropiaPuntuacion.fallos;
+  }
 }
 
 function infPickQuestion() {
@@ -6229,8 +6425,13 @@ function infMostrarPregunta() {
   infRespondida = false;
   infPreguntaActual = infPickQuestion();
   infContador++;
+  infRenderMarcador();
+  infRenderPreguntaEnPantalla(infPreguntaActual);
+  if (modoOnline === 'host') onlineBroadcastEstadoInf('pregunta');
+}
 
-  const q = infPreguntaActual;
+// Pinta la pregunta en pantalla (usado tanto en local como al recibir el estado online)
+function infRenderPreguntaEnPantalla(q) {
   const catInfo = CATS_INFO[q.categoria];
 
   // Cabecera
@@ -6266,7 +6467,7 @@ function infMostrarPregunta() {
     const letters = ["A","B","C","D"];
     opts.style.display = "";
     opts.innerHTML = q.opciones.map((op, i) =>
-      `<button class="q-option" onclick="infOpcion(${i})" id="inf-opt-${i}">
+      `<button class="q-option" onclick="infOpcionUI(${i})" id="inf-opt-${i}">
         <span class="opt-letter">${letters[i]}</span><span>${op}</span>
       </button>`
     ).join("");
@@ -6278,6 +6479,18 @@ function infMostrarPregunta() {
     document.getElementById("inf-write-wrap").style.display = "block";
     setTimeout(() => document.getElementById("inf-write-input")?.focus(), 200);
   }
+  if (modoOnline) onlineActualizarBloqueoTurno();
+}
+
+// Registra el resultado en el marcador del jugador activo (multijugador) o el propio (solo)
+function infRegistrarResultado(correcto) {
+  if (infJugadores) {
+    const j = infJugadores[infTurno];
+    if (correcto) j.aciertos++; else j.fallos++;
+  } else {
+    if (correcto) infMiPropiaPuntuacion.aciertos++; else infMiPropiaPuntuacion.fallos++;
+  }
+  infRenderMarcador();
 }
 
 function infOpcion(idx) {
@@ -6285,6 +6498,7 @@ function infOpcion(idx) {
   infRespondida = true;
   const q = infPreguntaActual;
   const correct = idx === q.correcta;
+  infRegistrarResultado(correct);
 
   for (let i = 0; i < 4; i++) {
     const el = document.getElementById(`inf-opt-${i}`);
@@ -6305,6 +6519,8 @@ function infOpcion(idx) {
   r.classList.add("visible", correct ? "correct" : "wrong");
   document.getElementById("inf-actions").classList.add("visible");
   correct ? sfxCorrecto() : sfxIncorrecto();
+  infUltimoResultado = { tipo: 'opcion', idx, juzgado: true, correcto: correct };
+  if (modoOnline === 'host') onlineBroadcastEstadoInf('resultado');
 }
 
 function infRevelar() {
@@ -6324,16 +6540,28 @@ function infRevelar() {
     d.classList.add("visible");
   }
 
-  document.getElementById("inf-judge-btns").classList.add("visible");
+  infUltimoResultado = { tipo: 'revelar', juzgado: false };
+  if (modoOnline) {
+    infPrepararVotacion();
+    if (modoOnline === 'host') onlineBroadcastEstadoInf('resultado');
+  } else {
+    document.getElementById("inf-judge-btns").classList.add("visible");
+  }
 }
 
 function infRevelarEscrito() {
   if (infRespondida) return;
-  infRespondida = true;
-  const q = infPreguntaActual;
   const input = document.getElementById("inf-write-input");
   const tuRespuesta = input.value.trim() || "(sin respuesta)";
   input.disabled = true;
+  infRevelarEscritoConTexto(tuRespuesta);
+}
+
+// Igual que infRevelarEscrito pero con el texto ya dado (para cuando lo envía un invitado remoto)
+function infRevelarEscritoConTexto(tuRespuesta) {
+  if (infRespondida) return;
+  infRespondida = true;
+  const q = infPreguntaActual;
 
   // Ocultar botón revelar
   document.getElementById("inf-write-wrap").style.display = "none";
@@ -6350,21 +6578,189 @@ function infRevelarEscrito() {
     d.classList.add("visible");
   }
 
-  // Botones juez para decidir si se autocorrector correctamente
-  document.getElementById("inf-judge-btns").classList.add("visible");
+  infUltimoResultado = { tipo: 'escrito', texto: tuRespuesta, juzgado: false };
+  if (modoOnline) {
+    infPrepararVotacion();
+    if (modoOnline === 'host') onlineBroadcastEstadoInf('resultado');
+  } else {
+    document.getElementById("inf-judge-btns").classList.add("visible");
+  }
 }
 
 function infJuzgar(correcto) {
+  infRegistrarResultado(correcto);
   document.getElementById("inf-judge-btns").classList.remove("visible");
+  document.getElementById("inf-esperando-votos").style.display = "none";
   const r = document.getElementById("inf-result");
   r.textContent = correcto ? "✅ ¡Correcto!" : "❌ Incorrecto";
   r.classList.add("visible", correcto ? "correct" : "wrong");
   document.getElementById("inf-actions").classList.add("visible");
   correcto ? sfxCorrecto() : sfxIncorrecto();
+  if (infUltimoResultado) { infUltimoResultado.juzgado = true; infUltimoResultado.correcto = correcto; }
+  if (modoOnline === 'host') onlineBroadcastEstadoInf('resultado');
 }
 
 function infSiguiente() {
+  if (infJugadores) {
+    infTurno = (infTurno + 1) % infJugadores.length;
+  }
   infMostrarPregunta();
+}
+
+// ── Bridges: si es mi turno y soy invitado, la acción viaja por red al host;
+//    si soy el anfitrión o estoy jugando en local, se ejecuta tal cual siempre ──
+function infOpcionUI(idx) {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('infOpcion', { idx }); return; }
+  infOpcion(idx);
+}
+function infRevelarUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('infRevelar', {}); return; }
+  infRevelar();
+}
+function infRevelarEscritoUI() {
+  if (!onlineEsMiTurno()) return;
+  const texto = document.getElementById('inf-write-input')?.value || '';
+  if (modoOnline === 'guest') { onlineEnviarAccion('infRevelarEscrito', { texto }); return; }
+  infRevelarEscrito();
+}
+function infSiguienteUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('infSiguiente', {}); return; }
+  infSiguiente();
+}
+
+// El botón ✅/❌: en local lo pulsa el grupo directamente; en online, los espectadores votan
+function infJuzgarUI(correcto) {
+  if (!modoOnline) { infJuzgar(correcto); return; }
+  document.getElementById('inf-judge-btns').style.opacity = '0.4';
+  document.getElementById('inf-judge-btns').style.pointerEvents = 'none';
+  if (modoOnline === 'host') infRegistrarVoto('HOST', correcto);
+  else onlineEnviarAccion('infVotar', { correcto });
+}
+
+let infVotos = {};
+// Solo el host: registra un voto de un espectador y resuelve cuando ya han votado todos
+function infRegistrarVoto(quien, correcto) {
+  infVotos[quien] = correcto;
+  const totalEsperado = Math.max((infJugadores ? infJugadores.length : 1) - 1, 1);
+  const emitidos = Object.keys(infVotos).length;
+  onlineBroadcast({ type: 'INF_VOTOS_UPDATE', emitidos, total: totalEsperado });
+  infActualizarTallyVotos(emitidos, totalEsperado);
+  if (emitidos >= totalEsperado) {
+    const positivos = Object.values(infVotos).filter(Boolean).length;
+    const resultado = positivos * 2 >= emitidos; // mayoria simple; empate = acierto
+    infJuzgar(resultado);
+  }
+}
+
+function infActualizarTallyVotos(emitidos, total) {
+  const el = document.getElementById('inf-votos-tally');
+  if (!el) return;
+  el.style.display = 'block';
+  el.textContent = `🗳️ ${emitidos}/${total} han votado`;
+}
+
+// Tras revelar (submodo 3/4): decide quién ve botones de juez y quién espera
+function infPrepararVotacion() {
+  document.getElementById('inf-judge-btns').classList.remove('visible');
+  document.getElementById('inf-judge-btns').style.opacity = '';
+  document.getElementById('inf-judge-btns').style.pointerEvents = '';
+  document.getElementById('inf-esperando-votos').style.display = 'none';
+  document.getElementById('inf-votos-tally').style.display = 'none';
+  if (!modoOnline) {
+    document.getElementById('inf-judge-btns').classList.add('visible');
+    return;
+  }
+  infVotos = {};
+  if (onlineEsMiTurno()) {
+    document.getElementById('inf-esperando-votos').style.display = 'block';
+  } else {
+    document.getElementById('inf-judge-btns').classList.add('visible');
+  }
+}
+
+// ── Sincronización online: el anfitrión difunde el estado, los invitados lo aplican ──
+let onlineUltimaFaseInf = 'pregunta';
+function onlineBroadcastEstadoInf(faseExtra) {
+  if (modoOnline !== 'host' || !infJugadores) return;
+  onlineUltimaFaseInf = faseExtra || 'pregunta';
+  const estado = {
+    turno: infTurno,
+    jugadores: infJugadores.map(j => ({ name:j.name, color:j.color, emoji:j.emoji, fichaId:j.fichaId, _peerId:j._peerId, _guestId:j._guestId, aciertos:j.aciertos, fallos:j.fallos })),
+    pregunta: infPreguntaActual,
+    submodo: infSubmodo,
+    contador: infContador,
+    fase: onlineUltimaFaseInf, // 'pregunta' | 'resultado'
+    resultado: infUltimoResultado,
+  };
+  onlineBroadcast({ type: 'STATE_UPDATE_INF', estado });
+}
+
+let infUltimoResultado = null;
+function onlineAplicarEstadoRemotoInf(estado) {
+  infGameActivo = true;
+  infJugadores = estado.jugadores;
+  infTurno = estado.turno;
+  infSubmodo = estado.submodo;
+  infContador = estado.contador;
+  infPreguntaActual = estado.pregunta;
+  infUltimoResultado = estado.resultado;
+
+  document.getElementById('inf-multi-header').style.display = 'flex';
+  document.getElementById('inf-solo-header').style.display = 'none';
+  infRenderMarcador();
+
+  if (estado.fase === 'pregunta' && estado.pregunta) {
+    infRespondida = false;
+    infRenderPreguntaEnPantalla(estado.pregunta);
+  } else if (estado.fase === 'resultado' && estado.resultado) {
+    infRespondida = true;
+    infMostrarResultadoRemoto(estado.resultado);
+  }
+  onlineActualizarBloqueoTurno();
+  autoAjustarPantalla();
+}
+
+// Pinta el resultado (correcto/incorrecto) ya resuelto por el host, sin volver a decidirlo
+function infMostrarResultadoRemoto(resultado) {
+  const q = infPreguntaActual;
+  if (resultado.tipo === 'opcion') {
+    for (let i = 0; i < 4; i++) {
+      const el = document.getElementById(`inf-opt-${i}`);
+      if (!el) continue;
+      el.style.pointerEvents = "none";
+      if (i === q.correcta) el.classList.add("correct");
+      else if (i === resultado.idx && i !== q.correcta) el.classList.add("wrong");
+    }
+    document.getElementById('inf-options').style.display = '';
+  } else if (resultado.tipo === 'revelar') {
+    document.getElementById('inf-reveal-wrap').style.display = 'none';
+    const respEl = document.getElementById('inf-respuesta-correcta');
+    respEl.textContent = "✅ Respuesta correcta: " + q.opciones[q.correcta];
+    respEl.classList.add("visible");
+  } else if (resultado.tipo === 'escrito') {
+    document.getElementById('inf-write-wrap').style.display = 'none';
+    document.getElementById('inf-tu-respuesta').textContent = resultado.texto || '(sin respuesta)';
+    document.getElementById('inf-resp-correcta-texto').textContent = q.opciones[q.correcta];
+    document.getElementById('inf-write-result').style.display = 'block';
+  }
+  if (q.dato) {
+    const d = document.getElementById("inf-dato");
+    d.textContent = "💡 " + q.dato;
+    d.classList.add("visible");
+  }
+  if (resultado.juzgado) {
+    const r = document.getElementById("inf-result");
+    r.textContent = resultado.correcto ? "✅ ¡Correcto!" : "❌ Incorrecto";
+    r.classList.add("visible", resultado.correcto ? "correct" : "wrong");
+    document.getElementById("inf-actions").classList.add("visible");
+    document.getElementById('inf-judge-btns').classList.remove('visible');
+    document.getElementById('inf-esperando-votos').style.display = 'none';
+  } else {
+    infPrepararVotacion();
+  }
 }
 
 // ════════════════════════════════════════════════════════
