@@ -541,6 +541,23 @@ body > * { position: relative; z-index: 1; }
   -webkit-tap-highlight-color: transparent;
 }
 .btn-skip:active { background: rgba(255,255,255,0.16); }
+.racha-badge {
+  background: linear-gradient(135deg, #FF6D00, #FFA000);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.22rem 0.5rem;
+  border-radius: 50px;
+  white-space: nowrap;
+  box-shadow: 0 1px 6px rgba(255,109,0,0.5);
+}
+.racha-badge.hito { animation: rachaHito 0.6s ease-out; }
+@keyframes rachaHito {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.5) rotate(-6deg); }
+  70%  { transform: scale(1.2) rotate(4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
 .q-cat-badge {
   display: inline-flex;
   align-items: center;
@@ -1608,6 +1625,8 @@ body > * { position: relative; z-index: 1; }
       <div class="q-header">
         <div class="q-header-top">
           <span class="q-cat-badge" id="inf-cat-badge">–</span>
+          <span class="racha-badge" id="inf-racha-badge" style="display:none">🔥 0</span>
+          <button class="btn-skip" id="inf-5050-btn" onclick="usar5050Infinitas()" title="Quitar 2 opciones incorrectas">🎯 50/50</button>
           <button class="btn-skip" id="inf-skip-btn" onclick="infSaltarUI()" title="Saltar pregunta">⏭️ Saltar</button>
         </div>
         <div class="q-movie" id="inf-movie">–</div>
@@ -1738,6 +1757,8 @@ body > * { position: relative; z-index: 1; }
         <div class="q-header-top">
           <span class="q-cat-badge" id="pq-cat-badge">–</span>
           <span class="q-wedge-badge hidden" id="pq-wedge-badge">🏅</span>
+          <span class="racha-badge" id="pq-racha-badge" style="display:none">🔥 0</span>
+          <button class="btn-skip" id="pq-5050-btn" onclick="usar5050Pq()" title="Quitar 2 opciones incorrectas">🎯 50/50</button>
           <button class="btn-skip" id="pq-skip-btn" onclick="pqSaltarUI()" title="Saltar pregunta">⏭️ Saltar</button>
         </div>
         <div class="q-movie" id="pq-movie">–</div>
@@ -1853,6 +1874,8 @@ body > * { position: relative; z-index: 1; }
       <div class="q-header-top">
         <span class="q-cat-badge" id="q-cat-badge">–</span>
         <span class="q-wedge-badge hidden" id="q-wedge-badge">🏅 Cuña</span>
+        <span class="racha-badge" id="q-racha-badge" style="display:none">🔥 0</span>
+        <button class="btn-skip" id="q-5050-btn" onclick="usar5050Compartido()" title="Quitar 2 opciones incorrectas">🎯 50/50</button>
         <button class="btn-skip" id="q-skip-btn" onclick="saltarPreguntaUI()" title="Saltar pregunta">⏭️ Saltar</button>
       </div>
       <div class="q-movie" id="q-movie">–</div>
@@ -3314,7 +3337,8 @@ function onlineActualizarBloqueoTurno() {
   }
   // Bloquear opciones/botones de la vista de pregunta si no es mi turno (compartido por todos los modos)
   ['pq-options','pq-reveal-actions','pq-judge-btns','pq-actions','pq-reader-controls','q-options','q-actions',
-   'inf-options','inf-reveal-wrap','inf-write-wrap','inf-actions','q-skip-btn','inf-skip-btn','pq-skip-btn'].forEach(id => {
+   'inf-options','inf-reveal-wrap','inf-write-wrap','inf-actions','q-skip-btn','inf-skip-btn','pq-skip-btn',
+   'q-5050-btn','inf-5050-btn','pq-5050-btn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.pointerEvents = esMio ? '' : 'none';
     if (el) el.style.opacity = esMio ? '' : '0.5';
@@ -5477,6 +5501,7 @@ function showQuestionModal(isFinal) {
   questionAnswered = false;
   opcionesVisibles = (modoSubtipo !== 1); // en modo 1 empiezan ocultas por defecto
   document.getElementById('q-skip-btn').style.display = '';
+  document.getElementById('q-5050-btn').style.display = modoSubtipo === 2 ? '' : 'none';
 
   const catInfo = CATS_INFO[q.categoria];
   const badge = document.getElementById("q-cat-badge");
@@ -5656,6 +5681,7 @@ function saltarPregunta() {
   r.classList.add("visible", "wrong");
   r.dataset.correcto = "0";
   document.getElementById("q-actions").classList.add("visible");
+  rachaActual = 0; actualizarRachaUI(false);
 
   onlineNotificarReplay('saltarPregunta', []);
 }
@@ -6251,8 +6277,100 @@ function _tono(freq, inicio, duracion, tipo, volumen) {
 }
 // Vibración táctil corta (silenciosa si el dispositivo no la soporta, p.ej. iPhone/escritorio)
 function vibrar(patron) { try { navigator.vibrate && navigator.vibrate(patron); } catch (e) {} }
-function sfxCorrecto() { _tono(660, 0, 0.12, 'sine'); _tono(880, 0.1, 0.18, 'sine'); vibrar(35); }
-function sfxIncorrecto() { _tono(180, 0, 0.28, 'sawtooth', 0.1); vibrar([40, 60, 40]); }
+
+// Racha de aciertos seguidos (global a la sesión: cualquier fallo la corta).
+// La mejor racha se guarda para poder presumir entre partidas.
+let rachaActual = 0;
+let rachaMejor = parseInt(localStorage.getItem('trivial_racha_mejor') || '0', 10);
+
+function actualizarRachaUI(esHito) {
+  ['q-racha-badge', 'pq-racha-badge', 'inf-racha-badge'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (rachaActual >= 2) {
+      el.style.display = '';
+      el.textContent = `🔥 ${rachaActual}`;
+      if (esHito) { el.classList.remove('hito'); void el.offsetWidth; el.classList.add('hito'); }
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+
+function sfxCorrecto() {
+  _tono(660, 0, 0.12, 'sine'); _tono(880, 0.1, 0.18, 'sine'); vibrar(35);
+  rachaActual++;
+  if (rachaActual > rachaMejor) {
+    rachaMejor = rachaActual;
+    try { localStorage.setItem('trivial_racha_mejor', String(rachaMejor)); } catch (e) {}
+  }
+  const esHito = rachaActual >= 5 && rachaActual % 5 === 0;
+  actualizarRachaUI(esHito);
+  if (esHito) {
+    mostrarToast(`🔥 ¡Racha de ${rachaActual} seguidas!`);
+    vibrar([30, 40, 30, 40, 60]);
+  }
+}
+function sfxIncorrecto() {
+  _tono(180, 0, 0.28, 'sawtooth', 0.1); vibrar([40, 60, 40]);
+  rachaActual = 0;
+  actualizarRachaUI(false);
+}
+
+// ── Comodín 50/50: quita 2 opciones incorrectas de las 4 posibles ──
+// No necesita red: solo cambia lo que ve el propio dispositivo, no el resultado
+// real de la pregunta, así que cada jugador gasta sus propios usos localmente.
+const COMODIN_5050_USOS_INICIALES = 3;
+let comodin5050Restantes = COMODIN_5050_USOS_INICIALES;
+
+function comodin5050Reset() {
+  comodin5050Restantes = COMODIN_5050_USOS_INICIALES;
+  actualizar5050UI();
+}
+
+function actualizar5050UI() {
+  ['q-5050-btn', 'pq-5050-btn', 'inf-5050-btn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = `🎯 50/50 (${comodin5050Restantes})`;
+    el.style.opacity = comodin5050Restantes > 0 ? '' : '0.35';
+    el.style.pointerEvents = comodin5050Restantes > 0 ? '' : 'none';
+  });
+}
+
+// Oculta 2 opciones incorrectas al azar entre los botones dados (los ids ya existentes,
+// del tipo prefijo-opt-0..3), dejando la correcta y una incorrecta visibles.
+function _aplicar5050(prefijoOpt, indiceCorrecta) {
+  const incorrectas = [0, 1, 2, 3].filter(i => i !== indiceCorrecta);
+  incorrectas.sort(() => Math.random() - 0.5);
+  incorrectas.slice(0, 2).forEach(i => {
+    const el = document.getElementById(`${prefijoOpt}-${i}`);
+    if (el) { el.style.visibility = 'hidden'; el.style.pointerEvents = 'none'; }
+  });
+  comodin5050Restantes--;
+  actualizar5050UI();
+  vibrar(20);
+}
+
+function usar5050Compartido() {
+  if (comodin5050Restantes <= 0 || questionAnswered) return;
+  const q = game && game.pendingQuestion;
+  if (!q) return;
+  _aplicar5050('q-opt', q.correcta);
+}
+function usar5050Pq() {
+  if (comodin5050Restantes <= 0 || pqRespondida) return;
+  const q = pqGame && pqGame._preguntaActual;
+  if (!q) return;
+  _aplicar5050('pq-opt', q.correcta);
+}
+function usar5050Infinitas() {
+  if (comodin5050Restantes <= 0 || infRespondida) return;
+  const q = infPreguntaActual;
+  if (!q) return;
+  _aplicar5050('inf-opt', q.correcta);
+}
+
 function sfxVictoria() {
   [523, 659, 784, 1047].forEach((f, i) => _tono(f, i * 0.14, 0.22, 'triangle', 0.13));
 }
@@ -6276,6 +6394,8 @@ function mostrarToast(msg) {
 //  INICIAR JUEGO
 // ════════════════════════════════════════════════════════
 async function iniciarJuego() {
+  rachaActual = 0; actualizarRachaUI(false);
+  comodin5050Reset();
   // Recoger nombres (solo en partidas locales; en online los jugadores ya vienen del lobby)
   if (!modoOnline) {
     jugadores = [];
@@ -6575,6 +6695,8 @@ async function irASubmodoInfinitoOnline() {
 // El anfitrión arranca la partida: construye infJugadores a partir de jugadores[]
 // (que ya trae los _peerId de los invitados conectados) y avisa a todo el mundo
 function iniciarInfinitoOnlineHost() {
+  rachaActual = 0; actualizarRachaUI(false);
+  comodin5050Reset();
   infGameActivo = true;
   infJugadores = jugadores.map(j => ({
     name: j.name, color: j.color, emoji: j.emoji, fichaId: j.fichaId,
@@ -6593,6 +6715,8 @@ function iniciarInfinitoOnlineHost() {
 }
 
 function iniciarInfinito(submodo) {
+  rachaActual = 0; actualizarRachaUI(false);
+  comodin5050Reset();
   infSubmodo = submodo;
   infContador = 0;
   infUsadas = new Set();
@@ -6660,6 +6784,7 @@ function infMostrarPregunta() {
 function infRenderPreguntaEnPantalla(q) {
   const catInfo = CATS_INFO[q.categoria];
   document.getElementById('inf-skip-btn').style.display = '';
+  document.getElementById('inf-5050-btn').style.display = infSubmodo === 2 ? '' : 'none';
 
   // Cabecera
   const badge = document.getElementById("inf-cat-badge");
@@ -6785,6 +6910,7 @@ function infSaltar() {
   r.textContent = "⏭️ Pregunta saltada";
   r.classList.add("visible", "wrong");
   document.getElementById("inf-actions").classList.add("visible");
+  rachaActual = 0; actualizarRachaUI(false);
   infUltimoResultado = { tipo: 'saltada', juzgado: true, correcto: false };
   if (modoOnline === 'host') onlineBroadcastEstadoInf('resultado');
 }
@@ -7320,6 +7446,7 @@ function pqRenderPreguntaUI(q, cat, esCorona) {
   pqEsCorona = esCorona;
   pqRespondida = false;
   document.getElementById('pq-skip-btn').style.display = '';
+  document.getElementById('pq-5050-btn').style.display = modoSubtipo === 2 ? '' : 'none';
   const catInfo = CATS_INFO[cat];
 
   // Cabecera pregunta
@@ -7502,6 +7629,7 @@ function pqSaltar() {
   r.textContent = '⏭️ Pregunta saltada';
   r.classList.add('visible', 'wrong');
   document.getElementById('pq-actions').classList.add('visible');
+  rachaActual = 0; actualizarRachaUI(false);
   document.getElementById('pq-actions').dataset.correcto = '0';
   onlineNotificarReplay('pqSaltar', []);
 }
