@@ -541,6 +541,19 @@ body > * { position: relative; z-index: 1; }
   -webkit-tap-highlight-color: transparent;
 }
 .btn-skip:active { background: rgba(255,255,255,0.16); }
+#cronometro-toggle:checked ~ #cronometro-toggle-track { background: var(--gold); }
+#cronometro-toggle:checked ~ #cronometro-toggle-knob { left: 23px; }
+.cronometro-display {
+  display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+  font-weight: 800; font-size: 0.8rem; color: white;
+  background: rgba(255,255,255,0.08); border-radius: 50px; padding: 0.2rem 0.6rem;
+  transition: background 0.3s, color 0.3s;
+}
+.cronometro-display.cronometro-urgente { background: rgba(244,67,54,0.35); color: #FFCDD2; animation: cronometroLatido 0.6s ease-in-out infinite; }
+@keyframes cronometroLatido {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.1); }
+}
 .racha-badge {
   background: linear-gradient(135deg, #FF6D00, #FFA000);
   color: white;
@@ -1430,6 +1443,28 @@ body > * { position: relative; z-index: 1; }
       </select>
     </div>
 
+    <!-- Cronómetro opcional -->
+    <div style="margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;gap:0.8rem">
+      <div>
+        <div class="filtro-label" style="margin-bottom:0.15rem">⏱️ Cronómetro por pregunta</div>
+        <div style="font-size:0.75rem;color:var(--text2);font-weight:600">Cada pregunta tendrá un tiempo límite para responder</div>
+      </div>
+      <label style="position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0">
+        <input type="checkbox" id="cronometro-toggle" onchange="onCronometroToggle()" style="opacity:0;width:0;height:0">
+        <span id="cronometro-toggle-track" style="position:absolute;inset:0;background:rgba(255,255,255,0.15);border-radius:26px;transition:0.2s;cursor:pointer" onclick="document.getElementById('cronometro-toggle').click()"></span>
+        <span id="cronometro-toggle-knob" style="position:absolute;left:3px;top:3px;width:20px;height:20px;background:white;border-radius:50%;transition:0.2s;pointer-events:none"></span>
+      </label>
+    </div>
+    <div id="cronometro-duracion-wrap" style="display:none;margin-bottom:1rem">
+      <div class="filtro-label">Segundos por pregunta</div>
+      <select class="filtro-select" id="cronometro-duracion" onchange="onCronometroDuracionChange()">
+        <option value="10">10 segundos</option>
+        <option value="15" selected>15 segundos</option>
+        <option value="20">20 segundos</option>
+        <option value="30">30 segundos</option>
+      </select>
+    </div>
+
     <!-- Resumen de películas seleccionadas + botón para abrir pantalla de filtros -->
     <div style="display:flex;align-items:center;justify-content:space-between;gap:0.8rem">
       <div id="filtro-info" style="font-size:0.82rem;color:var(--text2);font-weight:700">
@@ -1518,6 +1553,14 @@ body > * { position: relative; z-index: 1; }
 
       <!-- Quesitos ganados -->
       <div id="fin-wedges" style="display:flex;justify-content:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem"></div>
+
+      <!-- Resumen de la partida -->
+      <div class="panel" id="fin-resumen-panel" style="text-align:left;margin-bottom:1.5rem">
+        <div style="font-family:'Fredoka One',cursive;color:var(--gold);font-size:1rem;margin-bottom:0.8rem;text-align:center">
+          📋 Resumen de la partida
+        </div>
+        <div id="fin-resumen" style="display:flex;justify-content:space-around;flex-wrap:wrap;gap:0.8rem;text-align:center"></div>
+      </div>
 
       <!-- Clasificación de todos los jugadores -->
       <div class="panel" style="text-align:left;margin-bottom:1.5rem">
@@ -1645,6 +1688,7 @@ body > * { position: relative; z-index: 1; }
       <div class="q-header">
         <div class="q-header-top">
           <span class="q-cat-badge" id="inf-cat-badge">–</span>
+          <span class="cronometro-display" id="inf-cronometro" style="display:none">⏱️ 15</span>
           <span class="racha-badge" id="inf-racha-badge" style="display:none">🔥 0</span>
           <button class="btn-skip" id="inf-5050-btn" onclick="usar5050Infinitas()" title="Quitar 2 opciones incorrectas">🎯 50/50</button>
           <button class="btn-skip" id="inf-skip-btn" onclick="infSaltarUI()" title="Saltar pregunta">⏭️ Saltar</button>
@@ -1777,6 +1821,7 @@ body > * { position: relative; z-index: 1; }
         <div class="q-header-top">
           <span class="q-cat-badge" id="pq-cat-badge">–</span>
           <span class="q-wedge-badge hidden" id="pq-wedge-badge">🏅</span>
+          <span class="cronometro-display" id="pq-cronometro" style="display:none">⏱️ 15</span>
           <span class="racha-badge" id="pq-racha-badge" style="display:none">🔥 0</span>
           <button class="btn-skip" id="pq-5050-btn" onclick="usar5050Pq()" title="Quitar 2 opciones incorrectas">🎯 50/50</button>
           <button class="btn-skip" id="pq-skip-btn" onclick="pqSaltarUI()" title="Saltar pregunta">⏭️ Saltar</button>
@@ -1894,6 +1939,7 @@ body > * { position: relative; z-index: 1; }
       <div class="q-header-top">
         <span class="q-cat-badge" id="q-cat-badge">–</span>
         <span class="q-wedge-badge hidden" id="q-wedge-badge">🏅 Cuña</span>
+        <span class="cronometro-display" id="q-cronometro" style="display:none">⏱️ 15</span>
         <span class="racha-badge" id="q-racha-badge" style="display:none">🔥 0</span>
         <button class="btn-skip" id="q-5050-btn" onclick="usar5050Compartido()" title="Quitar 2 opciones incorrectas">🎯 50/50</button>
         <button class="btn-skip" id="q-skip-btn" onclick="saltarPreguntaUI()" title="Saltar pregunta">⏭️ Saltar</button>
@@ -3135,7 +3181,7 @@ function onlineProcesarAccion(peerId, action, payload) {
   else if (action === 'rollAgainContinuar') onRollAgainContinue();
   // Preguntas Infinitas
   else if (action === 'infOpcion') infOpcion(payload.idx);
-  else if (action === 'infSaltar') infSaltar();
+  else if (action === 'infSaltar') infSaltar(payload.mensaje);
   else if (action === 'infRevelar') infRevelar();
   else if (action === 'infRevelarEscrito') infRevelarEscritoConTexto(payload.texto || '(sin respuesta)');
   else if (action === 'infSiguiente') infSiguiente();
@@ -5558,6 +5604,9 @@ function showQuestionModal(isFinal) {
   opcionesVisibles = (modoSubtipo !== 1); // en modo 1 empiezan ocultas por defecto
   document.getElementById('q-skip-btn').style.display = '';
   document.getElementById('q-5050-btn').style.display = modoSubtipo === 2 ? '' : 'none';
+  detenerCronometro();
+  if (onlineEsMiTurno()) iniciarCronometro('q-cronometro', _porTiempoCompartido);
+  else document.getElementById('q-cronometro').style.display = 'none';
 
   const catInfo = CATS_INFO[q.categoria];
   const badge = document.getElementById("q-cat-badge");
@@ -5708,7 +5757,13 @@ function saltarPreguntaUI() {
   saltarPregunta();
 }
 
-function saltarPregunta() {
+// Se llama automáticamente cuando el cronómetro llega a 0
+function _porTiempoCompartido() {
+  if (modoOnline === 'guest') { onlineEnviarAccion('relay', { fn: 'saltarPregunta', args: ['⏰ ¡Se acabó el tiempo!'] }); return; }
+  saltarPregunta('⏰ ¡Se acabó el tiempo!');
+}
+
+function saltarPregunta(mensaje) {
   if (questionAnswered) return;
   questionAnswered = true;
   const q = game.pendingQuestion;
@@ -5733,13 +5788,15 @@ function saltarPregunta() {
   }
 
   const r = document.getElementById("q-result");
-  r.textContent = "⏭️ Pregunta saltada";
+  r.textContent = mensaje || "⏭️ Pregunta saltada";
   r.classList.add("visible", "wrong");
   r.dataset.correcto = "0";
   document.getElementById("q-actions").classList.add("visible");
   rachaActual = 0; actualizarRachaUI(false);
+  statsPartida.incorrectas++;
+  detenerCronometro();
 
-  onlineNotificarReplay('saltarPregunta', []);
+  onlineNotificarReplay('saltarPregunta', [mensaje]);
 }
 
 function onQuestionContinueUI() {
@@ -6425,9 +6482,16 @@ function actualizarRachaUI(esHito) {
   });
 }
 
+// Estadísticas de la partida actual (se resetean en cada partida nueva), para
+// poder mostrar un resumen más completo en la pantalla de victoria
+let statsPartida = { correctas: 0, incorrectas: 0, rachaMejorPartida: 0 };
+
 function sfxCorrecto() {
   _tono(660, 0, 0.12, 'sine'); _tono(880, 0.1, 0.18, 'sine'); vibrar(35);
+  detenerCronometro();
+  statsPartida.correctas++;
   rachaActual++;
+  if (rachaActual > statsPartida.rachaMejorPartida) statsPartida.rachaMejorPartida = rachaActual;
   if (rachaActual > rachaMejor) {
     rachaMejor = rachaActual;
     try { localStorage.setItem('trivial_racha_mejor', String(rachaMejor)); } catch (e) {}
@@ -6441,6 +6505,8 @@ function sfxCorrecto() {
 }
 function sfxIncorrecto() {
   _tono(180, 0, 0.28, 'sawtooth', 0.1); vibrar([40, 60, 40]);
+  detenerCronometro();
+  statsPartida.incorrectas++;
   rachaActual = 0;
   actualizarRachaUI(false);
 }
@@ -6450,6 +6516,47 @@ function sfxIncorrecto() {
 // real de la pregunta, así que cada jugador gasta sus propios usos localmente.
 const COMODIN_5050_USOS_INICIALES = 3;
 let comodin5050Restantes = COMODIN_5050_USOS_INICIALES;
+
+// ── Cronómetro opcional por pregunta ──
+let cronometroActivo = false;
+let cronometroSegundos = 15;
+let _cronometroIntervalo = null;
+let _cronometroRestante = 0;
+
+function onCronometroToggle() {
+  cronometroActivo = document.getElementById('cronometro-toggle').checked;
+  document.getElementById('cronometro-duracion-wrap').style.display = cronometroActivo ? '' : 'none';
+}
+function onCronometroDuracionChange() {
+  cronometroSegundos = parseInt(document.getElementById('cronometro-duracion').value, 10) || 15;
+}
+
+// Arranca la cuenta atrás en el display indicado; llama a onTimeout() si llega a 0.
+// Si el cronómetro no está activado, simplemente oculta el display y no hace nada más.
+function iniciarCronometro(displayId, onTimeout) {
+  detenerCronometro();
+  const el = document.getElementById(displayId);
+  if (!cronometroActivo) { if (el) el.style.display = 'none'; return; }
+  _cronometroRestante = cronometroSegundos;
+  if (!el) return;
+  el.style.display = 'inline-flex';
+  el.classList.remove('cronometro-urgente');
+  el.textContent = `⏱️ ${_cronometroRestante}`;
+  _cronometroIntervalo = setInterval(() => {
+    _cronometroRestante--;
+    if (el) {
+      el.textContent = `⏱️ ${_cronometroRestante}`;
+      el.classList.toggle('cronometro-urgente', _cronometroRestante <= 5 && _cronometroRestante > 0);
+    }
+    if (_cronometroRestante <= 0) {
+      detenerCronometro();
+      onTimeout();
+    }
+  }, 1000);
+}
+function detenerCronometro() {
+  if (_cronometroIntervalo) { clearInterval(_cronometroIntervalo); _cronometroIntervalo = null; }
+}
 
 function comodin5050Reset() {
   comodin5050Restantes = COMODIN_5050_USOS_INICIALES;
@@ -6523,6 +6630,7 @@ function mostrarToast(msg) {
 // ════════════════════════════════════════════════════════
 async function iniciarJuego() {
   rachaActual = 0; actualizarRachaUI(false);
+  statsPartida = { correctas: 0, incorrectas: 0, rachaMejorPartida: 0 };
   comodin5050Reset();
   // Recoger nombres (solo en partidas locales; en online los jugadores ya vienen del lobby)
   if (!modoOnline) {
@@ -6825,6 +6933,7 @@ async function irASubmodoInfinitoOnline() {
 // (que ya trae los _peerId de los invitados conectados) y avisa a todo el mundo
 function iniciarInfinitoOnlineHost() {
   rachaActual = 0; actualizarRachaUI(false);
+  statsPartida = { correctas: 0, incorrectas: 0, rachaMejorPartida: 0 };
   comodin5050Reset();
   infGameActivo = true;
   infJugadores = jugadores.map(j => ({
@@ -6845,6 +6954,7 @@ function iniciarInfinitoOnlineHost() {
 
 function iniciarInfinito(submodo) {
   rachaActual = 0; actualizarRachaUI(false);
+  statsPartida = { correctas: 0, incorrectas: 0, rachaMejorPartida: 0 };
   comodin5050Reset();
   infSubmodo = submodo;
   infContador = 0;
@@ -6914,6 +7024,9 @@ function infRenderPreguntaEnPantalla(q) {
   const catInfo = CATS_INFO[q.categoria];
   document.getElementById('inf-skip-btn').style.display = '';
   document.getElementById('inf-5050-btn').style.display = infSubmodo === 2 ? '' : 'none';
+  detenerCronometro();
+  if (onlineEsMiTurno()) iniciarCronometro('inf-cronometro', _porTiempoInfinitas);
+  else document.getElementById('inf-cronometro').style.display = 'none';
 
   // Cabecera
   const badge = document.getElementById("inf-cat-badge");
@@ -7012,7 +7125,7 @@ function infSaltarUI() {
   infSaltar();
 }
 
-function infSaltar() {
+function infSaltar(mensaje) {
   if (infRespondida) return;
   infRespondida = true;
   const q = infPreguntaActual;
@@ -7036,12 +7149,19 @@ function infSaltar() {
   }
 
   const r = document.getElementById("inf-result");
-  r.textContent = "⏭️ Pregunta saltada";
+  r.textContent = mensaje || "⏭️ Pregunta saltada";
   r.classList.add("visible", "wrong");
   document.getElementById("inf-actions").classList.add("visible");
   rachaActual = 0; actualizarRachaUI(false);
-  infUltimoResultado = { tipo: 'saltada', juzgado: true, correcto: false };
+  statsPartida.incorrectas++;
+  detenerCronometro();
+  infUltimoResultado = { tipo: 'saltada', juzgado: true, correcto: false, mensaje };
   if (modoOnline === 'host') onlineBroadcastEstadoInf('resultado');
+}
+
+function _porTiempoInfinitas() {
+  if (modoOnline === 'guest') { onlineEnviarAccion('infSaltar', { mensaje: '⏰ ¡Se acabó el tiempo!' }); return; }
+  infSaltar('⏰ ¡Se acabó el tiempo!');
 }
 
 function infRevelar() {
@@ -7284,7 +7404,7 @@ function infMostrarResultadoRemoto(resultado) {
   }
   if (resultado.juzgado) {
     const r = document.getElementById("inf-result");
-    r.textContent = resultado.tipo === 'saltada' ? '⏭️ Pregunta saltada' : (resultado.correcto ? "✅ ¡Correcto!" : "❌ Incorrecto");
+    r.textContent = resultado.tipo === 'saltada' ? (resultado.mensaje || '⏭️ Pregunta saltada') : (resultado.correcto ? "✅ ¡Correcto!" : "❌ Incorrecto");
     r.classList.add("visible", resultado.correcto ? "correct" : "wrong");
     document.getElementById("inf-actions").classList.add("visible");
     document.getElementById('inf-judge-btns').classList.remove('visible');
@@ -7576,6 +7696,9 @@ function pqRenderPreguntaUI(q, cat, esCorona) {
   pqRespondida = false;
   document.getElementById('pq-skip-btn').style.display = '';
   document.getElementById('pq-5050-btn').style.display = modoSubtipo === 2 ? '' : 'none';
+  detenerCronometro();
+  if (onlineEsMiTurno()) iniciarCronometro('pq-cronometro', _porTiempoPq);
+  else document.getElementById('pq-cronometro').style.display = 'none';
   const catInfo = CATS_INFO[cat];
 
   // Cabecera pregunta
@@ -7738,7 +7861,7 @@ function pqSaltarUI() {
   pqSaltar();
 }
 
-function pqSaltar() {
+function pqSaltar(mensaje) {
   if (pqRespondida) return;
   pqRespondida = true;
   const q = pqGame._preguntaActual;
@@ -7755,12 +7878,19 @@ function pqSaltar() {
   respEl.classList.add('visible');
   if (q.dato) { const d=document.getElementById('pq-dato'); d.textContent='💡 '+q.dato; d.classList.add('visible'); }
   const r = document.getElementById('pq-result');
-  r.textContent = '⏭️ Pregunta saltada';
+  r.textContent = mensaje || '⏭️ Pregunta saltada';
   r.classList.add('visible', 'wrong');
   document.getElementById('pq-actions').classList.add('visible');
   rachaActual = 0; actualizarRachaUI(false);
+  statsPartida.incorrectas++;
+  detenerCronometro();
   document.getElementById('pq-actions').dataset.correcto = '0';
-  onlineNotificarReplay('pqSaltar', []);
+  onlineNotificarReplay('pqSaltar', [mensaje]);
+}
+
+function _porTiempoPq() {
+  if (modoOnline === 'guest') { onlineEnviarAccion('relay', { fn: 'pqSaltar', args: ['⏰ ¡Se acabó el tiempo!'] }); return; }
+  pqSaltar('⏰ ¡Se acabó el tiempo!');
 }
 
 function pqRevelar() {
@@ -7848,6 +7978,16 @@ function pqMostrarVictoria(j) {
     ).join('');
   }
   const clasiDiv = document.getElementById('fin-clasificacion');
+  const totalResp = statsPartida.correctas + statsPartida.incorrectas;
+  const precision = totalResp > 0 ? Math.round((statsPartida.correctas / totalResp) * 100) : 0;
+  const resumenDiv = document.getElementById('fin-resumen');
+  if (resumenDiv) {
+    resumenDiv.innerHTML = `
+      <div><div style="font-size:1.4rem;font-weight:800;color:var(--gold)">${totalResp}</div><div style="font-size:0.7rem;color:var(--text2);font-weight:700">preguntas</div></div>
+      <div><div style="font-size:1.4rem;font-weight:800;color:#69F0AE">${precision}%</div><div style="font-size:0.7rem;color:var(--text2);font-weight:700">acierto</div></div>
+      <div><div style="font-size:1.4rem;font-weight:800;color:#FF9800">🔥${statsPartida.rachaMejorPartida}</div><div style="font-size:0.7rem;color:var(--text2);font-weight:700">mejor racha</div></div>
+    `;
+  }
   if (clasiDiv && pqGame?.jugadores) {
     const sorted = esOca
       ? [...pqGame.jugadores].sort((a,b) => (b._ocaPos||0) - (a._ocaPos||0))
