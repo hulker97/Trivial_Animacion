@@ -6483,7 +6483,9 @@ function infRenderPreguntaEnPantalla(q) {
 }
 
 // Registra el resultado en el marcador del jugador activo (multijugador) o el propio (solo)
+let infUltimaCorrecta = false;
 function infRegistrarResultado(correcto) {
+  infUltimaCorrecta = correcto;
   if (infJugadores) {
     const j = infJugadores[infTurno];
     if (correcto) j.aciertos++; else j.fallos++;
@@ -6601,7 +6603,7 @@ function infJuzgar(correcto) {
 }
 
 function infSiguiente() {
-  if (infJugadores) {
+  if (infJugadores && !infUltimaCorrecta) {
     infTurno = (infTurno + 1) % infJugadores.length;
   }
   infMostrarPregunta();
