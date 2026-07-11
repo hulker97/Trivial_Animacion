@@ -990,6 +990,15 @@ body > * { position: relative; z-index: 1; }
   0%, 100% { transform: scale(1); box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
   50%      { transform: scale(1.12); box-shadow: 0 2px 18px rgba(255,215,0,0.6); }
 }
+@keyframes rectDadoGirando {
+  0%   { transform: rotate(0deg) scale(1); }
+  25%  { transform: rotate(-12deg) scale(1.06); }
+  50%  { transform: rotate(10deg) scale(0.95); }
+  75%  { transform: rotate(-8deg) scale(1.04); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+.rect-dado-girando { animation: rectDadoGirando 0.18s ease-in-out infinite; }
+.rect-dado-listo { animation: dadoOcaPulso 0.6s ease-out 1; }
 @keyframes confetti-fall {
   0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
   100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
@@ -1687,9 +1696,9 @@ body > * { position: relative; z-index: 1; }
 
   <div id="rect-banner-pozo" style="display:none;text-align:center;font-weight:800;color:#4FC3F7;background:rgba(79,195,247,0.12);border:1px solid rgba(79,195,247,0.4);border-radius:12px;margin:0 0.8rem;padding:0.5rem 0.8rem;font-size:0.8rem"></div>
   <div id="rect-aviso-especial" style="display:none;text-align:center;font-weight:800;color:var(--gold);padding:0 0.8rem;font-size:0.85rem;width:100%;box-sizing:border-box"></div>
-  <div id="rect-dado-inline-wrap" style="display:none;flex-direction:column;align-items:center;gap:0.3rem;padding:0.3rem 0.8rem;width:100%;box-sizing:border-box">
-    <div id="rect-dado-result" style="width:88px;height:88px;background:linear-gradient(135deg,#fff 0%,#e8e8e8 100%);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:3.4rem;font-weight:900;color:#1a0050;box-shadow:0 6px 20px rgba(0,0,0,0.6),0 0 0 3px rgba(255,215,0,0.5),inset 0 2px 4px rgba(255,255,255,0.8)"></div>
-    <div id="rect-dado-hint" style="font-size:0.78rem;color:var(--text2);font-weight:700;text-align:center"></div>
+  <div id="rect-dado-inline-wrap" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:0.5rem;padding:0.7rem 0.8rem;width:100%;box-sizing:border-box">
+    <div id="rect-dado-result" style="width:106px;height:106px;background:linear-gradient(150deg,#ffffff 0%,#f2f2f2 55%,#dcdcdc 100%);border-radius:24px;box-shadow:0 8px 26px rgba(0,0,0,0.65),0 0 0 3px rgba(255,215,0,0.55),0 0 26px rgba(255,215,0,0.25),inset 0 3px 6px rgba(255,255,255,0.9);transition:transform 0.12s"></div>
+    <div id="rect-dado-hint" style="font-size:0.8rem;color:var(--text2);font-weight:700;text-align:center"></div>
   </div>
   <div style="display:flex;gap:0.8rem;align-items:center;justify-content:center;padding:0.6rem 0.8rem 1rem;width:100%;box-sizing:border-box">
     <button class="btn btn-primary" id="rect-dado-btn" onclick="rectTirarDadoUI()" style="font-size:1.1rem;max-width:280px;width:100%">🎲 Tirar dado</button>
@@ -7280,8 +7289,6 @@ function rectConfirmarDado() {
   rectGame.dadoPendiente = null;
   if (dado == null) return;
 
-  document.getElementById('rect-dado-result').textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][dado-1];
-
   let destino = j.pos + dado;
   if (destino > RECT_META) {
     // Te pasas de la meta: rebotas hacia atras la diferencia
@@ -7296,6 +7303,20 @@ function rectConfirmarDado() {
   }
 }
 
+// Dibuja la cara de un dado de verdad, con puntos (en vez de usar el emoji ⚀-⚅)
+function rectCaraDadoHTML(valor) {
+  const layouts = { 1:[4], 2:[0,8], 3:[0,4,8], 4:[0,2,6,8], 5:[0,2,4,6,8], 6:[0,2,3,5,6,8] };
+  const activos = new Set(layouts[valor] || []);
+  let html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);width:100%;height:100%;padding:16%;box-sizing:border-box;gap:6%">';
+  for (let i = 0; i < 9; i++) {
+    html += `<div style="display:flex;align-items:center;justify-content:center">${
+      activos.has(i) ? '<div style="width:100%;height:100%;max-width:17px;max-height:17px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#3a2570,#1a0050);box-shadow:inset 0 1px 2px rgba(0,0,0,0.5)"></div>' : ''
+    }</div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
 // ── Animación visual del dado, en su sitio entre el tablero y el botón ──
 let _rectAnimDadoInterval = null;
 function rectMostrarAnimacionDado(valor, jugador, alConfirmar) {
@@ -7304,21 +7325,25 @@ function rectMostrarAnimacionDado(valor, jugador, alConfirmar) {
   const hint = document.getElementById('rect-dado-hint');
   if (wrap) wrap.style.display = 'flex';
   if (hint) hint.textContent = 'Girando…';
-  const caras = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+  if (cubo) { cubo.classList.remove('rect-dado-listo'); cubo.classList.add('rect-dado-girando'); }
   let tick = 0;
   if (_rectAnimDadoInterval) clearInterval(_rectAnimDadoInterval);
   _rectAnimDadoInterval = setInterval(() => {
-    if (cubo) cubo.textContent = caras[Math.floor(Math.random() * 6)];
+    if (cubo) cubo.innerHTML = rectCaraDadoHTML(1 + Math.floor(Math.random() * 6));
     tick++;
-    if (tick > 10) {
+    if (tick > 12) {
       clearInterval(_rectAnimDadoInterval);
-      if (cubo) cubo.textContent = caras[valor - 1];
+      if (cubo) {
+        cubo.innerHTML = rectCaraDadoHTML(valor);
+        cubo.classList.remove('rect-dado-girando');
+        cubo.classList.add('rect-dado-listo');
+      }
       if (hint) hint.textContent = '👆 Toca tu ficha en el tablero para avanzar';
       // La ficha del jugador activo ya sale destacada y tocable en el propio tablero
       // (lo gestiona rectRenderBoard() mientras rectGame.dadoPendiente esté activo)
       rectRenderBoard();
     }
-  }, 90);
+  }, 85);
 }
 
 // Lo que ven los demás jugadores (u otro dispositivo) mientras alguien confirma su tirada
@@ -7328,8 +7353,11 @@ function rectMostrarEsperaDado(valor, jugador) {
   const hint = document.getElementById('rect-dado-hint');
   if (wrap) wrap.style.display = 'flex';
   clearInterval(_rectAnimDadoInterval);
-  const caras = ['⚀','⚁','⚂','⚃','⚄','⚅'];
-  if (cubo) cubo.textContent = caras[valor - 1];
+  if (cubo) {
+    cubo.classList.remove('rect-dado-girando');
+    cubo.classList.add('rect-dado-listo');
+    cubo.innerHTML = rectCaraDadoHTML(valor);
+  }
   if (hint) hint.textContent = `⏳ Esperando a que ${jugador.name} avance su ficha…`;
   rectRenderBoard();
 }
@@ -7337,6 +7365,8 @@ function rectMostrarEsperaDado(valor, jugador) {
 function rectOcultarDadoInline() {
   const wrap = document.getElementById('rect-dado-inline-wrap');
   if (wrap) wrap.style.display = 'none';
+  const cubo = document.getElementById('rect-dado-result');
+  if (cubo) { cubo.classList.remove('rect-dado-girando', 'rect-dado-listo'); cubo.innerHTML = ''; }
   const hint = document.getElementById('rect-dado-hint');
   if (hint) hint.textContent = '';
   clearInterval(_rectAnimDadoInterval);
