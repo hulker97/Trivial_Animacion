@@ -6037,7 +6037,7 @@ async function iniciarJuego() {
 // ════════════════════════════════════════════════════════
 // Pantallas "de juego" donde queremos que quepa todo sin scroll (reescalando si hace falta).
 // Las de configuración/menús se dejan con su scroll normal, porque pueden tener listas largas.
-const PANTALLAS_AUTOAJUSTABLES = new Set(['screen-preguntados', 'screen-game', 'screen-infinito', 'screen-fin']);
+const PANTALLAS_AUTOAJUSTABLES = new Set(['screen-preguntados', 'screen-game', 'screen-rect', 'screen-infinito', 'screen-fin']);
 
 function autoAjustarPantalla() {
   requestAnimationFrame(() => {
