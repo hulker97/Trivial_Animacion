@@ -4594,6 +4594,31 @@ function getMovieIcon(t,cx,cy,s=1){ return MOVIE_ICONS[t] ? MOVIE_ICONS[t](cx,cy
 
 
 
+// Películas para las que ya tenemos foto real (las mismas que en la Oca).
+// Se dibujan ENCIMA del icono SVG de siempre; si la foto no carga, se cae
+// de vuelta automáticamente al dibujo SVG (que sigue debajo, sin romper nada).
+const IMG_PELI_REAL_CIRCULAR = {
+  'Shrek': 'images/casillas-oca/oca.jpg',
+  'Toy Story': 'images/casillas-oca/dados.jpg',
+  'Cómo Entrenar a tu Dragón': 'images/casillas-oca/puente.jpg',
+  'Frozen': 'images/casillas-oca/frozen.jpg',
+  'Coraline': 'images/casillas-oca/pozo.jpg',
+  'Cars': 'images/casillas-oca/salida.jpg',
+  'El Rey León': 'images/casillas-oca/calavera.jpg',
+  'La Bella y la Bestia': 'images/casillas-oca/bella_bestia.jpg',
+  'La Sirenita': 'images/casillas-oca/sirenita.jpg',
+  'Los Increíbles': 'images/casillas-oca/increibles.jpg',
+  'Hércules': 'images/casillas-oca/carcel.jpg',
+  'Buscando a Nemo': 'images/casillas-oca/nemo.jpg',
+  'La Bella Durmiente': 'images/casillas-oca/posada.jpg',
+  'Cenicienta': 'images/casillas-oca/meta.jpg',
+  'Mulán': 'images/casillas-oca/mulan.jpg',
+  'Ratatouille': 'images/casillas-oca/ratatouille.jpg',
+  'Shrek 2': 'images/casillas-oca/shrek2.jpg',
+  'Peter Pan': 'images/casillas-oca/peter_pan.jpg',
+  'Tarzán': 'images/casillas-oca/laberinto.jpg',
+};
+
 function renderBoard() {
   const svg = document.getElementById("board-svg");
   const validIds  = new Set((game ? game.validTargets : []).map(t => t.id));
@@ -4726,9 +4751,10 @@ function renderBoard() {
         <clipPath id="${_scid}">
           <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3"/>
         </clipPath>
-        <!-- ilustración SVG de la película -->
+        <!-- ilustración SVG de la película (+ foto real encima, si existe) -->
         <g clip-path="url(#${_scid})">
           ${MOVIE_ICONS[_st](0, 0, 1)}
+          ${IMG_PELI_REAL_CIRCULAR[_st] ? `<image href="${IMG_PELI_REAL_CIRCULAR[_st]}" x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" preserveAspectRatio="xMidYMid slice" onerror="this.remove()"/>` : ''}
         </g>` : `
         <!-- fondo color si no hay icono -->
         <rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3" fill="${bg}"/>`}
@@ -4868,7 +4894,11 @@ const RING_MOVIE_DATA = [
     } else if (md && MOVIE_ICONS[md.title]) {
       // Casilla normal: ilustración SVG completa
       s += `<clipPath id="${clipId}"><rect x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" rx="3"/></clipPath>`;
-      s += `<g clip-path="url(#${clipId})">${MOVIE_ICONS[md.title](0, 0, 1)}</g>`;
+      s += `<g clip-path="url(#${clipId})">${MOVIE_ICONS[md.title](0, 0, 1)}`;
+      if (IMG_PELI_REAL_CIRCULAR[md.title]) {
+        s += `<image href="${IMG_PELI_REAL_CIRCULAR[md.title]}" x="${-W}" y="${-H}" width="${W*2}" height="${H*2}" preserveAspectRatio="xMidYMid slice" onerror="this.remove()"/>`;
+      }
+      s += `</g>`;
       s += `<rect x="${-W}" y="${-H}" width="${W*2}" height="${H*0.35}" rx="3" fill="rgba(255,255,255,0.18)"/>`;
       // Perforaciones filmstrip
       s += `<rect x="${-(W+2)}" y="-2.5" width="3.5" height="5" rx="1" fill="#111"/>`;
