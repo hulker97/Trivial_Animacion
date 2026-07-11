@@ -1099,6 +1099,12 @@ body > * { position: relative; z-index: 1; }
 </head>
 <body>
 
+<button id="btn-musica-fondo" onclick="toggleMusicaFondo()" title="Música de fondo"
+  style="position:fixed;top:0.8rem;right:0.8rem;z-index:50;width:40px;height:40px;border-radius:50%;
+  background:rgba(20,20,50,0.55);backdrop-filter:blur(4px);border:1px solid rgba(255,215,0,0.3);
+  color:white;font-size:1.15rem;display:none;align-items:center;justify-content:center;cursor:pointer;
+  -webkit-tap-highlight-color:transparent">🔇</button>
+
 <!-- ══════════════════════════════════════════════════
      PANTALLA 1: INICIO
 ══════════════════════════════════════════════════ -->
@@ -1193,7 +1199,13 @@ body > * { position: relative; z-index: 1; }
   <div class="panel" style="text-align:center">
     <div style="font-size:0.78rem;color:var(--text2);font-weight:700;margin-bottom:0.3rem">CÓDIGO DE SALA</div>
     <div id="online-codigo-grande" style="font-family:'Fredoka One',cursive;font-size:2.8rem;letter-spacing:0.4rem;color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,0.5)">-----</div>
-    <button class="btn btn-secondary btn-sm" style="margin-top:0.6rem" onclick="onlineCopiarEnlace()">🔗 Copiar enlace para invitar</button>
+    <div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;margin-top:0.6rem">
+      <button class="btn btn-secondary btn-sm" onclick="onlineCopiarEnlace()">🔗 Copiar enlace para invitar</button>
+      <button class="btn btn-secondary btn-sm" onclick="onlineToggleQR()">📱 Código QR</button>
+    </div>
+    <div id="online-qr-wrap" style="display:none;margin-top:0.8rem;background:white;border-radius:12px;padding:0.6rem">
+      <img id="online-qr-img" width="180" height="180" style="display:block" alt="Código QR para unirse a la sala"/>
+    </div>
   </div>
   <div class="panel">
     <h3>👤 Tu nombre y ficha</h3>
@@ -2682,6 +2694,18 @@ function onlineCopiarEnlace() {
   } else {
     prompt('Copia este enlace:', url);
   }
+}
+
+// Muestra/oculta un código QR con el enlace de invitación, para no tener que
+// copiar/pegar ni escribir nada: la otra persona solo tiene que escanearlo.
+function onlineToggleQR() {
+  const wrap = document.getElementById('online-qr-wrap');
+  const visible = wrap.style.display !== 'none';
+  if (visible) { wrap.style.display = 'none'; return; }
+  const url = location.origin + location.pathname + '?join=' + onlineCodigoSala;
+  document.getElementById('online-qr-img').src =
+    'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=0&data=' + encodeURIComponent(url);
+  wrap.style.display = 'block';
 }
 
 function onlineHostContinuarASetup() {
@@ -6336,6 +6360,52 @@ function _tono(freq, inicio, duracion, tipo, volumen) {
 // Vibración táctil corta (silenciosa si el dispositivo no la soporta, p.ej. iPhone/escritorio)
 function vibrar(patron) { try { navigator.vibrate && navigator.vibrate(patron); } catch (e) {} }
 
+// ── Música de fondo suave para los menús (acordes ambientales sintetizados,
+// nada de archivos externos: encaja con que todo el juego sea un único HTML) ──
+let musicaFondoActiva = false;
+try { musicaFondoActiva = localStorage.getItem('trivial_musica_fondo') === '1'; } catch (e) {}
+let _musicaFondoIntervalo = null;
+let _musicaFondoIdx = 0;
+const MUSICA_FONDO_ACORDES = [
+  [261.63, 329.63, 392.00, 493.88], // Do mayor 7
+  [220.00, 261.63, 329.63, 392.00], // La menor 7
+  [174.61, 220.00, 261.63, 349.23], // Fa mayor
+  [196.00, 246.94, 293.66, 369.99], // Sol
+];
+
+function _tocarAcordeFondo() {
+  const acorde = MUSICA_FONDO_ACORDES[_musicaFondoIdx % MUSICA_FONDO_ACORDES.length];
+  _musicaFondoIdx++;
+  acorde.forEach((freq, i) => _tono(freq, i * 0.18, 7, 'sine', 0.022));
+}
+
+function iniciarMusicaFondo() {
+  if (_musicaFondoIntervalo) return;
+  _tocarAcordeFondo();
+  _musicaFondoIntervalo = setInterval(_tocarAcordeFondo, 7200);
+}
+function detenerMusicaFondo() {
+  if (_musicaFondoIntervalo) { clearInterval(_musicaFondoIntervalo); _musicaFondoIntervalo = null; }
+}
+function actualizarBotonMusica() {
+  const btn = document.getElementById('btn-musica-fondo');
+  if (btn) btn.textContent = musicaFondoActiva ? '🎵' : '🔇';
+}
+function toggleMusicaFondo() {
+  musicaFondoActiva = !musicaFondoActiva;
+  try { localStorage.setItem('trivial_musica_fondo', musicaFondoActiva ? '1' : '0'); } catch (e) {}
+  actualizarBotonMusica();
+  if (musicaFondoActiva) iniciarMusicaFondo(); else detenerMusicaFondo();
+}
+// Arranca/para la música según si la pantalla activa es de menú o de juego,
+// respetando siempre la preferencia del usuario (musicaFondoActiva).
+function _sincronizarMusicaFondo(esPantallaDeMenu) {
+  const btn = document.getElementById('btn-musica-fondo');
+  if (btn) btn.style.display = esPantallaDeMenu ? '' : 'none';
+  if (musicaFondoActiva && esPantallaDeMenu) iniciarMusicaFondo();
+  else detenerMusicaFondo();
+}
+
 // Racha de aciertos seguidos (global a la sesión: cualquier fallo la corta).
 // La mejor racha se guarda para poder presumir entre partidas.
 let rachaActual = 0;
@@ -6583,6 +6653,7 @@ function mostrarScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   inyectarFondoDecorativoSiHaceFalta(id);
+  _sincronizarMusicaFondo(PANTALLAS_CON_FONDO_DECORATIVO.has(id));
   autoAjustarPantalla();
   if (!_historialNavegandoInterno) {
     try { history.pushState({ pantalla: id }, ''); } catch (e) {}
@@ -8508,6 +8579,8 @@ window.addEventListener("DOMContentLoaded", () => {
   // mostrarScreen() al cargar la página), así que hay que inyectar aquí el fondo
   // decorativo a mano para que también se vea desde el primer segundo.
   inyectarFondoDecorativoSiHaceFalta('screen-inicio');
+  actualizarBotonMusica();
+  _sincronizarMusicaFondo(true);
   try { history.replaceState({ pantalla: 'screen-inicio' }, ''); } catch (e) {}
 
   // Si se abre desde un enlace de invitación (?join=CODIGO), ir directo a unirse
