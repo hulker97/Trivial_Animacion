@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Verificación humana 🎬</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e2e; --gold:#FFD700; --gold2:#FFF176; --text2:#B8C8F0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:#fff;font-family:'Nunito',sans-serif;overflow-x:hidden}
+  body::before{
+    content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      radial-gradient(1.5px 1.5px at 10% 15%, #fff 0%, transparent 100%),
+      radial-gradient(1px 1px at 25% 60%, #fff 0%, transparent 100%),
+      radial-gradient(2px 2px at 40% 25%, #FFD700 0%, transparent 100%),
+      radial-gradient(1px 1px at 55% 80%, #fff 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 70% 10%, #fff 0%, transparent 100%),
+      radial-gradient(1px 1px at 80% 45%, #FFD700 0%, transparent 100%),
+      radial-gradient(2px 2px at 90% 70%, #fff 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 90%, #fff 0%, transparent 100%);
+    animation:twinkle 4s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle{0%{opacity:.5}50%{opacity:1}100%{opacity:.7}}
+  .wrap{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.2rem;text-align:center;background:radial-gradient(ellipse at 50% 35%, #1a2070 0%, #0a0e2e 65%)}
+  .box{max-width:440px;width:100%}
+  .icon{font-size:3.4rem;filter:drop-shadow(0 0 18px rgba(255,215,0,.7));animation:float 3s ease-in-out infinite}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  h1{font-family:'Fredoka One',cursive;font-size:1.5rem;margin:.8rem 0 .3rem;
+    background:linear-gradient(135deg,#FFD700,#FFF176,#FF8C00);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .sub{color:var(--text2);font-size:.9rem;font-weight:600;margin-bottom:1.6rem;line-height:1.4}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem;margin-bottom:1.2rem}
+  .tile{
+    background:rgba(255,255,255,.06);border:2px solid rgba(255,215,0,.25);border-radius:16px;
+    padding:1rem .5rem;font-size:2.1rem;cursor:pointer;transition:all .15s;user-select:none;
+  }
+  .tile:hover{transform:translateY(-3px);border-color:var(--gold)}
+  .tile.wrong{animation:shake .4s;border-color:#F44336;background:rgba(244,67,54,.15)}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+  .tile.right{border-color:#4CAF50;background:rgba(76,175,80,.2);transform:scale(1.05)}
+  .msg{font-size:.85rem;font-weight:800;color:var(--gold);min-height:1.4rem;margin-bottom:.4rem}
+  .progreso{display:flex;justify-content:center;gap:.4rem;margin-bottom:1.4rem}
+  .paso{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.15);transition:all .3s}
+  .paso.hecho{background:var(--gold);box-shadow:0 0 8px rgba(255,215,0,.7)}
+
+  .exito{display:none}
+  .sello{
+    width:130px;height:130px;border-radius:50%;margin:0 auto 1.2rem;
+    background:radial-gradient(circle at 35% 30%, #FFF176, #FFD700 60%, #FF8C00);
+    display:flex;align-items:center;justify-content:center;font-size:3.2rem;
+    box-shadow:0 0 40px rgba(255,215,0,.6), 0 0 0 6px rgba(255,215,0,.15);
+    animation:pop .5s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
+    padding:1rem 2rem;border:none;border-radius:50px;font-family:'Fredoka One',cursive;
+    font-size:1.05rem;cursor:pointer;background:linear-gradient(135deg,#FFD700,#FF8C00);
+    color:#1a0050;font-weight:800;box-shadow:0 4px 20px rgba(255,215,0,.5);text-decoration:none;
+    transition:all .2s;
+  }
+  .btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,215,0,.7)}
+  .footer{margin-top:1.2rem;font-size:.72rem;color:var(--text2);opacity:.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="box">
+
+    <div id="reto">
+      <div class="icon">🕵️</div>
+      <h1>Verificación humana</h1>
+      <div class="sub">Antes de dejarte entrar al Trivial, tenemos que comprobar que no eres un villano infiltrado. <b>Maléfica</b> se esconde entre los héroes en cada ronda — evítala a ella y toca al resto.</div>
+      <div class="progreso" id="progreso"></div>
+      <div class="msg" id="msg">&nbsp;</div>
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="exito" id="exito">
+      <div class="sello">✅</div>
+      <h1>¡Verificado!</h1>
+      <div class="sub">Queda oficialmente confirmado: eres 100% humano y 0% villano de Disney. Ya puedes entrar.</div>
+      <a class="btn" id="btnEntrar" href="#">🎬 Entrar al Trivial</a>
+      <div class="footer">Certificado válido para esta sesión, esta vida, y la próxima reencarnación.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// URL del Trivial (ya configurada)
+const URL_TRIVIAL = "https://trivial-animacion.vercel.app";
+document.getElementById('btnEntrar').href = URL_TRIVIAL;
+
+// Cada ronda: la ficha de Maléfica escondida entre varias fichas de héroes.
+// Solo hay que tocar a los héroes (evitar a Maléfica).
+const MALVADA = { id: 'malefica', nombre: 'Maléfica', img: 'images/fichas/malefica.png', emoji: '🖤' };
+const RONDAS = [
+  { buenos: [
+      {id:'simba', nombre:'Simba', img:'images/fichas/simba.png', emoji:'🦁'},
+      {id:'woody', nombre:'Woody', img:'images/fichas/woody.png', emoji:'🤠'},
+      {id:'nemo', nombre:'Nemo', img:'images/fichas/nemo.png', emoji:'🐠'},
+    ] },
+  { buenos: [
+      {id:'elsa', nombre:'Elsa', img:'images/fichas/elsa.png', emoji:'❄️'},
+      {id:'ariel', nombre:'Ariel', img:'images/fichas/ariel.png', emoji:'🧜‍♀️'},
+      {id:'cenicienta', nombre:'Cenicienta', img:'images/fichas/cenicienta.png', emoji:'👠'},
+    ] },
+  { buenos: [
+      {id:'hercules', nombre:'Hércules', img:'images/fichas/hercules.png', emoji:'⚡'},
+      {id:'mulan', nombre:'Mulán', img:'images/fichas/mulan.png', emoji:'🗡️'},
+      {id:'tarzan', nombre:'Tarzán', img:'images/fichas/tarzan.png', emoji:'🌿'},
+    ] },
+];
+
+let ronda = 0;
+let aciertosRonda = 0;
+
+function pintarProgreso() {
+  const p = document.getElementById('progreso');
+  p.innerHTML = RONDAS.map((_, i) => `<div class="paso ${i < ronda ? 'hecho' : ''}"></div>`).join('');
+}
+
+function barajar(arr) { return arr.map(v => [Math.random(), v]).sort((a,b)=>a[0]-b[0]).map(v=>v[1]); }
+
+function fichaImg(f, size) {
+  return `<img src="${f.img}" alt="${f.emoji}" style="width:${size}px;height:${size}px;object-fit:contain;pointer-events:none" onerror="this.replaceWith(document.createTextNode('${f.emoji}'))">`;
+}
+
+function pintarRonda() {
+  if (ronda >= RONDAS.length) { mostrarExito(); return; }
+  pintarProgreso();
+  document.getElementById('msg').textContent = 'Toca a todos los héroes, evita a Maléfica (' + (aciertosRonda) + '/' + RONDAS[ronda].buenos.length + ')';
+  const r = RONDAS[ronda];
+  const todos = barajar([...r.buenos.map(f=>({f,bueno:true})), {f: MALVADA, bueno:false}]);
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  aciertosRonda = 0;
+  todos.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'tile';
+    div.innerHTML = fichaImg(item.f, 52);
+    div.onclick = () => {
+      if (div.dataset.usado) return;
+      if (item.bueno) {
+        div.dataset.usado = '1';
+        div.classList.add('right');
+        aciertosRonda++;
+        document.getElementById('msg').textContent = 'Toca a todos los héroes, evita a Maléfica (' + aciertosRonda + '/' + r.buenos.length + ')';
+        if (aciertosRonda === r.buenos.length) {
+          setTimeout(() => { ronda++; pintarRonda(); }, 500);
+        }
+      } else {
+        div.classList.add('wrong');
+        document.getElementById('msg').textContent = '¡Esa es Maléfica! Sigue intentando...';
+        setTimeout(() => div.classList.remove('wrong'), 400);
+      }
+    };
+    grid.appendChild(div);
+  });
+}
+
+function mostrarExito() {
+  document.getElementById('reto').style.display = 'none';
+  document.getElementById('exito').style.display = 'block';
+}
+
+pintarRonda();
+</script>
+</body>
+</html>
