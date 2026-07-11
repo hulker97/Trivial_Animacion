@@ -7053,6 +7053,14 @@ function rectRenderBoard() {
     meta:     'radial-gradient(circle at 40% 30%, #FFF9C4, #F9A825 70%, #E65100)',
     inicio:   'radial-gradient(circle at 35% 30%, #FFFFFF, #B0BEC5)',
   };
+  // Ilustraciones personalizadas de las casillas (películas con ficha de jugador).
+  // Si la imagen no carga, se cae de vuelta al fondo de color de siempre (FONDOS/color de categoría).
+  const RECT_IMG_ESPECIAL = {
+    inicio:'salida', oca:'oca', puente:'puente', posada:'posada', pozo:'pozo',
+    laberinto:'laberinto', carcel:'carcel', calavera:'calavera', dados:'dados', meta:'meta',
+  };
+  const RECT_IMG_CATEGORIA = ['frozen','bella_bestia','sirenita','increibles','nemo','mulan','ratatouille','ice_age','shrek2','peter_pan'];
+  let rectNormalIdx = 0;
 
   const marco = 22;
   let html = `<div style="position:relative;width:${anchoPx + marco*2}px;height:${altoPx + marco*2}px;margin:0 auto;
@@ -7080,22 +7088,33 @@ function rectRenderBoard() {
     const top = (coord.y - minY) * cellFull + cell/2 - tam/2 + extraGrande/2;
 
     const fondo = especial ? FONDOS[cas.tipo] : `radial-gradient(circle at 35% 30%, ${info.color}, ${info.color}99)`;
-    const anillo = '3px solid rgba(255,255,255,0.75)';
+    const anillo = especial ? '3px solid rgba(255,255,255,0.75)' : `3px solid ${info.color}`;
     const glow = '0 2px 6px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.6)';
     const hayJugadores = jugadoresAqui.length > 0;
     const tamFicha = jugadoresAqui.length === 1 ? tam * 0.82 : jugadoresAqui.length === 2 ? tam * 0.42 : tam * 0.36;
+
+    // Imagen de la casilla: especiales usan su propia ilustración; las normales
+    // ciclan por las 10 películas de categoría a lo largo del recorrido.
+    let imgSrc = null;
+    if (especial && RECT_IMG_ESPECIAL[cas.tipo]) {
+      imgSrc = `images/casillas-oca/${RECT_IMG_ESPECIAL[cas.tipo]}.jpg`;
+    } else if (!especial) {
+      imgSrc = `images/casillas-oca/${RECT_IMG_CATEGORIA[rectNormalIdx % RECT_IMG_CATEGORIA.length]}.jpg`;
+      rectNormalIdx++;
+    }
 
     html += `<div style="
       position:absolute;left:${left}px;top:${top}px;width:${tam}px;height:${tam}px;z-index:${hayJugadores?3:1};
       background:${fondo};border:${anillo};border-radius:10px;box-shadow:${glow};
       display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;
     ">
-      <div style="font-size:${especial&&!hayJugadores?'1.05rem':'0'};line-height:1">${especial && !hayJugadores ? ICONOS[cas.tipo] : ''}</div>
-      ${!especial && !hayJugadores ? mascotaTag(cas.cat, 24) : ''}
-      <div style="font-size:0.4rem;font-weight:800;color:white;text-shadow:0 1px 2px rgba(0,0,0,0.8);text-align:center;line-height:1;margin-top:1px;opacity:${hayJugadores?0.55:1}">
+      ${imgSrc && !hayJugadores ? `<img src="${imgSrc}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0" onerror="this.style.display='none'">` : ''}
+      <div style="font-size:${especial&&!hayJugadores&&!imgSrc?'1.05rem':'0'};line-height:1;position:relative;z-index:1">${especial && !hayJugadores && !imgSrc ? ICONOS[cas.tipo] : ''}</div>
+      ${!especial && !hayJugadores && !imgSrc ? mascotaTag(cas.cat, 24) : ''}
+      <div style="font-size:0.4rem;font-weight:800;color:white;text-shadow:0 1px 2px rgba(0,0,0,0.9);text-align:center;line-height:1;margin-top:1px;opacity:${hayJugadores?0.55:1};position:relative;z-index:1;${especial&&imgSrc?'position:absolute;bottom:1px;left:0;right:0;background:rgba(0,0,0,0.45);padding:1px 0':''}">
         ${especial ? NOMBRES[cas.tipo] : ''}
       </div>
-      ${hayJugadores ? `<div style="position:absolute;inset:0;display:flex;flex-wrap:nowrap;gap:2px;align-items:center;justify-content:center">
+      ${hayJugadores ? `<div style="position:absolute;inset:0;display:flex;flex-wrap:nowrap;gap:2px;align-items:center;justify-content:center;z-index:2">
         ${jugadoresAqui.map(j=>`<div style="width:${tamFicha}px;height:${tamFicha}px;border-radius:50%;background:${j.color};border:2.5px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.6);overflow:hidden;flex-shrink:0">${fichaTag(j, tamFicha-4)}</div>`).join('')}
       </div>` : ''}
       <div style="font-size:0.36rem;color:rgba(255,255,255,0.55);position:absolute;top:1px;right:2px;z-index:4">${cas.id}</div>
@@ -7120,9 +7139,9 @@ function rectRenderBoard() {
       box-shadow:0 0 22px rgba(255,215,0,0.85);
       display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;
     ">
-      <div style="font-size:2rem;line-height:1">🦢🦢</div>
-      <div style="font-size:0.6rem;font-weight:800;color:#4E2600;margin-top:2px">¡META!</div>
-      ${jugadoresMeta.length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-top:3px">
+      <img src="images/casillas-oca/meta.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0" onerror="this.style.display='none'">
+      <div style="font-size:0.6rem;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.9);margin-top:2px;position:relative;z-index:1;background:rgba(0,0,0,0.4);padding:1px 6px;border-radius:6px">¡META!</div>
+      ${jugadoresMeta.length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-top:3px;position:relative;z-index:1">
         ${jugadoresMeta.map(j=>`<div style="width:28px;height:28px;border-radius:50%;background:${j.color};border:2.5px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.6);overflow:hidden">${fichaTag(j, 24)}</div>`).join('')}
       </div>` : ''}
     </div>`;
