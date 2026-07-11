@@ -528,6 +528,19 @@ body > * { position: relative; z-index: 1; }
   justify-content: space-between;
   gap: 0.8rem;
 }
+.btn-skip {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: var(--text2);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+  border-radius: 50px;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-skip:active { background: rgba(255,255,255,0.16); }
 .q-cat-badge {
   display: inline-flex;
   align-items: center;
@@ -1595,6 +1608,7 @@ body > * { position: relative; z-index: 1; }
       <div class="q-header">
         <div class="q-header-top">
           <span class="q-cat-badge" id="inf-cat-badge">–</span>
+          <button class="btn-skip" id="inf-skip-btn" onclick="infSaltarUI()" title="Saltar pregunta">⏭️ Saltar</button>
         </div>
         <div class="q-movie" id="inf-movie">–</div>
       </div>
@@ -1724,6 +1738,7 @@ body > * { position: relative; z-index: 1; }
         <div class="q-header-top">
           <span class="q-cat-badge" id="pq-cat-badge">–</span>
           <span class="q-wedge-badge hidden" id="pq-wedge-badge">🏅</span>
+          <button class="btn-skip" id="pq-skip-btn" onclick="pqSaltarUI()" title="Saltar pregunta">⏭️ Saltar</button>
         </div>
         <div class="q-movie" id="pq-movie">–</div>
       </div>
@@ -1838,6 +1853,7 @@ body > * { position: relative; z-index: 1; }
       <div class="q-header-top">
         <span class="q-cat-badge" id="q-cat-badge">–</span>
         <span class="q-wedge-badge hidden" id="q-wedge-badge">🏅 Cuña</span>
+        <button class="btn-skip" id="q-skip-btn" onclick="saltarPreguntaUI()" title="Saltar pregunta">⏭️ Saltar</button>
       </div>
       <div class="q-movie" id="q-movie">–</div>
     </div>
@@ -2970,7 +2986,7 @@ function onlineGuestRecibe(data) {
     onlineOcultarPantallaReconexion();
     onlineAplicarEstadoRemotoInf(data.estado);
   } else if (data.type === 'REPLAY') {
-    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick };
+    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick, saltarPregunta, pqSaltar };
     const fn = fns[data.fn];
     if (fn) fn(...(data.args || []));
   } else if (data.type === 'VOTOS_UPDATE') {
@@ -3017,7 +3033,7 @@ function onlineProcesarAccion(peerId, action, payload) {
   else if (action === 'elegirQuesito') pqElegirQuesito(payload.cat);
   else if (action === 'continuar') pqContinuar(payload.correcto);
   else if (action === 'relay') {
-    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick };
+    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick, saltarPregunta, pqSaltar };
     const fn = fns[payload.fn];
     if (fn) fn(...(payload.args || []));
   }
@@ -3040,6 +3056,7 @@ function onlineProcesarAccion(peerId, action, payload) {
   else if (action === 'rollAgainContinuar') onRollAgainContinue();
   // Preguntas Infinitas
   else if (action === 'infOpcion') infOpcion(payload.idx);
+  else if (action === 'infSaltar') infSaltar();
   else if (action === 'infRevelar') infRevelar();
   else if (action === 'infRevelarEscrito') infRevelarEscritoConTexto(payload.texto || '(sin respuesta)');
   else if (action === 'infSiguiente') infSiguiente();
@@ -3297,7 +3314,7 @@ function onlineActualizarBloqueoTurno() {
   }
   // Bloquear opciones/botones de la vista de pregunta si no es mi turno (compartido por todos los modos)
   ['pq-options','pq-reveal-actions','pq-judge-btns','pq-actions','pq-reader-controls','q-options','q-actions',
-   'inf-options','inf-reveal-wrap','inf-write-wrap','inf-actions'].forEach(id => {
+   'inf-options','inf-reveal-wrap','inf-write-wrap','inf-actions','q-skip-btn','inf-skip-btn','pq-skip-btn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.pointerEvents = esMio ? '' : 'none';
     if (el) el.style.opacity = esMio ? '' : '0.5';
@@ -5459,6 +5476,7 @@ function showQuestionModal(isFinal) {
   if (!q) return;
   questionAnswered = false;
   opcionesVisibles = (modoSubtipo !== 1); // en modo 1 empiezan ocultas por defecto
+  document.getElementById('q-skip-btn').style.display = '';
 
   const catInfo = CATS_INFO[q.categoria];
   const badge = document.getElementById("q-cat-badge");
@@ -5599,6 +5617,47 @@ function onOptionClick(idx) {
   correct ? sfxCorrecto() : sfxIncorrecto();
 
   onlineNotificarReplay('onOptionClick', [idx]);
+}
+
+// Saltar la pregunta (modal compartido de Oca/Circular): revela la respuesta correcta
+// sin puntuar como acierto, y deja seguir el flujo normal (botón "Continuar").
+function saltarPreguntaUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('relay', { fn: 'saltarPregunta', args: [] }); return; }
+  saltarPregunta();
+}
+
+function saltarPregunta() {
+  if (questionAnswered) return;
+  questionAnswered = true;
+  const q = game.pendingQuestion;
+
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById(`q-opt-${i}`);
+    if (!el) continue;
+    el.style.pointerEvents = "none";
+    if (i === q.correcta) el.classList.add("correct");
+  }
+  document.getElementById('q-skip-btn').style.display = 'none';
+  document.getElementById('q-reveal-actions').style.display = 'none';
+  document.getElementById('q-judge-btns').classList.remove('visible');
+  const respEl = document.getElementById('q-respuesta-correcta');
+  respEl.textContent = "✅ Respuesta correcta: " + q.opciones[q.correcta];
+  respEl.classList.add("visible");
+
+  if (q.dato) {
+    const d = document.getElementById("q-dato");
+    d.textContent = "💡 " + q.dato;
+    d.classList.add("visible");
+  }
+
+  const r = document.getElementById("q-result");
+  r.textContent = "⏭️ Pregunta saltada";
+  r.classList.add("visible", "wrong");
+  r.dataset.correcto = "0";
+  document.getElementById("q-actions").classList.add("visible");
+
+  onlineNotificarReplay('saltarPregunta', []);
 }
 
 function onQuestionContinueUI() {
@@ -6190,8 +6249,10 @@ function _tono(freq, inicio, duracion, tipo, volumen) {
   osc.start(ctx.currentTime + inicio);
   osc.stop(ctx.currentTime + inicio + duracion + 0.02);
 }
-function sfxCorrecto() { _tono(660, 0, 0.12, 'sine'); _tono(880, 0.1, 0.18, 'sine'); }
-function sfxIncorrecto() { _tono(180, 0, 0.28, 'sawtooth', 0.1); }
+// Vibración táctil corta (silenciosa si el dispositivo no la soporta, p.ej. iPhone/escritorio)
+function vibrar(patron) { try { navigator.vibrate && navigator.vibrate(patron); } catch (e) {} }
+function sfxCorrecto() { _tono(660, 0, 0.12, 'sine'); _tono(880, 0.1, 0.18, 'sine'); vibrar(35); }
+function sfxIncorrecto() { _tono(180, 0, 0.28, 'sawtooth', 0.1); vibrar([40, 60, 40]); }
 function sfxVictoria() {
   [523, 659, 784, 1047].forEach((f, i) => _tono(f, i * 0.14, 0.22, 'triangle', 0.13));
 }
@@ -6598,6 +6659,7 @@ function infMostrarPregunta() {
 // Pinta la pregunta en pantalla (usado tanto en local como al recibir el estado online)
 function infRenderPreguntaEnPantalla(q) {
   const catInfo = CATS_INFO[q.categoria];
+  document.getElementById('inf-skip-btn').style.display = '';
 
   // Cabecera
   const badge = document.getElementById("inf-cat-badge");
@@ -6687,6 +6749,43 @@ function infOpcion(idx) {
   document.getElementById("inf-actions").classList.add("visible");
   correct ? sfxCorrecto() : sfxIncorrecto();
   infUltimoResultado = { tipo: 'opcion', idx, juzgado: true, correcto: correct };
+  if (modoOnline === 'host') onlineBroadcastEstadoInf('resultado');
+}
+
+function infSaltarUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('infSaltar', {}); return; }
+  infSaltar();
+}
+
+function infSaltar() {
+  if (infRespondida) return;
+  infRespondida = true;
+  const q = infPreguntaActual;
+  infRegistrarResultado(false); // saltar no cuenta como acierto
+
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById(`inf-opt-${i}`);
+    if (!el) continue;
+    el.style.pointerEvents = "none";
+    if (i === q.correcta) el.classList.add("correct");
+  }
+  document.getElementById('inf-skip-btn').style.display = 'none';
+  document.getElementById('inf-reveal-wrap').style.display = 'none';
+  document.getElementById('inf-write-wrap').style.display = 'none';
+  document.getElementById('inf-judge-btns').classList.remove('visible');
+
+  if (q.dato) {
+    const d = document.getElementById("inf-dato");
+    d.textContent = "💡 " + q.dato;
+    d.classList.add("visible");
+  }
+
+  const r = document.getElementById("inf-result");
+  r.textContent = "⏭️ Pregunta saltada";
+  r.classList.add("visible", "wrong");
+  document.getElementById("inf-actions").classList.add("visible");
+  infUltimoResultado = { tipo: 'saltada', juzgado: true, correcto: false };
   if (modoOnline === 'host') onlineBroadcastEstadoInf('resultado');
 }
 
@@ -6912,6 +7011,16 @@ function infMostrarResultadoRemoto(resultado) {
     document.getElementById('inf-tu-respuesta').textContent = resultado.texto || '(sin respuesta)';
     document.getElementById('inf-resp-correcta-texto').textContent = q.opciones[q.correcta];
     document.getElementById('inf-write-result').style.display = 'block';
+  } else if (resultado.tipo === 'saltada') {
+    document.getElementById('inf-skip-btn').style.display = 'none';
+    document.getElementById('inf-reveal-wrap').style.display = 'none';
+    document.getElementById('inf-write-wrap').style.display = 'none';
+    for (let i = 0; i < 4; i++) {
+      const el = document.getElementById(`inf-opt-${i}`);
+      if (!el) continue;
+      el.style.pointerEvents = "none";
+      if (i === q.correcta) el.classList.add("correct");
+    }
   }
   if (q.dato) {
     const d = document.getElementById("inf-dato");
@@ -6920,7 +7029,7 @@ function infMostrarResultadoRemoto(resultado) {
   }
   if (resultado.juzgado) {
     const r = document.getElementById("inf-result");
-    r.textContent = resultado.correcto ? "✅ ¡Correcto!" : "❌ Incorrecto";
+    r.textContent = resultado.tipo === 'saltada' ? '⏭️ Pregunta saltada' : (resultado.correcto ? "✅ ¡Correcto!" : "❌ Incorrecto");
     r.classList.add("visible", resultado.correcto ? "correct" : "wrong");
     document.getElementById("inf-actions").classList.add("visible");
     document.getElementById('inf-judge-btns').classList.remove('visible');
@@ -7210,6 +7319,7 @@ function pqRenderPreguntaUI(q, cat, esCorona) {
   pqCatElegida = cat;
   pqEsCorona = esCorona;
   pqRespondida = false;
+  document.getElementById('pq-skip-btn').style.display = '';
   const catInfo = CATS_INFO[cat];
 
   // Cabecera pregunta
@@ -7364,6 +7474,36 @@ function pqOpcion(idx) {
   document.getElementById('pq-actions').dataset.correcto = correct ? '1' : '0';
   correct ? sfxCorrecto() : sfxIncorrecto();
   onlineNotificarReplay('pqOpcion', [idx]);
+}
+
+function pqSaltarUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('relay', { fn: 'pqSaltar', args: [] }); return; }
+  pqSaltar();
+}
+
+function pqSaltar() {
+  if (pqRespondida) return;
+  pqRespondida = true;
+  const q = pqGame._preguntaActual;
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById(`pq-opt-${i}`);
+    if (!el) continue;
+    el.style.pointerEvents = 'none';
+    if (i === q.correcta) el.classList.add('correct');
+  }
+  document.getElementById('pq-skip-btn').style.display = 'none';
+  document.getElementById('pq-reveal-actions').style.display = 'none';
+  const respEl = document.getElementById('pq-respuesta-correcta');
+  respEl.textContent = '✅ Respuesta correcta: ' + q.opciones[q.correcta];
+  respEl.classList.add('visible');
+  if (q.dato) { const d=document.getElementById('pq-dato'); d.textContent='💡 '+q.dato; d.classList.add('visible'); }
+  const r = document.getElementById('pq-result');
+  r.textContent = '⏭️ Pregunta saltada';
+  r.classList.add('visible', 'wrong');
+  document.getElementById('pq-actions').classList.add('visible');
+  document.getElementById('pq-actions').dataset.correcto = '0';
+  onlineNotificarReplay('pqSaltar', []);
 }
 
 function pqRevelar() {
