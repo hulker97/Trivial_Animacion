@@ -7424,7 +7424,7 @@ function rectMoverJugador(nuevaPos) {
       j.pos = destino;
       rectRenderBoard(); rectRenderTopbar();
       if (rectGame.casillas[j.pos].tipo === 'meta') { rectGame.ganador = j; rectGame.esperandoMovimiento = true; rectMostrarVictoria(j); }
-      else { rectGame.esperandoMovimiento = false; } // turno extra: no se pasa turno, como con la oca
+      else { rectGame.esperandoMovimiento = false; rectRenderTopbar(); } // turno extra: no se pasa turno, como con la oca
     }, 400);
     return;
   }
