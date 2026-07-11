@@ -1479,7 +1479,7 @@ body > * { position: relative; z-index: 1; }
   <!-- Botones -->
   <div style="display:flex;gap:1rem;justify-content:center;max-width:600px;width:100%;margin:0 auto;">
     <button class="btn btn-secondary" onclick="if(modoJuego==='infinito'){mostrarScreen('screen-infinito-modo');}else{resetearConfigJugadores();mostrarScreen('screen-modo');}">← Volver</button>
-    <button class="btn btn-primary" id="btn-iniciar" onclick="iniciarJuego()">🎲 Iniciar juego</button>
+    <button class="btn btn-primary" id="btn-iniciar" onclick="if(_btnIniciarAccion)_btnIniciarAccion()">🎲 Iniciar juego</button>
   </div>
 </div>
 
@@ -2791,14 +2791,14 @@ function onlineHostContinuarASetup() {
     infMultijugador = true;
     infSubmodo = onlineModoSubtipoElegido; // 2 (opciones), 3 (viva voz) o 4 (escribir)
     document.getElementById('btn-iniciar').textContent = '▶ Iniciar partida online';
-    document.getElementById('btn-iniciar').onclick = irASubmodoInfinitoOnline;
+    _btnIniciarAccion = irASubmodoInfinitoOnline;
   } else {
     modoJuego = 'tablero';
     modoSubtipo = onlineModoSubtipoElegido; // elegido por el anfitrión: 2 (opciones) o 3 (viva voz)
     rectModoClasico = onlineModoOcaClasicoElegido; // elegido por el anfitrión: con preguntas o Oca clásica
     setTipoTablero(onlineTipoTableroElegido); // el que haya elegido el anfitrión en el lobby
     document.getElementById('btn-iniciar').textContent = '🎲 Iniciar partida online';
-    document.getElementById('btn-iniciar').onclick = iniciarJuego;
+    _btnIniciarAccion = iniciarJuego;
   }
   document.getElementById('panel-jugadores').style.display = 'none';
   mostrarScreen('screen-setup');
@@ -3464,6 +3464,10 @@ function onlineActualizarBloqueoTurno() {
     if (el) el.style.opacity = esMio ? '' : '0.5';
   });
 }
+
+// Qué hace el botón "Iniciar juego"/"Elegir modo →" ahora mismo (se cambia según
+// el modo/pantalla, en vez de reasignar repetidamente el onclick del elemento)
+let _btnIniciarAccion = null;
 
 let numJugadores = 2;
 let jugadores = []; // { name, color, emoji }
@@ -6036,35 +6040,19 @@ const ESTUDIOS_EMOJI = {
 
 async function cargarListaPeliculas() {
   try {
-    // Paginar de 1000 en 1000 hasta obtener todos los registros
+    // Antes esto hacía su propia descarga paginada separada, EN PARALELO a la que ya
+    // hace cargarPreguntas() (la misma tabla, dos veces), compitiendo por ancho de
+    // banda y haciendo todo más lento. Ahora reutiliza el mismo banco ya cacheado
+    // (o en curso) de cargarPreguntas(), así solo hay una descarga real.
+    const todas = await cargarPreguntas({ dificultad: '' });
     peliculasPorEstudio = {};
-    let offset = 0;
-    const pageSize = 1000;
-    while (true) {
-      const url = `${SUPABASE_URL}/rest/v1/preguntas?select=pelicula,estudio&limit=${pageSize}&offset=${offset}`;
-      const res = await fetch(url, {
-        headers: {
-          "apikey": SUPABASE_KEY,
-          "Authorization": "Bearer " + SUPABASE_KEY,
-        }
-      });
-      if (!res.ok) throw new Error("Supabase error " + res.status);
-      const data = await res.json();
-      if (!data.length) break;
-
-      data.forEach(r => {
-        const est = r.estudio || 'Otros';
-        const pel = r.pelicula;
-        if (!pel) return;
-        if (!peliculasPorEstudio[est]) peliculasPorEstudio[est] = new Set();
-        peliculasPorEstudio[est].add(pel);
-      });
-
-      if (data.length < pageSize) break;
-      offset += pageSize;
-    }
-
-    // Convertir Sets a arrays ordenados
+    todas.forEach(r => {
+      const est = r.estudio || 'Otros';
+      const pel = r.pelicula;
+      if (!pel) return;
+      if (!peliculasPorEstudio[est]) peliculasPorEstudio[est] = new Set();
+      peliculasPorEstudio[est].add(pel);
+    });
     for (const est in peliculasPorEstudio) {
       peliculasPorEstudio[est] = [...peliculasPorEstudio[est]].sort((a,b) => a.localeCompare(b,'es'));
     }
@@ -6883,7 +6871,7 @@ async function irASetupInfinito() {
       document.getElementById("panel-jugadores").style.display = "none";
     }
     document.getElementById("btn-iniciar").textContent = "▶ Elegir modo →";
-    document.getElementById("btn-iniciar").onclick = irASubmodoInfinito;
+    _btnIniciarAccion = irASubmodoInfinito;
     mostrarScreen("screen-setup");
     renderSelectPerfiles();
     actualizarResumenFiltros();
@@ -6903,7 +6891,7 @@ function seleccionarSubmodo(subtipo) {
 async function irASetup() {
   document.getElementById("panel-jugadores").style.display = "";
   document.getElementById("btn-iniciar").textContent = "🎲 Iniciar juego";
-  document.getElementById("btn-iniciar").onclick = iniciarJuego;
+  _btnIniciarAccion = iniciarJuego;
   mostrarScreen("screen-setup");
   renderJugadores();
   renderSelectPerfiles();
@@ -8752,9 +8740,41 @@ function rectMostrarVictoria(j) {
 // ════════════════════════════════════════════════════════
 window.addEventListener('resize', () => { if (typeof autoAjustarPantalla === 'function') autoAjustarPantalla(); });
 
+// Manejador global de errores: si ocurre CUALQUIER fallo de JavaScript en toda la
+// página (no solo en los sitios donde ya hay try/catch), se muestra bien visible
+// en pantalla en vez de quedarse callado en la consola. Esto es temporal, para
+// diagnosticar el fallo del botón "Elegir modo" — si aparece este aviso alguna vez,
+// hacer una foto y pasarla tal cual.
+window.addEventListener('error', (e) => {
+  mostrarErrorVisible('Error de JavaScript: ' + e.message + ' (línea ' + e.lineno + ')');
+});
+window.addEventListener('unhandledrejection', (e) => {
+  mostrarErrorVisible('Error en una operación asíncrona: ' + (e.reason?.message || e.reason));
+});
+function mostrarErrorVisible(texto) {
+  console.error(texto);
+  let caja = document.getElementById('caja-error-visible');
+  if (!caja) {
+    caja = document.createElement('div');
+    caja.id = 'caja-error-visible';
+    caja.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99999;background:#B71C1C;color:white;'
+      + 'padding:0.8rem 1rem;font-family:monospace;font-size:0.75rem;max-height:40vh;overflow-y:auto;'
+      + 'box-shadow:0 -4px 20px rgba(0,0,0,0.6);white-space:pre-wrap;word-break:break-word';
+    document.body.appendChild(caja);
+  }
+  const linea = document.createElement('div');
+  linea.style.cssText = 'border-top:1px solid rgba(255,255,255,0.3);padding-top:0.4rem;margin-top:0.4rem';
+  linea.textContent = '⚠️ ' + texto;
+  caja.appendChild(linea);
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   // Esperar a que el script de Supabase esté listo
   initSupabase();
+
+  // Valor por defecto de seguridad para el botón "Iniciar juego" (se sobreescribe
+  // en cuanto se entra en cualquier flujo de configuración de partida)
+  _btnIniciarAccion = iniciarJuego;
 
   // Precargar el banco de preguntas (sin filtro de dificultad, el caso más habitual)
   // en segundo plano desde el primer segundo, aprovechando el rato que se tarda en
