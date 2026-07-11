@@ -8178,6 +8178,12 @@ window.addEventListener("DOMContentLoaded", () => {
   // Esperar a que el script de Supabase esté listo
   initSupabase();
 
+  // La pantalla de inicio ya sale "activa" directamente en el HTML (no pasa por
+  // mostrarScreen() al cargar la página), así que hay que inyectar aquí el fondo
+  // decorativo a mano para que también se vea desde el primer segundo.
+  inyectarFondoDecorativoSiHaceFalta('screen-inicio');
+  try { history.replaceState({ pantalla: 'screen-inicio' }, ''); } catch (e) {}
+
   // Si se abre desde un enlace de invitación (?join=CODIGO), ir directo a unirse
   const params = new URLSearchParams(location.search);
   const codigoInvitacion = params.get('join');
