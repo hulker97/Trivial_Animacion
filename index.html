@@ -2025,14 +2025,9 @@ body > * { position: relative; z-index: 1; }
     <button class="btn btn-secondary btn-sm" onclick="if(confirm('¿Abandonar?'))location.reload()">✕</button>
   </div>
 
-  <!-- Tablero rectangular scrollable, con controles de zoom flotantes -->
-  <div style="position:relative;flex:1;min-height:0;display:flex;width:100%">
-    <div id="rect-board" style="padding:0.3rem 0.8rem 0.3rem;overflow:auto;flex:1;min-height:0;display:flex;justify-content:center;width:100%;box-sizing:border-box"></div>
-    <div style="position:absolute;top:0.4rem;right:0.9rem;display:flex;flex-direction:column;gap:0.4rem;z-index:5">
-      <button class="btn btn-secondary btn-sm" id="rect-zoom-in-btn" onclick="rectZoomIn()" title="Acercar" style="width:36px;height:36px;padding:0;font-size:1.1rem;border-radius:50%">🔍+</button>
-      <button class="btn btn-secondary btn-sm" id="rect-zoom-out-btn" onclick="rectZoomOut()" title="Alejar" style="width:36px;height:36px;padding:0;font-size:1.1rem;border-radius:50%;opacity:0.4">🔍−</button>
-    </div>
-  </div>
+  <!-- Tablero rectangular scrollable: zoom con gestos táctiles (pellizcar / doble toque) -->
+  <div id="rect-board" style="padding:0.3rem 0.8rem 0.3rem;overflow:auto;flex:1;min-height:0;display:flex;justify-content:center;width:100%;box-sizing:border-box"
+    ontouchstart="rectBoardTouchStart(event)" ontouchmove="rectBoardTouchMove(event)" ontouchend="rectBoardTouchEnd(event)" ontouchcancel="rectBoardTouchEnd(event)"></div>
 
   <div id="rect-banner-pozo" style="display:none;text-align:center;font-weight:800;color:#4FC3F7;background:rgba(79,195,247,0.12);border:1px solid rgba(79,195,247,0.4);border-radius:12px;margin:0 0.8rem;padding:0.4rem 0.8rem;font-size:0.8rem"></div>
   <div id="rect-aviso-especial" style="display:none;text-align:center;font-weight:800;color:var(--gold);padding:0 0.8rem;font-size:0.85rem;width:100%;box-sizing:border-box"></div>
@@ -8908,23 +8903,59 @@ function generarTableroOca(n) {
 // Zoom manual del tablero de la Oca, además del ajuste automático que ya hace que
 // quepa entero: 1 = ajuste automático normal, más de 1 = ampliado (con scroll).
 let rectZoomUsuario = 1;
-const RECT_ZOOM_PASO = 0.25, RECT_ZOOM_MAX = 2.5, RECT_ZOOM_MIN = 1;
+const RECT_ZOOM_MAX = 2.5, RECT_ZOOM_MIN = 1;
 
-function rectZoomIn() {
-  rectZoomUsuario = Math.min(RECT_ZOOM_MAX, rectZoomUsuario + RECT_ZOOM_PASO);
-  rectRenderBoard();
-  actualizarBotonesZoomRect();
+// ── Zoom del tablero de la Oca con gestos táctiles: pellizcar con 2 dedos, o
+// doble toque para alternar entre normal y ampliado ──
+let _rectGestoPellizco = null; // { distancia, zoomInicial } mientras se pellizca con 2 dedos
+let _rectUltimoTap = 0;        // timestamp del último toque simple, para detectar doble toque
+
+function _rectDistanciaTouches(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
 }
-function rectZoomOut() {
-  rectZoomUsuario = Math.max(RECT_ZOOM_MIN, rectZoomUsuario - RECT_ZOOM_PASO);
-  rectRenderBoard();
-  actualizarBotonesZoomRect();
+
+function rectBoardTouchStart(e) {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    _rectGestoPellizco = { distancia: _rectDistanciaTouches(e.touches), zoomInicial: rectZoomUsuario };
+  } else if (e.touches.length === 1) {
+    const ahora = Date.now();
+    if (ahora - _rectUltimoTap < 300) {
+      // Doble toque: alterna entre el tamaño normal y uno ampliado
+      e.preventDefault();
+      rectZoomUsuario = rectZoomUsuario > 1.05 ? 1 : 2;
+      rectRenderBoard();
+      _rectUltimoTap = 0;
+    } else {
+      _rectUltimoTap = ahora;
+    }
+  }
 }
-function actualizarBotonesZoomRect() {
-  const btnMenos = document.getElementById('rect-zoom-out-btn');
-  const btnMas = document.getElementById('rect-zoom-in-btn');
-  if (btnMenos) btnMenos.style.opacity = rectZoomUsuario <= RECT_ZOOM_MIN ? '0.4' : '';
-  if (btnMas) btnMas.style.opacity = rectZoomUsuario >= RECT_ZOOM_MAX ? '0.4' : '';
+
+function rectBoardTouchMove(e) {
+  if (e.touches.length === 2 && _rectGestoPellizco) {
+    e.preventDefault(); // que no haga zoom nativo de toda la página por encima
+    const distanciaActual = _rectDistanciaTouches(e.touches);
+    const factor = distanciaActual / _rectGestoPellizco.distancia;
+    rectZoomUsuario = Math.max(RECT_ZOOM_MIN, Math.min(RECT_ZOOM_MAX, _rectGestoPellizco.zoomInicial * factor));
+    // Durante el propio gesto se actualiza solo el transform (barato), en vez de
+    // volver a renderizar el tablero entero en cada frame (sería lento y a tirones).
+    const inner = document.getElementById('rect-board-inner');
+    if (inner) {
+      const escalaAuto = parseFloat(inner.dataset.escalaAuto || '1');
+      inner.style.transform = `scale(${escalaAuto * rectZoomUsuario})`;
+      if (inner.parentElement) inner.parentElement.style.overflow = rectZoomUsuario > 1.001 ? 'visible' : 'hidden';
+    }
+  }
+}
+
+function rectBoardTouchEnd(e) {
+  if (e.touches.length < 2 && _rectGestoPellizco) {
+    _rectGestoPellizco = null;
+    rectRenderBoard(); // al soltar, se recalcula del todo para que el scroll quede bien
+  }
 }
 
 function rectRenderBoard() {
@@ -9076,7 +9107,7 @@ function rectRenderBoard() {
   const escala = escalaAuto * rectZoomUsuario;
   const zoomActivo = rectZoomUsuario > 1.001;
   board.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:flex-start;justify-content:center;overflow:${zoomActivo ? 'visible' : 'hidden'}">
-    <div style="width:${anchoTotal}px;height:${altoTotal}px;transform:scale(${escala});transform-origin:top center;flex-shrink:0">
+    <div id="rect-board-inner" data-escala-auto="${escalaAuto}" style="width:${anchoTotal}px;height:${altoTotal}px;transform:scale(${escala});transform-origin:top center;flex-shrink:0">
       ${html}
     </div>
   </div>`;
