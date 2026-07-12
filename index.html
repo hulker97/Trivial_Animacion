@@ -2032,7 +2032,7 @@ body > * { position: relative; z-index: 1; }
   <div id="rect-aviso-especial" style="display:none;text-align:center;font-weight:800;color:var(--gold);padding:0 0.8rem;font-size:0.85rem;width:100%;box-sizing:border-box"></div>
   <div id="rect-dado-inline-wrap" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:0.15rem;padding:0;margin:0;width:100%;box-sizing:border-box">
     <div id="rect-dado-result" style="width:82px;height:82px;background:linear-gradient(150deg,#ffffff 0%,#f2f2f2 55%,#dcdcdc 100%);border-radius:20px;box-shadow:0 6px 20px rgba(0,0,0,0.65),0 0 0 3px rgba(255,215,0,0.55),0 0 20px rgba(255,215,0,0.25),inset 0 2px 4px rgba(255,255,255,0.9);transition:transform 0.12s"></div>
-    <div id="rect-dado-hint" style="font-size:0.75rem;color:var(--text2);font-weight:700;text-align:center;line-height:1.2"></div>
+    <div id="rect-dado-hint" style="font-size:0.75rem;color:var(--text2);font-weight:700;text-align:center;line-height:1.2;min-height:2.2em;display:flex;align-items:center;justify-content:center;max-width:220px"></div>
   </div>
   <div style="display:flex;gap:0.8rem;align-items:center;justify-content:center;padding:0.35rem 0.8rem 0.6rem;width:100%;box-sizing:border-box">
     <button class="btn btn-primary" id="rect-dado-btn" onclick="rectTirarDadoUI()" style="font-size:1.1rem;max-width:280px;width:100%">🎲 Tirar dado</button>
@@ -7351,7 +7351,15 @@ const PANTALLAS_AUTOAJUSTABLES = new Set([
   // screen-filtros y screen-logros quedan fuera a propósito: son listas largas pensadas para hacer scroll.
 ]);
 
+// Mientras el dado está girando se pausan los recálculos automáticos de tamaño
+// (cada uno resetea brevemente el zoom a 100% antes de volver a encoger, y si esto
+// pasa 12 veces seguidas muy rápido -una por cada cara que muestra el dado al girar-
+// se ve como un parpadeo/franja de pantalla a tamaño completo). Solo se recalcula
+// una vez al empezar a girar y otra vez al pararse.
+let _autoAjustePausado = false;
+
 function autoAjustarPantalla() {
+  if (_autoAjustePausado) return;
   requestAnimationFrame(() => {
     const screen = document.querySelector('.screen.active');
     if (!screen || !PANTALLAS_AUTOAJUSTABLES.has(screen.id)) return;
@@ -8744,7 +8752,7 @@ function mostrarVictoriaPQ(j) { pqMostrarVictoria(j); }
 //  MODO TABLERO RECTANGULAR
 // ════════════════════════════════════════════════════════
 const RECT_COLS = 5;     // 5 casillas por fila
-const RECT_TOTAL = 64;   // 64 casillas: rellena el rectángulo 8x8 entero, sin huecos
+const RECT_TOTAL = 66;   // 66 casillas: la espiral rectangular de 6x11 no deja huecos, todas jugables
 const RECT_CATS = ['heroes','historia','villanos','secundarios','lugares','mundo'];
 
 // Posiciones clásicas del juego de la Oca (1-indexadas en la tradición, aquí ya en 0-indexado)
@@ -8757,7 +8765,7 @@ const RECT_LABERINTO_DESTINO = 29;
 const RECT_CARCEL = 51;
 const RECT_CALAVERA = 57;
 const RECT_DADOS = { 25: 52, 52: 25 };
-const RECT_META = 63;
+const RECT_META = 65;
 
 let rectGame = null;
 
@@ -8917,7 +8925,12 @@ function rectRenderBoard() {
     inicio:'salida', oca:'oca', puente:'puente', posada:'posada', pozo:'pozo',
     laberinto:'laberinto', carcel:'carcel', calavera:'calavera', dados:'dados', meta:'meta',
   };
-  const RECT_IMG_CATEGORIA = ['frozen','bella_bestia','sirenita','increibles','nemo','mulan','ratatouille','ice_age','shrek2','peter_pan'];
+  // Antes las casillas "normales" (con solo el icono genérico de la oca) ciclaban por
+  // solo 10 imágenes, repitiéndose muchas veces a lo largo del tablero. Ahora se
+  // reutilizan también las ~43 imágenes ya creadas para el tablero Circular (menos
+  // las 10 que ya usan las casillas especiales), así que casi ninguna casilla repite imagen.
+  const RECT_IMG_CATEGORIA = [...new Set(Object.values(IMG_PELI_REAL_CIRCULAR).map(p => p.replace('images/casillas-oca/', '').replace('.jpg', '')))]
+    .filter(nombre => !Object.values(RECT_IMG_ESPECIAL).includes(nombre));
   let rectNormalIdx = 0;
 
   const marco = 22;
@@ -9159,7 +9172,13 @@ function rectMostrarAnimacionDado(valor, jugador, alConfirmar) {
   // producirse cambios), cada tirada del dado dispara tantos cambios seguidos
   // que nunca llega a tener un hueco para recalcular hasta que el dado se para,
   // dejando el tablero con el tamaño a medias mientras gira.
+  _autoAjustePausado = false;
   autoAjustarPantalla();
+  // A partir de aquí se pausa: cada cara nueva del dado (12 veces mientras gira)
+  // dispara un cambio en el DOM que, si no se pausara, recalcularía el tamaño
+  // una y otra vez —y cada recálculo resetea el zoom a 100% un instante antes de
+  // volver a encoger—, viéndose como parpadeos/franjas mientras el dado gira.
+  _autoAjustePausado = true;
   let tick = 0;
   if (_rectAnimDadoInterval) clearInterval(_rectAnimDadoInterval);
   _rectAnimDadoInterval = setInterval(() => {
@@ -9176,6 +9195,8 @@ function rectMostrarAnimacionDado(valor, jugador, alConfirmar) {
       // La ficha del jugador activo ya sale destacada y tocable en el propio tablero
       // (lo gestiona rectRenderBoard() mientras rectGame.dadoPendiente esté activo)
       rectRenderBoard();
+      _autoAjustePausado = false;
+      autoAjustarPantalla();
     }
   }, 85);
 }
@@ -9187,6 +9208,7 @@ function rectMostrarEsperaDado(valor, jugador) {
   const hint = document.getElementById('rect-dado-hint');
   if (wrap) wrap.style.display = 'flex';
   clearInterval(_rectAnimDadoInterval);
+  _autoAjustePausado = false;
   if (cubo) {
     cubo.classList.remove('rect-dado-girando');
     cubo.classList.add('rect-dado-listo');
@@ -9204,6 +9226,7 @@ function rectOcultarDadoInline() {
   const hint = document.getElementById('rect-dado-hint');
   if (hint) hint.textContent = '';
   clearInterval(_rectAnimDadoInterval);
+  _autoAjustePausado = false;
 }
 
 // Anima la ficha avanzando de casilla en casilla (en vez de saltar directa al destino),
@@ -9395,7 +9418,7 @@ function rectMostrarVictoria(j) {
   // Unificado con Preguntados/Circular: misma pantalla con clasificación,
   // confetti, y "Revancha" que NO desconecta la partida online.
   // La Oca no usa quesitos, así que pasamos la posición real de cada jugador
-  // para que la clasificación final muestre "casilla X/63" en vez de una fila vacía.
+  // para que la clasificación final muestre "casilla X/65" en vez de una fila vacía.
   pqGame = { jugadores: rectGame.jugadores.map(p => ({
     name: p.name, emoji: p.emoji, color: p.color, fichaId: p.fichaId,
     quesitos: { heroes:false, historia:false, villanos:false, secundarios:false, lugares:false, mundo:false },
