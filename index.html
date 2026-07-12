@@ -1175,7 +1175,16 @@ body > * { position: relative; z-index: 1; }
         <div class="modo-card-desc">Un móvil de anfitrión · Los demás se unen desde el suyo</div>
       </div>
     </div>
+    <div class="modo-card" onclick="iniciarDuelo()" style="border-color:rgba(255,109,0,0.35)">
+      <div class="modo-card-icon">⚔️</div>
+      <div class="modo-card-body">
+        <div class="modo-card-title" style="color:#FF6D00">Duelo rápido</div>
+        <div class="modo-card-desc">2 jugadores, las mismas 10 preguntas, gana quien acierte más</div>
+      </div>
+    </div>
   </div>
+
+  <button class="btn btn-secondary btn-sm" onclick="mostrarPantallaLogros()" style="margin-top:1rem;position:relative;z-index:1">🏆 Ver logros</button>
 </div>
 
 <!-- ══════════════════════════════════════════════════
@@ -1539,6 +1548,100 @@ body > * { position: relative; z-index: 1; }
 <!-- ══════════════════════════════════════════════════
      PANTALLA: VICTORIA 🏆
 ══════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════
+     PANTALLA: LOGROS
+══════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════
+     DUELO RÁPIDO: configuración
+══════════════════════════════════════════════════ -->
+<div id="screen-duelo-setup" class="screen">
+  <div style="width:100%;max-width:440px;margin:0 auto;padding:1.5rem 1rem">
+    <div class="logo-wrap" style="margin-bottom:1.2rem">
+      <div class="logo-icon" style="font-size:2.5rem">⚔️</div>
+      <div class="logo-title" style="font-size:1.8rem">Duelo rápido</div>
+      <div class="logo-sub">Las mismas 10 preguntas para los dos. Gana quien acierte más.</div>
+    </div>
+    <div class="panel">
+      <div class="jugador-row">
+        <div class="jugador-num" style="background:#FF4081;color:#fff">1</div>
+        <input type="text" id="duelo-nombre-1" placeholder="Jugador 1" maxlength="16">
+      </div>
+      <div class="jugador-row">
+        <div class="jugador-num" style="background:#40C4FF;color:#fff">2</div>
+        <input type="text" id="duelo-nombre-2" placeholder="Jugador 2" maxlength="16">
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:1rem" onclick="dueloEmpezar()">⚔️ Empezar duelo</button>
+    <button class="btn btn-secondary" style="width:100%;margin-top:0.6rem" onclick="mostrarScreen('screen-inicio')">← Volver</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     DUELO RÁPIDO: pasar el móvil entre turnos
+══════════════════════════════════════════════════ -->
+<div id="screen-duelo-pasar" class="screen">
+  <div style="width:100%;max-width:440px;margin:0 auto;padding:1.5rem 1rem;text-align:center">
+    <div style="font-size:3rem;margin-bottom:0.5rem">📱➡️</div>
+    <div style="font-family:'Fredoka One',cursive;font-size:1.5rem;color:var(--gold);margin-bottom:0.5rem" id="duelo-pasar-titulo">Pásale el móvil a...</div>
+    <div style="color:var(--text2);font-weight:700;margin-bottom:1.5rem" id="duelo-pasar-desc">
+      Las mismas 10 preguntas te esperan. ¡No hagas trampa mirando!
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="dueloConfirmarListo()">✅ Listo, ¡a jugar!</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     DUELO RÁPIDO: pregunta
+══════════════════════════════════════════════════ -->
+<div id="screen-duelo-juego" class="screen">
+  <div style="width:100%;max-width:520px;margin:0 auto;padding:1rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
+      <div style="font-weight:800;color:var(--gold)" id="duelo-jugador-actual">Jugador 1</div>
+      <div style="font-size:0.85rem;color:var(--text2);font-weight:700">Pregunta <span id="duelo-contador">1</span>/10</div>
+    </div>
+    <div class="question-modal" style="position:relative;margin:0;max-height:none">
+      <div class="q-header">
+        <div class="q-header-top">
+          <span class="q-cat-badge" id="duelo-cat-badge">–</span>
+        </div>
+        <div class="q-movie" id="duelo-movie">–</div>
+      </div>
+      <div class="q-text" id="duelo-texto">–</div>
+      <div class="q-options" id="duelo-options"></div>
+      <div class="q-dato" id="duelo-dato"></div>
+      <div class="q-result" id="duelo-result"></div>
+      <div class="q-actions" id="duelo-actions">
+        <button class="btn btn-primary" onclick="dueloSiguiente()">Siguiente →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     DUELO RÁPIDO: resultado final
+══════════════════════════════════════════════════ -->
+<div id="screen-duelo-resultado" class="screen">
+  <div style="width:100%;max-width:440px;margin:0 auto;padding:1.5rem 1rem;text-align:center">
+    <div style="font-size:3rem;margin-bottom:0.5rem">🏆</div>
+    <div style="font-family:'Fredoka One',cursive;font-size:1.6rem;color:var(--gold);margin-bottom:1.2rem" id="duelo-ganador-titulo">¡Resultado!</div>
+    <div id="duelo-resultado-marcador" style="display:flex;justify-content:space-around;gap:1rem;margin-bottom:1.5rem"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="iniciarDuelo()">⚔️ Otro duelo</button>
+    <button class="btn btn-secondary" style="width:100%;margin-top:0.6rem" onclick="mostrarScreen('screen-inicio')">🏠 Ir al inicio</button>
+  </div>
+</div>
+
+<div id="screen-logros" class="screen" style="overflow-y:auto">
+  <div style="width:100%;max-width:480px;margin:0 auto;padding:1.5rem 1rem">
+    <div class="logo-wrap" style="margin-bottom:1.2rem">
+      <div class="logo-icon" style="font-size:2.5rem">🏆</div>
+      <div class="logo-title" style="font-size:1.8rem">Logros</div>
+      <div class="logo-sub">Tu progreso acumulado en este dispositivo</div>
+    </div>
+    <div id="logros-lista"></div>
+    <button class="btn btn-secondary" style="margin-top:1.5rem;width:100%" onclick="mostrarScreen('screen-inicio')">← Volver</button>
+  </div>
+</div>
+
 <div id="screen-fin" class="screen" style="overflow-y:auto">
   <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:2rem 1rem;text-align:center">
 
@@ -1701,6 +1804,8 @@ body > * { position: relative; z-index: 1; }
           <span class="cronometro-display" id="inf-cronometro" style="display:none">⏱️ 15</span>
           <span class="racha-badge" id="inf-racha-badge" style="display:none">🔥 0</span>
           <button class="btn-skip" id="inf-5050-btn" onclick="usar5050Infinitas()" title="Quitar 2 opciones incorrectas">🎯 50/50</button>
+          <button class="btn-skip" id="inf-tiempo-btn" onclick="usarComodinTiempo()" title="Añade 10 segundos" style="display:none">⏰ +10s</button>
+          <button class="btn-skip" id="inf-cambiar-btn" onclick="usarCambiarInfinitasUI()" title="Cambia esta pregunta por otra, sin penalización">🔄 Cambiar</button>
           <button class="btn-skip" id="inf-skip-btn" onclick="infSaltarUI()" title="Saltar pregunta">⏭️ Saltar</button>
         </div>
         <div class="q-movie" id="inf-movie">–</div>
@@ -1836,6 +1941,8 @@ body > * { position: relative; z-index: 1; }
           <span class="cronometro-display" id="pq-cronometro" style="display:none">⏱️ 15</span>
           <span class="racha-badge" id="pq-racha-badge" style="display:none">🔥 0</span>
           <button class="btn-skip" id="pq-5050-btn" onclick="usar5050Pq()" title="Quitar 2 opciones incorrectas">🎯 50/50</button>
+          <button class="btn-skip" id="pq-tiempo-btn" onclick="usarComodinTiempo()" title="Añade 10 segundos" style="display:none">⏰ +10s</button>
+          <button class="btn-skip" id="pq-cambiar-btn" onclick="usarCambiarPqUI()" title="Cambia esta pregunta por otra, sin penalización">🔄 Cambiar</button>
           <button class="btn-skip" id="pq-skip-btn" onclick="pqSaltarUI()" title="Saltar pregunta">⏭️ Saltar</button>
         </div>
         <div class="q-movie" id="pq-movie">–</div>
@@ -1956,6 +2063,8 @@ body > * { position: relative; z-index: 1; }
         <span class="cronometro-display" id="q-cronometro" style="display:none">⏱️ 15</span>
         <span class="racha-badge" id="q-racha-badge" style="display:none">🔥 0</span>
         <button class="btn-skip" id="q-5050-btn" onclick="usar5050Compartido()" title="Quitar 2 opciones incorrectas">🎯 50/50</button>
+        <button class="btn-skip" id="q-tiempo-btn" onclick="usarComodinTiempo()" title="Añade 10 segundos" style="display:none">⏰ +10s</button>
+        <button class="btn-skip" id="q-cambiar-btn" onclick="usarCambiarCompartidoUI()" title="Cambia esta pregunta por otra, sin penalización">🔄 Cambiar</button>
         <button class="btn-skip" id="q-skip-btn" onclick="saltarPreguntaUI()" title="Saltar pregunta">⏭️ Saltar</button>
       </div>
       <div class="q-movie" id="q-movie">–</div>
@@ -3139,7 +3248,7 @@ function onlineGuestRecibe(data) {
     onlineOcultarPantallaReconexion();
     onlineAplicarEstadoRemotoInf(data.estado);
   } else if (data.type === 'REPLAY') {
-    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick, saltarPregunta, pqSaltar };
+    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick, saltarPregunta, pqSaltar, usarCambiarCompartido, usarCambiarPq };
     const fn = fns[data.fn];
     if (fn) fn(...(data.args || []));
   } else if (data.type === 'VOTOS_UPDATE') {
@@ -3190,7 +3299,7 @@ function onlineProcesarAccion(peerId, action, payload) {
   else if (action === 'elegirQuesito') pqElegirQuesito(payload.cat);
   else if (action === 'continuar') pqContinuar(payload.correcto);
   else if (action === 'relay') {
-    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick, saltarPregunta, pqSaltar };
+    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick, saltarPregunta, pqSaltar, usarCambiarCompartido, usarCambiarPq };
     const fn = fns[payload.fn];
     if (fn) fn(...(payload.args || []));
   }
@@ -3214,6 +3323,7 @@ function onlineProcesarAccion(peerId, action, payload) {
   // Preguntas Infinitas
   else if (action === 'infOpcion') infOpcion(payload.idx);
   else if (action === 'infSaltar') infSaltar(payload.mensaje);
+  else if (action === 'infCambiar') usarCambiarInfinitas();
   else if (action === 'infRevelar') infRevelar();
   else if (action === 'infRevelarEscrito') infRevelarEscritoConTexto(payload.texto || '(sin respuesta)');
   else if (action === 'infSiguiente') infSiguiente();
@@ -3472,7 +3582,8 @@ function onlineActualizarBloqueoTurno() {
   // Bloquear opciones/botones de la vista de pregunta si no es mi turno (compartido por todos los modos)
   ['pq-options','pq-reveal-actions','pq-judge-btns','pq-actions','pq-reader-controls','q-options','q-actions',
    'inf-options','inf-reveal-wrap','inf-write-wrap','inf-actions','q-skip-btn','inf-skip-btn','pq-skip-btn',
-   'q-5050-btn','inf-5050-btn','pq-5050-btn'].forEach(id => {
+   'q-5050-btn','inf-5050-btn','pq-5050-btn','q-tiempo-btn','inf-tiempo-btn','pq-tiempo-btn',
+   'q-cambiar-btn','inf-cambiar-btn','pq-cambiar-btn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.pointerEvents = esMio ? '' : 'none';
     if (el) el.style.opacity = esMio ? '' : '0.5';
@@ -5641,6 +5752,7 @@ function showQuestionModal(isFinal) {
   document.getElementById('q-skip-btn').style.display = '';
   document.getElementById('q-5050-btn').style.display = modoSubtipo === 2 ? '' : 'none';
   comodin5050ResetPorPregunta();
+  comodinCambiarResetPorPregunta();
   detenerCronometro();
   if (onlineEsMiTurno()) iniciarCronometro('q-cronometro', _porTiempoCompartido);
   else document.getElementById('q-cronometro').style.display = 'none';
@@ -5749,6 +5861,7 @@ function juzgarRespuesta(correcto) {
   document.getElementById("q-actions").classList.add("visible");
   // Guardamos el resultado para onQuestionContinue
   document.getElementById("q-result").dataset.correcto = correcto ? "1" : "0";
+  registrarStatsCategoria(game.pendingQuestion?.categoria, correcto);
   correcto ? sfxCorrecto() : sfxIncorrecto();
 }
 
@@ -5781,6 +5894,7 @@ function onOptionClick(idx) {
   r.textContent = correct ? "✅ ¡Correcto!" : "❌ Incorrecto";
   r.classList.add("visible", correct ? "correct" : "wrong");
   document.getElementById("q-actions").classList.add("visible");
+  registrarStatsCategoria(q.categoria, correct);
   correct ? sfxCorrecto() : sfxIncorrecto();
 
   onlineNotificarReplay('onOptionClick', [idx]);
@@ -6489,6 +6603,106 @@ function _sincronizarMusicaFondo(esPantallaDeMenu) {
 let rachaActual = 0;
 let rachaMejor = parseInt(localStorage.getItem('trivial_racha_mejor') || '0', 10);
 
+// ── Sistema de logros/medallas (acumulado entre partidas, guardado en localStorage) ──
+const LOGROS_DEFS = [
+  { id: 'racha5',            icono: '🔥', nombre: 'En racha',        desc: 'Consigue 5 aciertos seguidos' },
+  { id: 'racha10',           icono: '⚡', nombre: 'Imparable',       desc: 'Consigue 10 aciertos seguidos' },
+  { id: 'primera_victoria',  icono: '🏆', nombre: 'Primera victoria', desc: 'Gana tu primera partida' },
+  { id: 'explorador',        icono: '🗺️', nombre: 'Explorador',      desc: 'Juega a los 4 modos: Preguntados, Oca, Circular e Infinitas' },
+  { id: 'perfeccionista',    icono: '💯', nombre: 'Perfeccionista',   desc: 'Termina una partida con el 100% de acierto (mín. 10 preguntas)' },
+  { id: 'maraton',           icono: '🏃', nombre: 'Maratonista',      desc: 'Responde 100 preguntas en total' },
+  { id: 'diez_partidas',     icono: '🎮', nombre: 'Habitual',         desc: 'Juega 10 partidas' },
+];
+let logrosDesbloqueados = new Set();
+try { logrosDesbloqueados = new Set(JSON.parse(localStorage.getItem('trivial_logros') || '[]')); } catch(e) {}
+
+let statsGlobales = { preguntasTotales: 0, partidasJugadas: 0, victorias: 0, modosJugados: [] };
+try { statsGlobales = Object.assign(statsGlobales, JSON.parse(localStorage.getItem('trivial_stats_globales') || '{}')); } catch(e) {}
+function _guardarStatsGlobales() {
+  try { localStorage.setItem('trivial_stats_globales', JSON.stringify(statsGlobales)); } catch(e) {}
+}
+
+function desbloquearLogro(id) {
+  if (logrosDesbloqueados.has(id)) return;
+  logrosDesbloqueados.add(id);
+  try { localStorage.setItem('trivial_logros', JSON.stringify([...logrosDesbloqueados])); } catch(e) {}
+  const def = LOGROS_DEFS.find(l => l.id === id);
+  if (def) mostrarToast(`${def.icono} ¡Logro desbloqueado! ${def.nombre}`);
+}
+
+// Se llama cada vez que arranca una partida nueva (cualquier modo)
+function registrarInicioPartida(modo) {
+  statsGlobales.partidasJugadas++;
+  if (!statsGlobales.modosJugados.includes(modo)) statsGlobales.modosJugados.push(modo);
+  _guardarStatsGlobales();
+  if (statsGlobales.modosJugados.length >= 4) desbloquearLogro('explorador');
+  if (statsGlobales.partidasJugadas >= 10) desbloquearLogro('diez_partidas');
+}
+
+// Se llama al terminar cualquier partida con ganador (pq/rect/circular)
+function registrarVictoriaPartida() {
+  statsGlobales.victorias++;
+  _guardarStatsGlobales();
+  desbloquearLogro('primera_victoria');
+  const total = statsPartida.correctas + statsPartida.incorrectas;
+  if (total >= 10 && statsPartida.incorrectas === 0) desbloquearLogro('perfeccionista');
+}
+
+// ── Estadísticas de acierto por categoría, acumuladas entre partidas ──
+let statsCategorias = {};
+try { statsCategorias = JSON.parse(localStorage.getItem('trivial_stats_categorias') || '{}'); } catch(e) {}
+function registrarStatsCategoria(categoria, correcto) {
+  if (!categoria) return;
+  if (!statsCategorias[categoria]) statsCategorias[categoria] = { correctas: 0, incorrectas: 0 };
+  if (correcto) statsCategorias[categoria].correctas++; else statsCategorias[categoria].incorrectas++;
+  try { localStorage.setItem('trivial_stats_categorias', JSON.stringify(statsCategorias)); } catch(e) {}
+}
+
+function mostrarPantallaLogros() {
+  const cont = document.getElementById('logros-lista');
+  const desbloqueadosHTML = LOGROS_DEFS.map(l => {
+    const conseguido = logrosDesbloqueados.has(l.id);
+    return `<div style="display:flex;align-items:center;gap:0.8rem;background:rgba(255,255,255,${conseguido?'0.08':'0.03'});border:1px solid ${conseguido?'var(--gold)':'rgba(255,255,255,0.1)'};border-radius:12px;padding:0.7rem 0.9rem;opacity:${conseguido?'1':'0.5'}">
+      <div style="font-size:1.6rem">${conseguido ? l.icono : '🔒'}</div>
+      <div>
+        <div style="font-weight:800;color:${conseguido?'var(--gold)':'var(--text2)'};font-size:0.9rem">${l.nombre}</div>
+        <div style="font-size:0.75rem;color:var(--text2)">${l.desc}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const categoriasHTML = Object.keys(CATS_INFO).map(cat => {
+    const s = statsCategorias[cat] || { correctas: 0, incorrectas: 0 };
+    const total = s.correctas + s.incorrectas;
+    const pct = total > 0 ? Math.round((s.correctas / total) * 100) : 0;
+    const info = CATS_INFO[cat];
+    return `<div style="margin-bottom:0.6rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;font-weight:700;margin-bottom:0.2rem">
+        <span>${mascotaTag(cat, 18, 'border-radius:50%;vertical-align:middle;margin-right:0.3rem')}${info.nombre}</span>
+        <span style="color:var(--text2)">${total > 0 ? pct + '% (' + total + ')' : 'sin datos'}</span>
+      </div>
+      <div style="background:rgba(255,255,255,0.08);border-radius:20px;height:8px;overflow:hidden">
+        <div style="background:${info.color};height:100%;width:${pct}%;border-radius:20px"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  cont.innerHTML = `
+    <div style="display:flex;justify-content:space-around;text-align:center;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.6rem">
+      <div><div style="font-size:1.3rem;font-weight:800;color:var(--gold)">${statsGlobales.partidasJugadas}</div><div style="font-size:0.7rem;color:var(--text2);font-weight:700">partidas</div></div>
+      <div><div style="font-size:1.3rem;font-weight:800;color:#69F0AE">${statsGlobales.victorias}</div><div style="font-size:0.7rem;color:var(--text2);font-weight:700">victorias</div></div>
+      <div><div style="font-size:1.3rem;font-weight:800;color:#FF9800">${statsGlobales.preguntasTotales}</div><div style="font-size:0.7rem;color:var(--text2);font-weight:700">preguntas</div></div>
+      <div><div style="font-size:1.3rem;font-weight:800;color:#FF6D00">🔥${rachaMejor}</div><div style="font-size:0.7rem;color:var(--text2);font-weight:700">mejor racha</div></div>
+    </div>
+    <div class="panel" style="margin-bottom:1.2rem">
+      <div style="font-family:'Fredoka One',cursive;color:var(--gold);font-size:0.9rem;margin-bottom:0.6rem">📊 Acierto por categoría</div>
+      ${categoriasHTML}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.6rem">${desbloqueadosHTML}</div>
+  `;
+  mostrarScreen('screen-logros');
+}
+
 function actualizarRachaUI(esHito) {
   ['q-racha-badge', 'pq-racha-badge', 'inf-racha-badge'].forEach(id => {
     const el = document.getElementById(id);
@@ -6501,6 +6715,8 @@ function actualizarRachaUI(esHito) {
       el.style.display = 'none';
     }
   });
+  if (rachaActual === 5) desbloquearLogro('racha5');
+  if (rachaActual === 10) desbloquearLogro('racha10');
 }
 
 // Estadísticas de la partida actual (se resetean en cada partida nueva), para
@@ -6510,6 +6726,9 @@ let statsPartida = { correctas: 0, incorrectas: 0, rachaMejorPartida: 0 };
 function sfxCorrecto() {
   _tono(660, 0, 0.12, 'sine'); _tono(880, 0.1, 0.18, 'sine'); vibrar(35);
   detenerCronometro();
+  statsGlobales.preguntasTotales++;
+  _guardarStatsGlobales();
+  if (statsGlobales.preguntasTotales >= 100) desbloquearLogro('maraton');
   statsPartida.correctas++;
   rachaActual++;
   if (rachaActual > statsPartida.rachaMejorPartida) statsPartida.rachaMejorPartida = rachaActual;
@@ -6528,6 +6747,9 @@ function sfxIncorrecto() {
   _tono(180, 0, 0.28, 'sawtooth', 0.1); vibrar([40, 60, 40]);
   detenerCronometro();
   statsPartida.incorrectas++;
+  statsGlobales.preguntasTotales++;
+  _guardarStatsGlobales();
+  if (statsGlobales.preguntasTotales >= 100) desbloquearLogro('maraton');
   rachaActual = 0;
   actualizarRachaUI(false);
 }
@@ -6557,12 +6779,13 @@ function onCronometroDuracionChange() {
 function iniciarCronometro(displayId, onTimeout) {
   detenerCronometro();
   const el = document.getElementById(displayId);
-  if (!cronometroActivo) { if (el) el.style.display = 'none'; return; }
+  if (!cronometroActivo) { if (el) el.style.display = 'none'; actualizarComodinTiempoUI(); return; }
   _cronometroRestante = cronometroSegundos;
   if (!el) return;
   el.style.display = 'inline-flex';
   el.classList.remove('cronometro-urgente');
   el.textContent = `⏱️ ${_cronometroRestante}`;
+  actualizarComodinTiempoUI();
   _cronometroIntervalo = setInterval(() => {
     _cronometroRestante--;
     if (el) {
@@ -6577,6 +6800,7 @@ function iniciarCronometro(displayId, onTimeout) {
 }
 function detenerCronometro() {
   if (_cronometroIntervalo) { clearInterval(_cronometroIntervalo); _cronometroIntervalo = null; }
+  actualizarComodinTiempoUI();
 }
 
 function comodin5050Reset() {
@@ -6638,6 +6862,296 @@ function usar5050Infinitas() {
   _aplicar5050('inf-opt', q.correcta);
 }
 
+// ── Comodín "añadir tiempo": +10s al cronómetro (solo tiene sentido si está activado) ──
+const COMODIN_TIEMPO_USOS_INICIALES = 2;
+let comodinTiempoRestantes = COMODIN_TIEMPO_USOS_INICIALES;
+
+function comodinTiempoReset() {
+  comodinTiempoRestantes = COMODIN_TIEMPO_USOS_INICIALES;
+  actualizarComodinTiempoUI();
+}
+
+function actualizarComodinTiempoUI() {
+  ['q-tiempo-btn', 'pq-tiempo-btn', 'inf-tiempo-btn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = cronometroActivo ? '' : 'none';
+    el.textContent = `⏰ +10s (${comodinTiempoRestantes})`;
+    const disponible = comodinTiempoRestantes > 0 && _cronometroIntervalo !== null;
+    el.style.opacity = disponible ? '' : '0.35';
+    el.style.pointerEvents = disponible ? '' : 'none';
+  });
+}
+
+function usarComodinTiempo() {
+  if (comodinTiempoRestantes <= 0 || !_cronometroIntervalo) return;
+  comodinTiempoRestantes--;
+  _cronometroRestante += 10;
+  ['q-cronometro', 'pq-cronometro', 'inf-cronometro'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.style.display !== 'none') {
+      el.textContent = `⏱️ ${_cronometroRestante}`;
+      el.classList.toggle('cronometro-urgente', _cronometroRestante <= 5);
+    }
+  });
+  actualizarComodinTiempoUI();
+  vibrar(20);
+}
+
+// ── Comodín "cambiar pregunta": cambia la pregunta actual por otra de la misma
+// categoría, SIN penalización (no cuenta como acierto ni como fallo). Sí necesita
+// sincronizarse online, porque cambia una pregunta que ven todos los jugadores.
+const COMODIN_CAMBIAR_USOS_INICIALES = 2;
+let comodinCambiarRestantes = COMODIN_CAMBIAR_USOS_INICIALES;
+let comodinCambiarUsadoEnPreguntaActual = false;
+
+function comodinCambiarReset() {
+  comodinCambiarRestantes = COMODIN_CAMBIAR_USOS_INICIALES;
+  actualizarComodinCambiarUI();
+}
+function comodinCambiarResetPorPregunta() {
+  comodinCambiarUsadoEnPreguntaActual = false;
+  actualizarComodinCambiarUI();
+}
+function actualizarComodinCambiarUI() {
+  ['q-cambiar-btn', 'pq-cambiar-btn', 'inf-cambiar-btn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = `🔄 Cambiar (${comodinCambiarRestantes})`;
+    const disponible = comodinCambiarRestantes > 0 && !comodinCambiarUsadoEnPreguntaActual;
+    el.style.opacity = disponible ? '' : '0.35';
+    el.style.pointerEvents = disponible ? '' : 'none';
+  });
+}
+
+// Modal compartido (Oca/Circular)
+function usarCambiarCompartidoUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('relay', { fn: 'usarCambiarCompartido', args: [] }); return; }
+  usarCambiarCompartido();
+}
+function usarCambiarCompartido() {
+  if (comodinCambiarRestantes <= 0 || comodinCambiarUsadoEnPreguntaActual || questionAnswered) return;
+  if (!game || !game.pendingQuestion) return;
+  const actual = game.pendingQuestion;
+  const cat = actual.categoria;
+  const modo = onlineModoActivo();
+  let q, pool, usadasSet;
+  if (modo === 'rectangular') { pool = rectGame.pool; usadasSet = rectGame.usadas; }
+  else if (modo === 'circular') { pool = game.pool; usadasSet = game.usedIds; }
+  else return;
+  const disponibles = pool.filter(qq => qq.categoria === cat && !usadasSet.has(qq) && qq !== actual);
+  q = disponibles.length ? disponibles[Math.floor(Math.random() * disponibles.length)]
+    : pool.find(qq => qq.categoria === cat && qq !== actual);
+  if (!q) return; // no hay otra pregunta distinta disponible en esa categoría
+  usadasSet.add(q);
+  if (modo === 'rectangular') rectGame._preguntaActual = q;
+  game.pendingQuestion = q;
+  comodinCambiarRestantes--;
+  comodinCambiarUsadoEnPreguntaActual = true;
+  actualizarComodinCambiarUI();
+  showQuestionModal(false);
+  vibrar(20);
+  if (modo === 'rectangular' && modoOnline === 'host') onlineBroadcastEstadoRect('pregunta');
+  else if (modo === 'circular' && modoOnline === 'host') onlineBroadcastEstadoGame('pregunta');
+}
+
+// Preguntados
+function usarCambiarPqUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('relay', { fn: 'usarCambiarPq', args: [] }); return; }
+  usarCambiarPq();
+}
+function usarCambiarPq() {
+  if (comodinCambiarRestantes <= 0 || comodinCambiarUsadoEnPreguntaActual || pqRespondida) return;
+  const actual = pqGame._preguntaActual;
+  if (!actual) return;
+  const cat = actual.categoria;
+  const disponibles = pqGame.pool.filter(qq => qq.categoria === cat && !pqGame.usadas.has(qq) && qq !== actual);
+  const q = disponibles.length ? disponibles[Math.floor(Math.random() * disponibles.length)]
+    : pqGame.pool.find(qq => qq.categoria === cat && qq !== actual);
+  if (!q) return;
+  pqGame.usadas.add(q);
+  pqGame._preguntaActual = q;
+  comodinCambiarRestantes--;
+  comodinCambiarUsadoEnPreguntaActual = true;
+  actualizarComodinCambiarUI();
+  pqRenderPreguntaUI(q, pqCatElegida, pqEsCorona);
+  vibrar(20);
+  if (modoOnline === 'host') onlineBroadcastEstado('pregunta');
+}
+
+// Preguntas Infinitas (no hay categoría fija, así que se elige cualquier otra pregunta)
+function usarCambiarInfinitasUI() {
+  if (!onlineEsMiTurno()) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('infCambiar', {}); return; }
+  usarCambiarInfinitas();
+}
+function usarCambiarInfinitas() {
+  if (comodinCambiarRestantes <= 0 || comodinCambiarUsadoEnPreguntaActual || infRespondida) return;
+  infPreguntaActual = infPickQuestion();
+  comodinCambiarRestantes--;
+  comodinCambiarUsadoEnPreguntaActual = true;
+  actualizarComodinCambiarUI();
+  infRenderPreguntaEnPantalla(infPreguntaActual);
+  vibrar(20);
+  if (modoOnline === 'host') onlineBroadcastEstadoInf('pregunta');
+}
+
+// ════════════════════════════════════════════════════════
+//  MODO DUELO RÁPIDO
+// ════════════════════════════════════════════════════════
+let duelo = null; // { jugadores: [{name,color,aciertos}], preguntas: [], turnoActual: 0, indice: 0, respondida: false }
+
+function iniciarDuelo() {
+  mostrarScreen('screen-duelo-setup');
+}
+
+async function dueloEmpezar() {
+  const n1 = document.getElementById('duelo-nombre-1').value.trim() || 'Jugador 1';
+  const n2 = document.getElementById('duelo-nombre-2').value.trim() || 'Jugador 2';
+  mostrarScreen('screen-loading');
+  const avisoLento = setTimeout(() => {
+    const el = document.querySelector('#screen-loading div:last-child');
+    if (el) el.textContent = 'Cargando el banco de preguntas… puede tardar unos segundos la primera vez';
+  }, 2500);
+  try {
+    const pool = await cargarPreguntas({ dificultad: '' });
+    if (pool.length < 10) {
+      alert('No hay suficientes preguntas en el banco para un duelo (hacen falta al menos 10).');
+      mostrarScreen('screen-duelo-setup');
+      return;
+    }
+    const barajadas = [...pool].sort(() => Math.random() - 0.5).slice(0, 10);
+    duelo = {
+      jugadores: [
+        { name: n1, color: '#FF4081', aciertos: 0 },
+        { name: n2, color: '#40C4FF', aciertos: 0 },
+      ],
+      preguntas: barajadas,
+      turnoActual: 0,
+      indice: 0,
+      respondida: false,
+    };
+    registrarInicioPartida('duelo');
+    dueloMostrarPasar();
+  } catch (e) {
+    console.error('Error en dueloEmpezar:', e);
+    alert('Error al cargar preguntas: ' + e.message);
+    mostrarScreen('screen-duelo-setup');
+  } finally {
+    clearTimeout(avisoLento);
+  }
+}
+
+function dueloMostrarPasar() {
+  const j = duelo.jugadores[duelo.turnoActual];
+  document.getElementById('duelo-pasar-titulo').textContent = `Pásale el móvil a ${j.name}`;
+  document.getElementById('duelo-pasar-desc').textContent = duelo.turnoActual === 0
+    ? 'Las mismas 10 preguntas os esperan a los dos. ¡A por ello!'
+    : '¡Ahora te toca a ti responder las mismas 10 preguntas! No hagas trampa mirando la pantalla del anterior 😉';
+  mostrarScreen('screen-duelo-pasar');
+}
+
+function dueloConfirmarListo() {
+  mostrarScreen('screen-duelo-juego');
+  dueloMostrarPregunta();
+}
+
+function dueloMostrarPregunta() {
+  duelo.respondida = false;
+  const q = duelo.preguntas[duelo.indice];
+  const j = duelo.jugadores[duelo.turnoActual];
+  document.getElementById('duelo-jugador-actual').textContent = j.name;
+  document.getElementById('duelo-jugador-actual').style.color = j.color;
+  document.getElementById('duelo-contador').textContent = duelo.indice + 1;
+
+  const catInfo = CATS_INFO[q.categoria];
+  const badge = document.getElementById('duelo-cat-badge');
+  badge.innerHTML = `${mascotaTag(q.categoria, 20, 'border-radius:50%;margin-right:0.3rem')}${catInfo.nombre}`;
+  badge.style.background = catInfo.color;
+  badge.style.color = '#FBF5EA';
+  document.getElementById('duelo-movie').textContent = q.pelicula;
+  document.getElementById('duelo-texto').textContent = q.pregunta;
+
+  document.getElementById('duelo-dato').classList.remove('visible');
+  document.getElementById('duelo-dato').textContent = '';
+  document.getElementById('duelo-result').classList.remove('visible', 'correct', 'wrong');
+  document.getElementById('duelo-result').textContent = '';
+  document.getElementById('duelo-actions').classList.remove('visible');
+
+  const letters = ['A', 'B', 'C', 'D'];
+  document.getElementById('duelo-options').innerHTML = q.opciones.map((op, i) =>
+    `<button class="q-option" onclick="dueloResponder(${i})" id="duelo-opt-${i}">
+      <span class="opt-letter">${letters[i]}</span><span>${op}</span>
+    </button>`
+  ).join('');
+}
+
+function dueloResponder(idx) {
+  if (duelo.respondida) return;
+  duelo.respondida = true;
+  const q = duelo.preguntas[duelo.indice];
+  const correct = idx === q.correcta;
+  const j = duelo.jugadores[duelo.turnoActual];
+  if (correct) j.aciertos++;
+
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById(`duelo-opt-${i}`);
+    el.style.pointerEvents = 'none';
+    if (i === q.correcta) el.classList.add('correct');
+    else if (i === idx && !correct) el.classList.add('wrong');
+  }
+  if (q.dato) {
+    const d = document.getElementById('duelo-dato');
+    d.textContent = '💡 ' + q.dato;
+    d.classList.add('visible');
+  }
+  const r = document.getElementById('duelo-result');
+  r.textContent = correct ? '✅ ¡Correcto!' : '❌ Incorrecto';
+  r.classList.add('visible', correct ? 'correct' : 'wrong');
+  document.getElementById('duelo-actions').classList.add('visible');
+  correct ? sfxCorrecto() : sfxIncorrecto();
+}
+
+function dueloSiguiente() {
+  duelo.indice++;
+  if (duelo.indice >= duelo.preguntas.length) {
+    if (duelo.turnoActual === 0) {
+      duelo.turnoActual = 1;
+      duelo.indice = 0;
+      dueloMostrarPasar();
+    } else {
+      dueloMostrarResultado();
+    }
+  } else {
+    dueloMostrarPregunta();
+  }
+}
+
+function dueloMostrarResultado() {
+  const [j1, j2] = duelo.jugadores;
+  const cont = document.getElementById('duelo-resultado-marcador');
+  cont.innerHTML = [j1, j2].map(j => `
+    <div>
+      <div style="font-size:2rem;font-weight:800;color:${j.color}">${j.aciertos}/10</div>
+      <div style="font-weight:700">${j.name}</div>
+    </div>
+  `).join('');
+  const titulo = document.getElementById('duelo-ganador-titulo');
+  if (j1.aciertos === j2.aciertos) {
+    titulo.textContent = '🤝 ¡Empate!';
+  } else {
+    const ganador = j1.aciertos > j2.aciertos ? j1 : j2;
+    titulo.textContent = `🏆 ¡Gana ${ganador.name}!`;
+    statsGlobales.victorias++;
+    _guardarStatsGlobales();
+    desbloquearLogro('primera_victoria');
+  }
+  lanzarConfetti();
+  mostrarScreen('screen-duelo-resultado');
+}
+
 function sfxVictoria() {
   [523, 659, 784, 1047].forEach((f, i) => _tono(f, i * 0.14, 0.22, 'triangle', 0.13));
 }
@@ -6664,6 +7178,9 @@ async function iniciarJuego() {
   rachaActual = 0; actualizarRachaUI(false);
   statsPartida = { correctas: 0, incorrectas: 0, rachaMejorPartida: 0 };
   comodin5050Reset();
+  comodinTiempoReset();
+  comodinCambiarReset();
+  registrarInicioPartida(tipoTablero);
   // Recoger nombres (solo en partidas locales; en online los jugadores ya vienen del lobby)
   if (!modoOnline) {
     jugadores = [];
@@ -6727,7 +7244,8 @@ const PANTALLAS_AUTOAJUSTABLES = new Set([
   'screen-inicio', 'screen-online-menu', 'screen-online-host-lobby', 'screen-online-join',
   'screen-online-wait', 'screen-modo', 'screen-setup', 'screen-infinito-modo', 'screen-submodo-infinito',
   'screen-preguntados', 'screen-game', 'screen-rect', 'screen-infinito', 'screen-fin',
-  // screen-filtros queda fuera a propósito: es una lista larga de películas, pensada para hacer scroll.
+  'screen-duelo-setup', 'screen-duelo-pasar', 'screen-duelo-juego', 'screen-duelo-resultado',
+  // screen-filtros y screen-logros quedan fuera a propósito: son listas largas pensadas para hacer scroll.
 ]);
 
 function autoAjustarPantalla() {
@@ -6779,6 +7297,7 @@ const PANTALLAS_CON_FONDO_DECORATIVO = new Set([
   'screen-inicio', 'screen-online-menu', 'screen-modo', 'screen-infinito-modo',
   'screen-submodo-infinito', 'screen-setup', 'screen-online-host-lobby',
   'screen-online-join', 'screen-online-wait', 'screen-fin',
+  'screen-duelo-setup', 'screen-duelo-pasar', 'screen-duelo-resultado',
 ]);
 function inyectarFondoDecorativoSiHaceFalta(screenId) {
   if (!PANTALLAS_CON_FONDO_DECORATIVO.has(screenId)) return;
@@ -6841,6 +7360,11 @@ function _accionAtrasParaPantalla(id) {
     case 'screen-game':
       conConfirmacion('¿Abandonar la partida?', () => location.reload());
       break;
+    case 'screen-duelo-setup': mostrarScreen('screen-inicio'); break;
+    case 'screen-duelo-juego':
+      conConfirmacion('¿Abandonar el duelo?', () => mostrarScreen('screen-inicio'));
+      break;
+    case 'screen-duelo-resultado': mostrarScreen('screen-inicio'); break;
     // screen-inicio (u otra no contemplada): se deja el comportamiento nativo del
     // navegador/móvil, que es salir de la app — no hay "atrás" dentro del juego.
     default: break;
@@ -6990,6 +7514,9 @@ function iniciarInfinitoOnlineHost() {
   rachaActual = 0; actualizarRachaUI(false);
   statsPartida = { correctas: 0, incorrectas: 0, rachaMejorPartida: 0 };
   comodin5050Reset();
+  comodinTiempoReset();
+  comodinCambiarReset();
+  registrarInicioPartida('infinitas');
   infGameActivo = true;
   infJugadores = jugadores.map(j => ({
     name: j.name, color: j.color, emoji: j.emoji, fichaId: j.fichaId,
@@ -7011,6 +7538,9 @@ function iniciarInfinito(submodo) {
   rachaActual = 0; actualizarRachaUI(false);
   statsPartida = { correctas: 0, incorrectas: 0, rachaMejorPartida: 0 };
   comodin5050Reset();
+  comodinTiempoReset();
+  comodinCambiarReset();
+  registrarInicioPartida('infinitas');
   infSubmodo = submodo;
   infContador = 0;
   infUsadas = new Set();
@@ -7080,6 +7610,7 @@ function infRenderPreguntaEnPantalla(q) {
   document.getElementById('inf-skip-btn').style.display = '';
   document.getElementById('inf-5050-btn').style.display = infSubmodo === 2 ? '' : 'none';
   comodin5050ResetPorPregunta();
+  comodinCambiarResetPorPregunta();
   detenerCronometro();
   if (onlineEsMiTurno()) iniciarCronometro('inf-cronometro', _porTiempoInfinitas);
   else document.getElementById('inf-cronometro').style.display = 'none';
@@ -7170,6 +7701,7 @@ function infOpcion(idx) {
   r.textContent = correct ? "✅ ¡Correcto!" : "❌ Incorrecto";
   r.classList.add("visible", correct ? "correct" : "wrong");
   document.getElementById("inf-actions").classList.add("visible");
+  registrarStatsCategoria(q.categoria, correct);
   correct ? sfxCorrecto() : sfxIncorrecto();
   infUltimoResultado = { tipo: 'opcion', idx, juzgado: true, correcto: correct };
   if (modoOnline === 'host') onlineBroadcastEstadoInf('resultado');
@@ -7292,6 +7824,7 @@ function infJuzgar(correcto) {
   r.textContent = correcto ? "✅ ¡Correcto!" : "❌ Incorrecto";
   r.classList.add("visible", correcto ? "correct" : "wrong");
   document.getElementById("inf-actions").classList.add("visible");
+  registrarStatsCategoria(infPreguntaActual?.categoria, correcto);
   correcto ? sfxCorrecto() : sfxIncorrecto();
   if (infUltimoResultado) { infUltimoResultado.juzgado = true; infUltimoResultado.correcto = correcto; }
   if (modoOnline === 'host') onlineBroadcastEstadoInf('resultado');
@@ -7753,6 +8286,7 @@ function pqRenderPreguntaUI(q, cat, esCorona) {
   document.getElementById('pq-skip-btn').style.display = '';
   document.getElementById('pq-5050-btn').style.display = modoSubtipo === 2 ? '' : 'none';
   comodin5050ResetPorPregunta();
+  comodinCambiarResetPorPregunta();
   detenerCronometro();
   if (onlineEsMiTurno()) iniciarCronometro('pq-cronometro', _porTiempoPq);
   else document.getElementById('pq-cronometro').style.display = 'none';
@@ -7908,6 +8442,7 @@ function pqOpcion(idx) {
   r.classList.add('visible', correct ? 'correct' : 'wrong');
   document.getElementById('pq-actions').classList.add('visible');
   document.getElementById('pq-actions').dataset.correcto = correct ? '1' : '0';
+  registrarStatsCategoria(q.categoria, correct);
   correct ? sfxCorrecto() : sfxIncorrecto();
   onlineNotificarReplay('pqOpcion', [idx]);
 }
@@ -7970,6 +8505,7 @@ function pqJuzgar(correcto) {
   r.classList.add('visible', correcto ? 'correct' : 'wrong');
   document.getElementById('pq-actions').classList.add('visible');
   document.getElementById('pq-actions').dataset.correcto = correcto ? '1' : '0';
+  registrarStatsCategoria(pqGame?._preguntaActual?.categoria, correcto);
   correcto ? sfxCorrecto() : sfxIncorrecto();
   onlineNotificarReplay('pqJuzgar', [correcto]);
 }
@@ -8024,6 +8560,7 @@ function pqRenderAllPlayers() {
 }
 
 function pqMostrarVictoria(j) {
+  registrarVictoriaPartida();
   document.getElementById('fin-winner').innerHTML = `${fichaTag(j, 44, 'border-radius:50%;vertical-align:middle;margin-right:0.4rem')} ${j.name}`;
   document.getElementById('fin-winner').style.color = j.color;
   const esOca = pqGame?.jugadores?.some(jg => jg._ocaPos !== undefined);
