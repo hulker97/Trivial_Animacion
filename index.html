@@ -2025,8 +2025,14 @@ body > * { position: relative; z-index: 1; }
     <button class="btn btn-secondary btn-sm" onclick="if(confirm('¿Abandonar?'))location.reload()">✕</button>
   </div>
 
-  <!-- Tablero rectangular scrollable -->
-  <div id="rect-board" style="padding:0.3rem 0.8rem 0.3rem;overflow:auto;flex:1;min-height:0;display:flex;justify-content:center;width:100%;box-sizing:border-box"></div>
+  <!-- Tablero rectangular scrollable, con controles de zoom flotantes -->
+  <div style="position:relative;flex:1;min-height:0;display:flex;width:100%">
+    <div id="rect-board" style="padding:0.3rem 0.8rem 0.3rem;overflow:auto;flex:1;min-height:0;display:flex;justify-content:center;width:100%;box-sizing:border-box"></div>
+    <div style="position:absolute;top:0.4rem;right:0.9rem;display:flex;flex-direction:column;gap:0.4rem;z-index:5">
+      <button class="btn btn-secondary btn-sm" id="rect-zoom-in-btn" onclick="rectZoomIn()" title="Acercar" style="width:36px;height:36px;padding:0;font-size:1.1rem;border-radius:50%">🔍+</button>
+      <button class="btn btn-secondary btn-sm" id="rect-zoom-out-btn" onclick="rectZoomOut()" title="Alejar" style="width:36px;height:36px;padding:0;font-size:1.1rem;border-radius:50%;opacity:0.4">🔍−</button>
+    </div>
+  </div>
 
   <div id="rect-banner-pozo" style="display:none;text-align:center;font-weight:800;color:#4FC3F7;background:rgba(79,195,247,0.12);border:1px solid rgba(79,195,247,0.4);border-radius:12px;margin:0 0.8rem;padding:0.4rem 0.8rem;font-size:0.8rem"></div>
   <div id="rect-aviso-especial" style="display:none;text-align:center;font-weight:800;color:var(--gold);padding:0 0.8rem;font-size:0.85rem;width:100%;box-sizing:border-box"></div>
@@ -8777,6 +8783,7 @@ const RECT_META = 65;
 let rectGame = null;
 
 function iniciarTableroRect() {
+  rectZoomUsuario = 1;
   const especiales = {};
   RECT_OCAS.forEach(i => especiales[i] = 'oca');
   Object.keys(RECT_PUENTE).forEach(i => especiales[i] = 'puente');
@@ -8896,6 +8903,28 @@ function generarTableroOca(n) {
     if (puntuacion < mejorPuntuacion) { mejorPuntuacion = puntuacion; mejor = cs; }
   }
   return mejor;
+}
+
+// Zoom manual del tablero de la Oca, además del ajuste automático que ya hace que
+// quepa entero: 1 = ajuste automático normal, más de 1 = ampliado (con scroll).
+let rectZoomUsuario = 1;
+const RECT_ZOOM_PASO = 0.25, RECT_ZOOM_MAX = 2.5, RECT_ZOOM_MIN = 1;
+
+function rectZoomIn() {
+  rectZoomUsuario = Math.min(RECT_ZOOM_MAX, rectZoomUsuario + RECT_ZOOM_PASO);
+  rectRenderBoard();
+  actualizarBotonesZoomRect();
+}
+function rectZoomOut() {
+  rectZoomUsuario = Math.max(RECT_ZOOM_MIN, rectZoomUsuario - RECT_ZOOM_PASO);
+  rectRenderBoard();
+  actualizarBotonesZoomRect();
+}
+function actualizarBotonesZoomRect() {
+  const btnMenos = document.getElementById('rect-zoom-out-btn');
+  const btnMas = document.getElementById('rect-zoom-in-btn');
+  if (btnMenos) btnMenos.style.opacity = rectZoomUsuario <= RECT_ZOOM_MIN ? '0.4' : '';
+  if (btnMas) btnMas.style.opacity = rectZoomUsuario >= RECT_ZOOM_MAX ? '0.4' : '';
 }
 
 function rectRenderBoard() {
@@ -9038,10 +9067,15 @@ function rectRenderBoard() {
   // El tablero tiene tamaño fijo en píxeles (no es un SVG con viewBox como el circular),
   // así que lo escalamos nosotros mismos para que quepa entero en el espacio disponible
   // sin necesitar scroll, sea cual sea el tamaño de la pantalla del móvil.
+  // Además, "rectZoomUsuario" permite ampliar más allá de ese ajuste automático para
+  // ver mejor las casillas, con desplazamiento (el contenedor #rect-board ya tiene
+  // overflow:auto para eso).
   const anchoTotal = anchoPx + marco*2, altoTotal = altoPx + marco*2;
   const contW = board.clientWidth || 360, contH = board.clientHeight || 420;
-  const escala = Math.min(1, (contW - 8) / anchoTotal, (contH - 8) / altoTotal);
-  board.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:flex-start;justify-content:center;overflow:hidden">
+  const escalaAuto = Math.min(1, (contW - 8) / anchoTotal, (contH - 8) / altoTotal);
+  const escala = escalaAuto * rectZoomUsuario;
+  const zoomActivo = rectZoomUsuario > 1.001;
+  board.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:flex-start;justify-content:center;overflow:${zoomActivo ? 'visible' : 'hidden'}">
     <div style="width:${anchoTotal}px;height:${altoTotal}px;transform:scale(${escala});transform-origin:top center;flex-shrink:0">
       ${html}
     </div>
@@ -9172,7 +9206,12 @@ function rectMostrarAnimacionDado(valor, jugador, alConfirmar) {
   const cubo = document.getElementById('rect-dado-result');
   const hint = document.getElementById('rect-dado-hint');
   if (wrap) wrap.style.display = 'flex';
-  if (hint) hint.textContent = 'Girando…';
+  // Se pone directamente el texto FINAL (el mismo que se verá cuando el dado ya esté
+  // quieto), en vez de "Girando..." y cambiarlo después: así el tamaño que calcula el
+  // juego para la pantalla es, desde el primer instante, el definitivo (el del dado ya
+  // parado), y no cambia nada al terminar de girar. El propio dado ya gira visualmente
+  // gracias a su animación, sin necesidad de que el texto también cambie.
+  if (hint) hint.textContent = '👆 Toca tu ficha en el tablero para avanzar';
   if (cubo) { cubo.classList.remove('rect-dado-listo'); cubo.classList.add('rect-dado-girando'); }
   // Reajustar la pantalla YA, antes de que empiecen los cambios rápidos del dado:
   // si se deja al sistema de reajuste automático (que espera a que dejen de
@@ -9198,7 +9237,6 @@ function rectMostrarAnimacionDado(valor, jugador, alConfirmar) {
         cubo.classList.remove('rect-dado-girando');
         cubo.classList.add('rect-dado-listo');
       }
-      if (hint) hint.textContent = '👆 Toca tu ficha en el tablero para avanzar';
       // La ficha del jugador activo ya sale destacada y tocable en el propio tablero
       // (lo gestiona rectRenderBoard() mientras rectGame.dadoPendiente esté activo)
       rectRenderBoard();
@@ -9223,6 +9261,7 @@ function rectMostrarEsperaDado(valor, jugador) {
   }
   if (hint) hint.textContent = `⏳ Esperando a que ${jugador.name} avance su ficha…`;
   rectRenderBoard();
+  autoAjustarPantalla();
 }
 
 function rectOcultarDadoInline() {
