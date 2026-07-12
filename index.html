@@ -5626,6 +5626,7 @@ function showQuestionModal(isFinal) {
   opcionesVisibles = (modoSubtipo !== 1); // en modo 1 empiezan ocultas por defecto
   document.getElementById('q-skip-btn').style.display = '';
   document.getElementById('q-5050-btn').style.display = modoSubtipo === 2 ? '' : 'none';
+  comodin5050ResetPorPregunta();
   detenerCronometro();
   if (onlineEsMiTurno()) iniciarCronometro('q-cronometro', _porTiempoCompartido);
   else document.getElementById('q-cronometro').style.display = 'none';
@@ -6569,13 +6570,23 @@ function comodin5050Reset() {
   actualizar5050UI();
 }
 
+// Si ya se ha usado el 50/50 en la pregunta actual, no se puede volver a usar en ella
+// (usarlo dos veces en la misma pregunta podría acabar ocultando también la incorrecta
+// que quedaba, revelando sin querer cuál es la correcta)
+let comodin5050UsadoEnPreguntaActual = false;
+function comodin5050ResetPorPregunta() {
+  comodin5050UsadoEnPreguntaActual = false;
+  actualizar5050UI();
+}
+
 function actualizar5050UI() {
   ['q-5050-btn', 'pq-5050-btn', 'inf-5050-btn'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.textContent = `🎯 50/50 (${comodin5050Restantes})`;
-    el.style.opacity = comodin5050Restantes > 0 ? '' : '0.35';
-    el.style.pointerEvents = comodin5050Restantes > 0 ? '' : 'none';
+    const disponible = comodin5050Restantes > 0 && !comodin5050UsadoEnPreguntaActual;
+    el.style.opacity = disponible ? '' : '0.35';
+    el.style.pointerEvents = disponible ? '' : 'none';
   });
 }
 
@@ -6589,24 +6600,25 @@ function _aplicar5050(prefijoOpt, indiceCorrecta) {
     if (el) { el.style.visibility = 'hidden'; el.style.pointerEvents = 'none'; }
   });
   comodin5050Restantes--;
+  comodin5050UsadoEnPreguntaActual = true;
   actualizar5050UI();
   vibrar(20);
 }
 
 function usar5050Compartido() {
-  if (comodin5050Restantes <= 0 || questionAnswered) return;
+  if (comodin5050Restantes <= 0 || comodin5050UsadoEnPreguntaActual || questionAnswered) return;
   const q = game && game.pendingQuestion;
   if (!q) return;
   _aplicar5050('q-opt', q.correcta);
 }
 function usar5050Pq() {
-  if (comodin5050Restantes <= 0 || pqRespondida) return;
+  if (comodin5050Restantes <= 0 || comodin5050UsadoEnPreguntaActual || pqRespondida) return;
   const q = pqGame && pqGame._preguntaActual;
   if (!q) return;
   _aplicar5050('pq-opt', q.correcta);
 }
 function usar5050Infinitas() {
-  if (comodin5050Restantes <= 0 || infRespondida) return;
+  if (comodin5050Restantes <= 0 || comodin5050UsadoEnPreguntaActual || infRespondida) return;
   const q = infPreguntaActual;
   if (!q) return;
   _aplicar5050('inf-opt', q.correcta);
@@ -7053,6 +7065,7 @@ function infRenderPreguntaEnPantalla(q) {
   const catInfo = CATS_INFO[q.categoria];
   document.getElementById('inf-skip-btn').style.display = '';
   document.getElementById('inf-5050-btn').style.display = infSubmodo === 2 ? '' : 'none';
+  comodin5050ResetPorPregunta();
   detenerCronometro();
   if (onlineEsMiTurno()) iniciarCronometro('inf-cronometro', _porTiempoInfinitas);
   else document.getElementById('inf-cronometro').style.display = 'none';
@@ -7725,6 +7738,7 @@ function pqRenderPreguntaUI(q, cat, esCorona) {
   pqRespondida = false;
   document.getElementById('pq-skip-btn').style.display = '';
   document.getElementById('pq-5050-btn').style.display = modoSubtipo === 2 ? '' : 'none';
+  comodin5050ResetPorPregunta();
   detenerCronometro();
   if (onlineEsMiTurno()) iniciarCronometro('pq-cronometro', _porTiempoPq);
   else document.getElementById('pq-cronometro').style.display = 'none';
