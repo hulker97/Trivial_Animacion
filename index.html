@@ -1617,6 +1617,7 @@ body > * { position: relative; z-index: 1; }
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
       <div style="font-weight:800;color:var(--gold)" id="duelo-jugador-actual">Jugador 1</div>
       <div style="font-size:0.85rem;color:var(--text2);font-weight:700">Pregunta <span id="duelo-contador">1</span>/<span id="duelo-total">10</span></div>
+      <button class="btn btn-secondary btn-sm" onclick="dueloSalirUI()">✕</button>
     </div>
     <div class="question-modal" style="position:relative;margin:0;max-height:none">
       <div class="q-header">
@@ -7109,6 +7110,16 @@ function dueloConfirmarListo() {
   dueloMostrarPregunta();
 }
 
+function dueloSalirUI() {
+  if (confirm('¿Abandonar el duelo? Se perderá el progreso.')) {
+    detenerCronometro();
+    duelo = null;
+    mostrarScreen('screen-inicio');
+  } else {
+    _repushPantallaActual();
+  }
+}
+
 function dueloMostrarPregunta() {
   duelo.respondida = false;
   const q = duelo.preguntas[duelo.indice];
@@ -7453,9 +7464,7 @@ function _accionAtrasParaPantalla(id) {
       conConfirmacion('¿Abandonar la partida?', () => location.reload());
       break;
     case 'screen-duelo-setup': mostrarScreen('screen-inicio'); break;
-    case 'screen-duelo-juego':
-      conConfirmacion('¿Abandonar el duelo?', () => mostrarScreen('screen-inicio'));
-      break;
+    case 'screen-duelo-juego': dueloSalirUI(); break;
     case 'screen-duelo-resultado': mostrarScreen('screen-inicio'); break;
     // screen-inicio (u otra no contemplada): se deja el comportamiento nativo del
     // navegador/móvil, que es salir de la app — no hay "atrás" dentro del juego.
