@@ -6657,30 +6657,6 @@ function mostrarToast(msg) {
   toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
 }
 
-// La primera vez que se llega a una pregunta (en cualquier modo), se explica en un
-// aviso desmontable que existen el botón de saltar, el comodín 50/50 y el cronómetro
-// opcional — para que no pasen desapercibidos por estar tan pegados a la pregunta.
-function mostrarPistaHerramientasSiPrimeraVez() {
-  try {
-    if (localStorage.getItem('trivial_tip_herramientas_visto') === '1') return;
-    localStorage.setItem('trivial_tip_herramientas_visto', '1');
-  } catch (e) {}
-  if (document.getElementById('pista-herramientas')) return;
-  const caja = document.createElement('div');
-  caja.id = 'pista-herramientas';
-  caja.style.cssText = 'position:fixed;top:3.4rem;left:0.7rem;right:0.7rem;z-index:9998;'
-    + 'background:#1a2a5e;border:1px solid var(--gold);color:white;padding:0.7rem 0.9rem;'
-    + 'border-radius:14px;font-size:0.78rem;font-weight:700;line-height:1.4;'
-    + 'box-shadow:0 4px 20px rgba(0,0,0,0.5);display:flex;align-items:flex-start;gap:0.5rem';
-  caja.innerHTML = '<span style="flex:1">💡 Junto a cada pregunta tienes: '
-    + '<b>⏭️ Saltar</b>, el comodín <b>🎯 50/50</b> (quita 2 opciones malas), y si activas el '
-    + '<b>⏱️ cronómetro</b> en la configuración, también saldrá la cuenta atrás aquí.</span>'
-    + '<button onclick="document.getElementById(\'pista-herramientas\').remove()" '
-    + 'style="background:none;border:none;color:white;font-size:1.1rem;cursor:pointer;padding:0 0.2rem;flex-shrink:0">✕</button>';
-  document.body.appendChild(caja);
-  setTimeout(() => { if (caja.parentNode) caja.remove(); }, 9000);
-}
-
 // ════════════════════════════════════════════════════════
 //  INICIAR JUEGO
 // ════════════════════════════════════════════════════════
@@ -6824,9 +6800,6 @@ function mostrarScreen(id) {
   document.getElementById(id).classList.add("active");
   inyectarFondoDecorativoSiHaceFalta(id);
   _sincronizarMusicaFondo(PANTALLAS_CON_FONDO_DECORATIVO.has(id));
-  if (['screen-preguntados', 'screen-rect', 'screen-game', 'screen-infinito'].includes(id)) {
-    mostrarPistaHerramientasSiPrimeraVez();
-  }
   autoAjustarPantalla();
   if (!_historialNavegandoInterno) {
     try { history.pushState({ pantalla: id }, ''); } catch (e) {}
