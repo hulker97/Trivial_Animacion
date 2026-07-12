@@ -8829,22 +8829,25 @@ function rectRenderTopbar() {
 // El tablero real de la Oca: una espiral cuadrada continua de ~3 vueltas, empezando
 // por fuera y terminando en el centro (confirmado por varias fuentes). Cada casilla
 // es adyacente a la siguiente sin saltos.
+// Genera un camino en espiral RECTANGULAR (no cuadrada): empieza por fuera del
+// borde de un rectángulo de "ancho" x "alto" casillas y va girando hacia dentro,
+// hasta reunir "n" casillas. Al ser más alto que ancho, en un móvil en vertical
+// las casillas salen más grandes (antes, con una espiral cuadrada, sobraba mucho
+// hueco arriba/abajo al encoger el tablero para que cupiera a lo ancho).
 function generarTableroOca(n) {
-  const coords = [{ x: 0, y: 0 }];
-  let x = 0, y = 0, dx = 1, dy = 0;
-  let pasosEnSegmento = 1, pasosHechos = 0, segmentos = 0;
-  while (coords.length < n) {
-    x += dx; y += dy;
-    coords.push({ x, y });
-    pasosHechos++;
-    if (pasosHechos === pasosEnSegmento) {
-      pasosHechos = 0;
-      [dx, dy] = [dy, -dx]; // sentido de giro invertido
-      segmentos++;
-      if (segmentos % 2 === 0) pasosEnSegmento++;
-    }
+  const ancho = 6, alto = 11; // 6x11 = 66 casillas de hueco, de sobra para las 64 que hacen falta
+  const coords = [];
+  let top = 0, bottom = alto - 1, left = 0, right = ancho - 1;
+  while (coords.length < n && top <= bottom && left <= right) {
+    for (let x = left; x <= right && coords.length < n; x++) coords.push({ x, y: top });
+    top++;
+    for (let y = top; y <= bottom && coords.length < n; y++) coords.push({ x: right, y });
+    right--;
+    for (let x = right; x >= left && coords.length < n; x--) coords.push({ x, y: bottom });
+    bottom--;
+    for (let y = bottom; y >= top && coords.length < n; y--) coords.push({ x: left, y });
+    left++;
   }
-  coords.reverse(); // que la casilla 0 (salida) quede fuera y la última (meta) en el centro
 
   // Probar las 8 orientaciones posibles (4 giros x reflejo) y quedarse con la que deja
   // la salida (casilla 0) pegada a la esquina inferior izquierda Y empieza yendo a la derecha
