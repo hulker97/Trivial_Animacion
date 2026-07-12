@@ -1559,7 +1559,7 @@ body > * { position: relative; z-index: 1; }
     <div class="logo-wrap" style="margin-bottom:1.2rem">
       <div class="logo-icon" style="font-size:2.5rem">⚔️</div>
       <div class="logo-title" style="font-size:1.8rem">Duelo rápido</div>
-      <div class="logo-sub">Las mismas 10 preguntas para los dos. Gana quien acierte más.</div>
+      <div class="logo-sub">Las mismas preguntas para los dos. Gana quien acierte más.</div>
     </div>
     <div class="panel">
       <div class="jugador-row">
@@ -1569,6 +1569,25 @@ body > * { position: relative; z-index: 1; }
       <div class="jugador-row">
         <div class="jugador-num" style="background:#40C4FF;color:#fff">2</div>
         <input type="text" id="duelo-nombre-2" placeholder="Jugador 2" maxlength="16">
+      </div>
+    </div>
+    <div class="panel">
+      <h3>⚙️ Configuración del duelo</h3>
+      <div style="margin-bottom:1rem">
+        <div class="filtro-label">Número de preguntas</div>
+        <input type="number" class="filtro-select" id="duelo-num-preguntas" value="10" min="1" max="100" inputmode="numeric" style="width:100%">
+      </div>
+      <div style="margin-bottom:1rem">
+        <div class="filtro-label">Cómo se responde</div>
+        <select class="filtro-select" id="duelo-tipo-respuesta">
+          <option value="opciones">🔢 Con 4 opciones</option>
+          <option value="sinopciones">🗣️ Sin opciones (viva voz)</option>
+        </select>
+      </div>
+      <div>
+        <div class="filtro-label">Banco de preguntas</div>
+        <div id="duelo-filtro-info" style="font-size:0.85rem;color:var(--text2);font-weight:700;margin-bottom:0.5rem">Todas las películas</div>
+        <button class="btn btn-secondary btn-sm" style="width:100%" onclick="abrirPantallaFiltros()">🎬 Elegir películas</button>
       </div>
     </div>
     <button class="btn btn-primary" style="width:100%;margin-top:1rem" onclick="dueloEmpezar()">⚔️ Empezar duelo</button>
@@ -1597,7 +1616,7 @@ body > * { position: relative; z-index: 1; }
   <div style="width:100%;max-width:520px;margin:0 auto;padding:1rem">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
       <div style="font-weight:800;color:var(--gold)" id="duelo-jugador-actual">Jugador 1</div>
-      <div style="font-size:0.85rem;color:var(--text2);font-weight:700">Pregunta <span id="duelo-contador">1</span>/10</div>
+      <div style="font-size:0.85rem;color:var(--text2);font-weight:700">Pregunta <span id="duelo-contador">1</span>/<span id="duelo-total">10</span></div>
     </div>
     <div class="question-modal" style="position:relative;margin:0;max-height:none">
       <div class="q-header">
@@ -1608,6 +1627,16 @@ body > * { position: relative; z-index: 1; }
       </div>
       <div class="q-text" id="duelo-texto">–</div>
       <div class="q-options" id="duelo-options"></div>
+      <div id="duelo-reveal-wrap" style="display:none;margin-bottom:0.5rem">
+        <button class="btn btn-secondary" style="width:100%;padding:1.1rem;font-size:1.05rem" onclick="dueloRevelar()">
+          👆 Toca para revelar la respuesta
+        </button>
+      </div>
+      <div class="q-respuesta-correcta" id="duelo-respuesta-correcta"></div>
+      <div class="q-judge-btns" id="duelo-judge-btns">
+        <button class="btn btn-sm" style="background:#4CAF50;color:white;border:none;padding:0.8rem 1.5rem;font-size:1rem" onclick="dueloJuzgar(true)">✅ Correcto</button>
+        <button class="btn btn-sm" style="background:#F44336;color:white;border:none;padding:0.8rem 1.5rem;font-size:1rem" onclick="dueloJuzgar(false)">❌ Incorrecto</button>
+      </div>
       <div class="q-dato" id="duelo-dato"></div>
       <div class="q-result" id="duelo-result"></div>
       <div class="q-actions" id="duelo-actions">
@@ -6353,12 +6382,13 @@ function filtroSelTodas(todas) {
 function actualizarResumenFiltros() {
   const total = getTotalPelisSeleccionadas();
   const totalPelis = Object.values(peliculasPorEstudio).reduce((s,a)=>s+a.length,0);
-  const info = document.getElementById('filtro-info');
-  if (info) {
-    info.textContent = filtroPelisSeleccionadas === null
-      ? `Todas las películas (${totalPelis})`
-      : `${total} película${total !== 1 ? 's' : ''} seleccionada${total !== 1 ? 's' : ''}`;
-  }
+  const texto = filtroPelisSeleccionadas === null
+    ? `Todas las películas (${totalPelis})`
+    : `${total} película${total !== 1 ? 's' : ''} seleccionada${total !== 1 ? 's' : ''}`;
+  ['filtro-info', 'duelo-filtro-info'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = texto;
+  });
 }
 
 // ── Cargar preguntas según filtro activo ──
@@ -6373,6 +6403,20 @@ async function cargarPreguntasConFiltros() {
   } else {
     // Cargar todo y filtrar por películas seleccionadas
     const data = await cargarPreguntas({ dificultad });
+    return data.filter(q => filtroPelisSeleccionadas.has(q.pelicula));
+  }
+}
+
+// Variante para el Duelo: usa el mismo filtro de películas (compartido con el resto
+// del juego), pero sin depender del selector de dificultad de la pantalla de "Trivial"
+// (el Duelo no tiene su propio selector de dificultad todavía).
+async function cargarPreguntasParaDuelo() {
+  if (filtroPelisSeleccionadas === null) {
+    return await cargarPreguntas({ dificultad: '' });
+  } else if (filtroPelisSeleccionadas.size === 0) {
+    return [];
+  } else {
+    const data = await cargarPreguntas({ dificultad: '' });
     return data.filter(q => filtroPelisSeleccionadas.has(q.pelicula));
   }
 }
@@ -7004,35 +7048,42 @@ function usarCambiarInfinitas() {
 let duelo = null; // { jugadores: [{name,color,aciertos}], preguntas: [], turnoActual: 0, indice: 0, respondida: false }
 
 function iniciarDuelo() {
+  actualizarResumenFiltros();
   mostrarScreen('screen-duelo-setup');
 }
 
 async function dueloEmpezar() {
   const n1 = document.getElementById('duelo-nombre-1').value.trim() || 'Jugador 1';
   const n2 = document.getElementById('duelo-nombre-2').value.trim() || 'Jugador 2';
+  let numPreguntas = parseInt(document.getElementById('duelo-num-preguntas').value, 10);
+  if (!numPreguntas || numPreguntas < 1) numPreguntas = 10;
+  if (numPreguntas > 100) numPreguntas = 100; // límite razonable para no tirar de más de la cuenta
+  const tipoRespuesta = document.getElementById('duelo-tipo-respuesta').value; // 'opciones' | 'sinopciones'
   mostrarScreen('screen-loading');
   const avisoLento = setTimeout(() => {
     const el = document.querySelector('#screen-loading div:last-child');
     if (el) el.textContent = 'Cargando el banco de preguntas… puede tardar unos segundos la primera vez';
   }, 2500);
   try {
-    const pool = await cargarPreguntas({ dificultad: '' });
-    if (pool.length < 10) {
-      alert('No hay suficientes preguntas en el banco para un duelo (hacen falta al menos 10).');
+    const pool = await cargarPreguntasParaDuelo();
+    if (pool.length < numPreguntas) {
+      alert(`Solo hay ${pool.length} preguntas con esos filtros. Amplía el filtro o elige menos preguntas.`);
       mostrarScreen('screen-duelo-setup');
       return;
     }
-    const barajadas = [...pool].sort(() => Math.random() - 0.5).slice(0, 10);
+    const barajadas = [...pool].sort(() => Math.random() - 0.5).slice(0, numPreguntas);
     duelo = {
       jugadores: [
         { name: n1, color: '#FF4081', aciertos: 0 },
         { name: n2, color: '#40C4FF', aciertos: 0 },
       ],
       preguntas: barajadas,
+      tipoRespuesta,
       turnoActual: 0,
       indice: 0,
       respondida: false,
     };
+    document.getElementById('duelo-total').textContent = numPreguntas;
     registrarInicioPartida('duelo');
     dueloMostrarPasar();
   } catch (e) {
@@ -7079,13 +7130,53 @@ function dueloMostrarPregunta() {
   document.getElementById('duelo-result').classList.remove('visible', 'correct', 'wrong');
   document.getElementById('duelo-result').textContent = '';
   document.getElementById('duelo-actions').classList.remove('visible');
+  document.getElementById('duelo-respuesta-correcta').classList.remove('visible');
+  document.getElementById('duelo-judge-btns').classList.remove('visible');
+  document.getElementById('duelo-reveal-wrap').style.display = 'none';
+  document.getElementById('duelo-options').style.display = 'none';
+  document.getElementById('duelo-options').innerHTML = '';
 
-  const letters = ['A', 'B', 'C', 'D'];
-  document.getElementById('duelo-options').innerHTML = q.opciones.map((op, i) =>
-    `<button class="q-option" onclick="dueloResponder(${i})" id="duelo-opt-${i}">
-      <span class="opt-letter">${letters[i]}</span><span>${op}</span>
-    </button>`
-  ).join('');
+  if (duelo.tipoRespuesta === 'sinopciones') {
+    document.getElementById('duelo-reveal-wrap').style.display = 'block';
+  } else {
+    const letters = ['A', 'B', 'C', 'D'];
+    const opts = document.getElementById('duelo-options');
+    opts.style.display = '';
+    opts.innerHTML = q.opciones.map((op, i) =>
+      `<button class="q-option" onclick="dueloResponder(${i})" id="duelo-opt-${i}">
+        <span class="opt-letter">${letters[i]}</span><span>${op}</span>
+      </button>`
+    ).join('');
+  }
+}
+
+// Modo "sin opciones": revela la respuesta correcta y deja que decidan si acertó
+function dueloRevelar() {
+  if (duelo.respondida) return;
+  const q = duelo.preguntas[duelo.indice];
+  document.getElementById('duelo-reveal-wrap').style.display = 'none';
+  const respEl = document.getElementById('duelo-respuesta-correcta');
+  respEl.textContent = '✅ Respuesta correcta: ' + q.opciones[q.correcta];
+  respEl.classList.add('visible');
+  if (q.dato) {
+    const d = document.getElementById('duelo-dato');
+    d.textContent = '💡 ' + q.dato;
+    d.classList.add('visible');
+  }
+  document.getElementById('duelo-judge-btns').classList.add('visible');
+}
+
+function dueloJuzgar(correcto) {
+  if (duelo.respondida) return;
+  duelo.respondida = true;
+  const j = duelo.jugadores[duelo.turnoActual];
+  if (correcto) j.aciertos++;
+  document.getElementById('duelo-judge-btns').classList.remove('visible');
+  const r = document.getElementById('duelo-result');
+  r.textContent = correcto ? '✅ ¡Correcto!' : '❌ Incorrecto';
+  r.classList.add('visible', correcto ? 'correct' : 'wrong');
+  document.getElementById('duelo-actions').classList.add('visible');
+  correcto ? sfxCorrecto() : sfxIncorrecto();
 }
 
 function dueloResponder(idx) {
@@ -7131,10 +7222,11 @@ function dueloSiguiente() {
 
 function dueloMostrarResultado() {
   const [j1, j2] = duelo.jugadores;
+  const total = duelo.preguntas.length;
   const cont = document.getElementById('duelo-resultado-marcador');
   cont.innerHTML = [j1, j2].map(j => `
     <div>
-      <div style="font-size:2rem;font-weight:800;color:${j.color}">${j.aciertos}/10</div>
+      <div style="font-size:2rem;font-weight:800;color:${j.color}">${j.aciertos}/${total}</div>
       <div style="font-weight:700">${j.name}</div>
     </div>
   `).join('');
