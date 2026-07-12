@@ -2031,7 +2031,7 @@ body > * { position: relative; z-index: 1; }
   <div id="rect-banner-pozo" style="display:none;text-align:center;font-weight:800;color:#4FC3F7;background:rgba(79,195,247,0.12);border:1px solid rgba(79,195,247,0.4);border-radius:12px;margin:0 0.8rem;padding:0.5rem 0.8rem;font-size:0.8rem"></div>
   <div id="rect-aviso-especial" style="display:none;text-align:center;font-weight:800;color:var(--gold);padding:0 0.8rem;font-size:0.85rem;width:100%;box-sizing:border-box"></div>
   <div id="rect-dado-inline-wrap" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:0.5rem;padding:0.7rem 0.8rem;width:100%;box-sizing:border-box">
-    <div id="rect-dado-result" style="width:106px;height:106px;background:linear-gradient(150deg,#ffffff 0%,#f2f2f2 55%,#dcdcdc 100%);border-radius:24px;box-shadow:0 8px 26px rgba(0,0,0,0.65),0 0 0 3px rgba(255,215,0,0.55),0 0 26px rgba(255,215,0,0.25),inset 0 3px 6px rgba(255,255,255,0.9);transition:transform 0.12s"></div>
+    <div id="rect-dado-result" style="width:82px;height:82px;background:linear-gradient(150deg,#ffffff 0%,#f2f2f2 55%,#dcdcdc 100%);border-radius:20px;box-shadow:0 6px 20px rgba(0,0,0,0.65),0 0 0 3px rgba(255,215,0,0.55),0 0 20px rgba(255,215,0,0.25),inset 0 2px 4px rgba(255,255,255,0.9);transition:transform 0.12s"></div>
     <div id="rect-dado-hint" style="font-size:0.8rem;color:var(--text2);font-weight:700;text-align:center"></div>
   </div>
   <div style="display:flex;gap:0.8rem;align-items:center;justify-content:center;padding:0.6rem 0.8rem 1rem;width:100%;box-sizing:border-box">
@@ -9154,6 +9154,12 @@ function rectMostrarAnimacionDado(valor, jugador, alConfirmar) {
   if (wrap) wrap.style.display = 'flex';
   if (hint) hint.textContent = 'Girando…';
   if (cubo) { cubo.classList.remove('rect-dado-listo'); cubo.classList.add('rect-dado-girando'); }
+  // Reajustar la pantalla YA, antes de que empiecen los cambios rápidos del dado:
+  // si se deja al sistema de reajuste automático (que espera a que dejen de
+  // producirse cambios), cada tirada del dado dispara tantos cambios seguidos
+  // que nunca llega a tener un hueco para recalcular hasta que el dado se para,
+  // dejando el tablero con el tamaño a medias mientras gira.
+  autoAjustarPantalla();
   let tick = 0;
   if (_rectAnimDadoInterval) clearInterval(_rectAnimDadoInterval);
   _rectAnimDadoInterval = setInterval(() => {
