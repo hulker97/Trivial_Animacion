@@ -7360,16 +7360,23 @@ let _autoAjustePausado = false;
 
 function autoAjustarPantalla() {
   if (_autoAjustePausado) return;
+  // Doble frame: un solo requestAnimationFrame a veces mide el hueco disponible
+  // ANTES de que el navegador haya terminado de colocar un elemento que acaba de
+  // aparecer (como el dado), dejando el cálculo con el tamaño de un instante antes
+  // y provocando que el dado tape parte del tablero. Esperar a un segundo frame
+  // asegura que el diseño ya está asentado del todo antes de medir.
   requestAnimationFrame(() => {
-    const screen = document.querySelector('.screen.active');
-    if (!screen || !PANTALLAS_AUTOAJUSTABLES.has(screen.id)) return;
-    screen.style.zoom = 1;
-    const disponible = window.innerHeight;
-    const necesario = screen.scrollHeight;
-    if (necesario > disponible) {
-      const factor = Math.max(0.7, disponible / necesario - 0.01);
-      screen.style.zoom = factor;
-    }
+    requestAnimationFrame(() => {
+      const screen = document.querySelector('.screen.active');
+      if (!screen || !PANTALLAS_AUTOAJUSTABLES.has(screen.id)) return;
+      screen.style.zoom = 1;
+      const disponible = window.innerHeight;
+      const necesario = screen.scrollHeight;
+      if (necesario > disponible) {
+        const factor = Math.max(0.7, disponible / necesario - 0.03);
+        screen.style.zoom = factor;
+      }
+    });
   });
 }
 
