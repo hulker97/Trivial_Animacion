@@ -8779,6 +8779,7 @@ let rectGame = null;
 
 function iniciarTableroRect() {
   rectZoomUsuario = 1;
+  rectZoomOrigen = '50% 0%';
   const especiales = {};
   RECT_OCAS.forEach(i => especiales[i] = 'oca');
   Object.keys(RECT_PUENTE).forEach(i => especiales[i] = 'puente');
@@ -8903,6 +8904,7 @@ function generarTableroOca(n) {
 // Zoom manual del tablero de la Oca, además del ajuste automático que ya hace que
 // quepa entero: 1 = ajuste automático normal, más de 1 = ampliado (con scroll).
 let rectZoomUsuario = 1;
+let rectZoomOrigen = '50% 0%'; // punto desde el que crece el zoom (se recalcula al pellizcar/doble-tocar)
 const RECT_ZOOM_MAX = 2.5, RECT_ZOOM_MIN = 1;
 
 // ── Zoom del tablero de la Oca con gestos táctiles: pellizcar con 2 dedos, o
@@ -8916,15 +8918,35 @@ function _rectDistanciaTouches(touches) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
+// Calcula, a partir de uno o dos toques, el punto (en % dentro del contenido del
+// tablero) desde el que debe crecer el zoom — para que el zoom salga justo donde
+// se pellizca o se hace doble toque, en vez de crecer siempre desde un punto fijo.
+function _rectOrigenDesdeToques(touches) {
+  const inner = document.getElementById('rect-board-inner');
+  if (!inner || !inner.getBoundingClientRect) return rectZoomOrigen;
+  const rect = inner.getBoundingClientRect();
+  if (!rect.width || !rect.height) return rectZoomOrigen;
+  const x = touches.length === 2 ? (touches[0].clientX + touches[1].clientX) / 2 : touches[0].clientX;
+  const y = touches.length === 2 ? (touches[0].clientY + touches[1].clientY) / 2 : touches[0].clientY;
+  const px = Math.max(0, Math.min(100, ((x - rect.left) / rect.width) * 100));
+  const py = Math.max(0, Math.min(100, ((y - rect.top) / rect.height) * 100));
+  return `${px.toFixed(1)}% ${py.toFixed(1)}%`;
+}
+
 function rectBoardTouchStart(e) {
   if (e.touches.length === 2) {
     e.preventDefault();
+    rectZoomOrigen = _rectOrigenDesdeToques(e.touches);
+    const inner = document.getElementById('rect-board-inner');
+    if (inner) inner.style.transformOrigin = rectZoomOrigen;
     _rectGestoPellizco = { distancia: _rectDistanciaTouches(e.touches), zoomInicial: rectZoomUsuario };
   } else if (e.touches.length === 1) {
     const ahora = Date.now();
     if (ahora - _rectUltimoTap < 300) {
-      // Doble toque: alterna entre el tamaño normal y uno ampliado
+      // Doble toque: alterna entre el tamaño normal y uno ampliado, creciendo
+      // justo desde el punto donde se ha tocado
       e.preventDefault();
+      rectZoomOrigen = _rectOrigenDesdeToques(e.touches);
       rectZoomUsuario = rectZoomUsuario > 1.05 ? 1 : 2;
       rectRenderBoard();
       _rectUltimoTap = 0;
@@ -9107,7 +9129,7 @@ function rectRenderBoard() {
   const escala = escalaAuto * rectZoomUsuario;
   const zoomActivo = rectZoomUsuario > 1.001;
   board.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:flex-start;justify-content:center;overflow:${zoomActivo ? 'visible' : 'hidden'}">
-    <div id="rect-board-inner" data-escala-auto="${escalaAuto}" style="width:${anchoTotal}px;height:${altoTotal}px;transform:scale(${escala});transform-origin:top center;flex-shrink:0">
+    <div id="rect-board-inner" data-escala-auto="${escalaAuto}" style="width:${anchoTotal}px;height:${altoTotal}px;transform:scale(${escala});transform-origin:${rectZoomOrigen};flex-shrink:0">
       ${html}
     </div>
   </div>`;
