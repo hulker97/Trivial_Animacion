@@ -590,6 +590,20 @@ body > * { position: relative; z-index: 1; }
   letter-spacing: 0.5px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.4);
 }
+.q-dif-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.7rem;
+  border-radius: 50px;
+  font-weight: 800;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border: 1px solid;
+}
+.q-dif-badge.facil    { color: #69F0AE; border-color: rgba(105,240,174,0.5); background: rgba(105,240,174,0.12); }
+.q-dif-badge.media     { color: #FFD54F; border-color: rgba(255,213,79,0.5); background: rgba(255,213,79,0.12); }
+.q-dif-badge.dificil   { color: #FF8A80; border-color: rgba(255,138,128,0.5); background: rgba(255,138,128,0.12); }
 .q-movie {
   font-family: 'Fredoka One', cursive;
   font-size: 1.2rem;
@@ -1623,6 +1637,7 @@ body > * { position: relative; z-index: 1; }
       <div class="q-header">
         <div class="q-header-top">
           <span class="q-cat-badge" id="duelo-cat-badge">–</span>
+          <span class="q-dif-badge" id="duelo-dif-badge" style="display:none"></span>
         </div>
         <div class="q-movie" id="duelo-movie">–</div>
       </div>
@@ -1829,6 +1844,7 @@ body > * { position: relative; z-index: 1; }
       <div class="q-header">
         <div class="q-header-top">
           <span class="q-cat-badge" id="inf-cat-badge">–</span>
+          <span class="q-dif-badge" id="inf-dif-badge" style="display:none"></span>
         </div>
         <div class="q-header-extras">
           <span class="cronometro-display" id="inf-cronometro" style="display:none">⏱️ 15</span>
@@ -1965,6 +1981,7 @@ body > * { position: relative; z-index: 1; }
       <div class="q-header">
         <div class="q-header-top">
           <span class="q-cat-badge" id="pq-cat-badge">–</span>
+          <span class="q-dif-badge" id="pq-dif-badge" style="display:none"></span>
           <span class="q-wedge-badge hidden" id="pq-wedge-badge">🏅</span>
         </div>
         <div class="q-header-extras">
@@ -2093,6 +2110,7 @@ body > * { position: relative; z-index: 1; }
     <div class="q-header">
       <div class="q-header-top">
         <span class="q-cat-badge" id="q-cat-badge">–</span>
+          <span class="q-dif-badge" id="q-dif-badge" style="display:none"></span>
         <span class="q-wedge-badge hidden" id="q-wedge-badge">🏅 Cuña</span>
       </div>
       <div class="q-header-extras">
@@ -3284,7 +3302,7 @@ function onlineGuestRecibe(data) {
     onlineOcultarPantallaReconexion();
     onlineAplicarEstadoRemotoInf(data.estado);
   } else if (data.type === 'REPLAY') {
-    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick, saltarPregunta, pqSaltar, usarCambiarCompartido, usarCambiarPq };
+    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick, saltarPregunta, pqSaltar, usarCambiarCompartido, usarCambiarPq, usar5050Compartido, usar5050Pq, usar5050Infinitas, usarComodinTiempo };
     const fn = fns[data.fn];
     if (fn) fn(...(data.args || []));
   } else if (data.type === 'VOTOS_UPDATE') {
@@ -3335,7 +3353,7 @@ function onlineProcesarAccion(peerId, action, payload) {
   else if (action === 'elegirQuesito') pqElegirQuesito(payload.cat);
   else if (action === 'continuar') pqContinuar(payload.correcto);
   else if (action === 'relay') {
-    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick, saltarPregunta, pqSaltar, usarCambiarCompartido, usarCambiarPq };
+    const fns = { pqOpcion, pqJuzgar, pqRevelar, pqToggleOpciones, onOptionClick, saltarPregunta, pqSaltar, usarCambiarCompartido, usarCambiarPq, usar5050Compartido, usar5050Pq, usar5050Infinitas, usarComodinTiempo };
     const fn = fns[payload.fn];
     if (fn) fn(...(payload.args || []));
   }
@@ -3406,12 +3424,13 @@ function onlineBroadcastEstado(faseExtra) {
     turno: pqGame.turno,
     jugadores: pqGame.jugadores.map(j => ({
       name:j.name, color:j.color, emoji:j.emoji, fichaId:j.fichaId, _peerId:j._peerId, _guestId:j._guestId,
-      quesitos:j.quesitos, aciertosAcumulados:j.aciertosAcumulados
+      quesitos:j.quesitos, aciertosAcumulados:j.aciertosAcumulados,
+      comodin5050:j.comodin5050, comodinTiempo:j.comodinTiempo, comodinCambiar:j.comodinCambiar,
     })),
     pregunta: pqGame._preguntaActual || null,
     catElegida: pqCatElegida,
     esCorona: pqEsCorona,
-    fase: onlineUltimaFase, // 'ruleta' | 'pregunta' | 'corona' | 'selector-quesito'
+    fase: onlineUltimaFase, // 'ruleta' | 'pregunta' | 'corona' | 'selector-quesito' | '5050:i,j'
   };
   onlineBroadcast({ type: 'STATE_UPDATE', estado });
 }
@@ -3442,6 +3461,9 @@ function onlineAplicarEstadoRemoto(estado) {
     pqMostrarSelectorQuesito();
   } else if (estado.fase === 'pregunta' && estado.pregunta) {
     pqRenderPreguntaUI(estado.pregunta, pqCatElegida, pqEsCorona);
+  } else if (estado.fase && estado.fase.startsWith('5050:')) {
+    const ocultas = estado.fase.slice(5).split(',').map(Number);
+    _aplicar5050('pq-opt', -1, ocultas);
   } else if (estado.fase === 'victoria') {
     const ganador = pqGame.jugadores.find(j => Object.values(j.quesitos).every(Boolean));
     if (ganador) pqMostrarVictoria(ganador);
@@ -3460,12 +3482,13 @@ function onlineBroadcastEstadoRect(faseExtra) {
     jugadores: rectGame.jugadores.map(j => ({
       name:j.name, color:j.color, emoji:j.emoji, fichaId:j.fichaId, _peerId:j._peerId, _guestId:j._guestId,
       pos:j.pos, turnosPerdidos:j.turnosPerdidos, atascado:j.atascado,
+      comodin5050:j.comodin5050, comodinTiempo:j.comodinTiempo, comodinCambiar:j.comodinCambiar,
     })),
     pozoOcupado: rectGame.pozoOcupado,
     ganador: rectGame.ganador ? rectGame.jugadores.indexOf(rectGame.ganador) : null,
     pregunta: rectGame._preguntaActual || null,
     dadoPendiente: rectGame.dadoPendiente || null,
-    fase: onlineUltimaFaseRect, // 'tablero' | 'dado-pendiente' | 'pregunta' | 'victoria'
+    fase: onlineUltimaFaseRect, // 'tablero' | 'dado-pendiente' | 'pregunta' | 'victoria' | '5050:i,j'
   };
   onlineBroadcast({ type: 'STATE_UPDATE_RECT', estado });
 }
@@ -3496,6 +3519,9 @@ function onlineAplicarEstadoRemotoRect(estado) {
     game.phase = 'normal';
     showQuestionModal(false);
     document.getElementById('q-continue-btn').onclick = rectOnContinueUI;
+  } else if (estado.fase && estado.fase.startsWith('5050:')) {
+    const ocultas = estado.fase.slice(5).split(',').map(Number);
+    _aplicar5050('q-opt', -1, ocultas);
   } else {
     hideModal('modal-pregunta');
   }
@@ -3543,11 +3569,12 @@ function onlineBroadcastEstadoGame(faseExtra) {
     players: game.players.map(p => ({
       name:p.name, color:p.color, emoji:p.emoji, fichaId:p.fichaId, _peerId:p._peerId, _guestId:p._guestId,
       position:p.position, wedges:p.wedges, readyForFinal:p.readyForFinal,
+      comodin5050:p.comodin5050, comodinTiempo:p.comodinTiempo, comodinCambiar:p.comodinCambiar,
     })),
     winner: game.winner ? game.players.indexOf(game.winner) : null,
     pregunta: game.pendingQuestion || null,
     pendingWedgeCategoria: game.pendingWedgeCategoria || null,
-    fase: onlineUltimaFaseGame, // 'tablero' | 'pregunta' | 'victoria'
+    fase: onlineUltimaFaseGame, // 'tablero' | 'pregunta' | 'victoria' | '5050:i,j'
   };
   onlineBroadcast({ type: 'STATE_UPDATE_GAME', estado });
 }
@@ -3570,6 +3597,9 @@ function onlineAplicarEstadoRemotoGame(estado) {
 
   if (estado.fase === 'pregunta' && estado.pregunta) {
     showQuestionModal(estado.phase === 'finalQuestion');
+  } else if (estado.fase && estado.fase.startsWith('5050:')) {
+    const ocultas = estado.fase.slice(5).split(',').map(Number);
+    _aplicar5050('q-opt', -1, ocultas);
   } else {
     hideModal('modal-pregunta');
   }
@@ -5798,6 +5828,7 @@ function showQuestionModal(isFinal) {
   badge.innerHTML = `${mascotaTag(q.categoria, 20, 'border-radius:50%;margin-right:0.3rem')}${catInfo.nombre}`;
   badge.style.background = catInfo.color;
   badge.style.color = "#FBF5EA";
+  mostrarDificultad('q-dif-badge', q.dificultad);
 
   document.getElementById("q-movie").textContent = q.pelicula;
   document.getElementById("q-text").textContent = q.pregunta;
@@ -6603,6 +6634,18 @@ function _tono(freq, inicio, duracion, tipo, volumen) {
 // Vibración táctil corta (silenciosa si el dispositivo no la soporta, p.ej. iPhone/escritorio)
 function vibrar(patron) { try { navigator.vibrate && navigator.vibrate(patron); } catch (e) {} }
 
+// Muestra un pequeño recuadro con la dificultad de la pregunta actual (fácil/media/difícil)
+const DIFICULTAD_LABEL = { facil: 'Fácil', media: 'Media', dificil: 'Difícil' };
+function mostrarDificultad(elId, dificultad) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const clave = (dificultad || '').toLowerCase();
+  if (!DIFICULTAD_LABEL[clave]) { el.style.display = 'none'; return; }
+  el.textContent = DIFICULTAD_LABEL[clave];
+  el.className = 'q-dif-badge ' + clave;
+  el.style.display = '';
+}
+
 // ── Música de fondo suave para los menús (acordes ambientales sintetizados,
 // nada de archivos externos: encaja con que todo el juego sea un único HTML) ──
 let musicaFondoActiva = false;
@@ -6806,10 +6849,40 @@ function sfxIncorrecto() {
 }
 
 // ── Comodín 50/50: quita 2 opciones incorrectas de las 4 posibles ──
-// No necesita red: solo cambia lo que ve el propio dispositivo, no el resultado
-// real de la pregunta, así que cada jugador gasta sus propios usos localmente.
+// Cada jugador tiene sus PROPIOS usos (antes era un contador global compartido,
+// por lo que si un jugador lo usaba, se gastaba para todos). Los usos se guardan
+// como propiedad en el propio objeto del jugador, y como esos objetos ya viajan
+// completos en cada sincronización online, se ven reflejados para todos.
 const COMODIN_5050_USOS_INICIALES = 3;
-let comodin5050Restantes = COMODIN_5050_USOS_INICIALES;
+const COMODIN_TIEMPO_USOS_INICIALES = 2;
+const COMODIN_CAMBIAR_USOS_INICIALES = 2;
+
+// Objeto usado solo cuando no hay array de jugadores (Preguntas Infinitas en solitario)
+let _comodinesJugadorSolo = {};
+
+// Devuelve la lista de TODOS los jugadores de la partida activa ahora mismo,
+// sea cual sea el modo (Preguntados, Oca, Circular o Infinitas multijugador).
+function _listaJugadoresComodines() {
+  if (rectGame && rectGame.jugadores && rectGame.jugadores.length) return rectGame.jugadores;
+  if (pqGame && pqGame.jugadores && pqGame.jugadores.length) return pqGame.jugadores;
+  if (game && game.players && game.players.length) return game.players;
+  if (infJugadores && infJugadores.length) return infJugadores;
+  return [_comodinesJugadorSolo];
+}
+// Devuelve el jugador cuyo turno es ahora mismo (para gastar SUS comodines, no los de otro)
+function _jugadorActualComodines() {
+  if (rectGame && rectGame.jugadores && rectGame.jugadores.length) return rectJugadorActual();
+  if (pqGame && pqGame.jugadores && pqGame.jugadores.length) return pqGame.jugadores[pqGame.turno];
+  if (game && game.players && game.players.length) return game.players[game.currentPlayerIndex];
+  if (infJugadores && infJugadores.length) return infJugadores[infTurno];
+  return _comodinesJugadorSolo;
+}
+// Lee el valor de un comodín de un jugador, inicializándolo la primera vez que se
+// consulta (por si el reset explícito se llamó antes de que existiera el jugador).
+function _comodinValor(jugador, campo, valorInicial) {
+  if (jugador[campo] === undefined || jugador[campo] === null) jugador[campo] = valorInicial;
+  return jugador[campo];
+}
 
 // ── Cronómetro opcional por pregunta ──
 let cronometroActivo = false;
@@ -6855,7 +6928,7 @@ function detenerCronometro() {
 }
 
 function comodin5050Reset() {
-  comodin5050Restantes = COMODIN_5050_USOS_INICIALES;
+  _listaJugadoresComodines().forEach(j => { j.comodin5050 = COMODIN_5050_USOS_INICIALES; });
   actualizar5050UI();
 }
 
@@ -6869,11 +6942,13 @@ function comodin5050ResetPorPregunta() {
 }
 
 function actualizar5050UI() {
+  const jugador = _jugadorActualComodines();
+  const restantes = _comodinValor(jugador, 'comodin5050', COMODIN_5050_USOS_INICIALES);
   ['q-5050-btn', 'pq-5050-btn', 'inf-5050-btn'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.textContent = `🎯 50/50 (${comodin5050Restantes})`;
-    const disponible = comodin5050Restantes > 0 && !comodin5050UsadoEnPreguntaActual;
+    el.textContent = `🎯 50/50 (${restantes})`;
+    const disponible = restantes > 0 && !comodin5050UsadoEnPreguntaActual;
     el.style.opacity = disponible ? '' : '0.35';
     el.style.pointerEvents = disponible ? '' : 'none';
   });
@@ -6881,62 +6956,88 @@ function actualizar5050UI() {
 
 // Oculta 2 opciones incorrectas al azar entre los botones dados (los ids ya existentes,
 // del tipo prefijo-opt-0..3), dejando la correcta y una incorrecta visibles.
-function _aplicar5050(prefijoOpt, indiceCorrecta) {
-  const incorrectas = [0, 1, 2, 3].filter(i => i !== indiceCorrecta);
-  incorrectas.sort(() => Math.random() - 0.5);
-  incorrectas.slice(0, 2).forEach(i => {
+// Devuelve los índices ocultados, para poder sincronizarlos online.
+function _aplicar5050(prefijoOpt, indiceCorrecta, indicesForzados) {
+  let ocultas;
+  if (indicesForzados) {
+    ocultas = indicesForzados;
+  } else {
+    const incorrectas = [0, 1, 2, 3].filter(i => i !== indiceCorrecta);
+    incorrectas.sort(() => Math.random() - 0.5);
+    ocultas = incorrectas.slice(0, 2);
+  }
+  ocultas.forEach(i => {
     const el = document.getElementById(`${prefijoOpt}-${i}`);
     if (el) { el.style.visibility = 'hidden'; el.style.pointerEvents = 'none'; }
   });
-  comodin5050Restantes--;
   comodin5050UsadoEnPreguntaActual = true;
   actualizar5050UI();
   vibrar(20);
+  return ocultas;
 }
 
 function usar5050Compartido() {
-  if (comodin5050Restantes <= 0 || comodin5050UsadoEnPreguntaActual || questionAnswered) return;
+  if (!onlineEsMiTurno()) return;
+  const jugador = _jugadorActualComodines();
+  if (_comodinValor(jugador, 'comodin5050', COMODIN_5050_USOS_INICIALES) <= 0 || comodin5050UsadoEnPreguntaActual || questionAnswered) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('relay', { fn: 'usar5050Compartido', args: [] }); return; }
   const q = game && game.pendingQuestion;
   if (!q) return;
-  _aplicar5050('q-opt', q.correcta);
+  jugador.comodin5050--;
+  const ocultas = _aplicar5050('q-opt', q.correcta);
+  const modo = onlineModoActivo();
+  if (modo === 'rectangular' && modoOnline === 'host') onlineBroadcastEstadoRect('5050:' + ocultas.join(','));
+  else if (modo === 'circular' && modoOnline === 'host') onlineBroadcastEstadoGame('5050:' + ocultas.join(','));
 }
 function usar5050Pq() {
-  if (comodin5050Restantes <= 0 || comodin5050UsadoEnPreguntaActual || pqRespondida) return;
+  if (!onlineEsMiTurno()) return;
+  const jugador = _jugadorActualComodines();
+  if (_comodinValor(jugador, 'comodin5050', COMODIN_5050_USOS_INICIALES) <= 0 || comodin5050UsadoEnPreguntaActual || pqRespondida) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('relay', { fn: 'usar5050Pq', args: [] }); return; }
   const q = pqGame && pqGame._preguntaActual;
   if (!q) return;
-  _aplicar5050('pq-opt', q.correcta);
+  jugador.comodin5050--;
+  const ocultas = _aplicar5050('pq-opt', q.correcta);
+  if (modoOnline === 'host') onlineBroadcastEstado('5050:' + ocultas.join(','));
 }
 function usar5050Infinitas() {
-  if (comodin5050Restantes <= 0 || comodin5050UsadoEnPreguntaActual || infRespondida) return;
+  if (!onlineEsMiTurno()) return;
+  const jugador = _jugadorActualComodines();
+  if (_comodinValor(jugador, 'comodin5050', COMODIN_5050_USOS_INICIALES) <= 0 || comodin5050UsadoEnPreguntaActual || infRespondida) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('relay', { fn: 'usar5050Infinitas', args: [] }); return; }
   const q = infPreguntaActual;
   if (!q) return;
-  _aplicar5050('inf-opt', q.correcta);
+  jugador.comodin5050--;
+  const ocultas = _aplicar5050('inf-opt', q.correcta);
+  if (modoOnline === 'host') onlineBroadcastEstadoInf('5050:' + ocultas.join(','));
 }
 
 // ── Comodín "añadir tiempo": +10s al cronómetro (solo tiene sentido si está activado) ──
-const COMODIN_TIEMPO_USOS_INICIALES = 2;
-let comodinTiempoRestantes = COMODIN_TIEMPO_USOS_INICIALES;
-
 function comodinTiempoReset() {
-  comodinTiempoRestantes = COMODIN_TIEMPO_USOS_INICIALES;
+  _listaJugadoresComodines().forEach(j => { j.comodinTiempo = COMODIN_TIEMPO_USOS_INICIALES; });
   actualizarComodinTiempoUI();
 }
 
 function actualizarComodinTiempoUI() {
+  const jugador = _jugadorActualComodines();
+  const restantes = _comodinValor(jugador, 'comodinTiempo', COMODIN_TIEMPO_USOS_INICIALES);
   ['q-tiempo-btn', 'pq-tiempo-btn', 'inf-tiempo-btn'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.style.display = cronometroActivo ? '' : 'none';
-    el.textContent = `⏰ +10s (${comodinTiempoRestantes})`;
-    const disponible = comodinTiempoRestantes > 0 && _cronometroIntervalo !== null;
+    el.textContent = `⏰ +10s (${restantes})`;
+    const disponible = restantes > 0 && _cronometroIntervalo !== null;
     el.style.opacity = disponible ? '' : '0.35';
     el.style.pointerEvents = disponible ? '' : 'none';
   });
 }
 
 function usarComodinTiempo() {
-  if (comodinTiempoRestantes <= 0 || !_cronometroIntervalo) return;
-  comodinTiempoRestantes--;
+  if (!onlineEsMiTurno()) return;
+  const jugador = _jugadorActualComodines();
+  if (_comodinValor(jugador, 'comodinTiempo', COMODIN_TIEMPO_USOS_INICIALES) <= 0 || !_cronometroIntervalo) return;
+  if (modoOnline === 'guest') { onlineEnviarAccion('relay', { fn: 'usarComodinTiempo', args: [] }); return; }
+  jugador.comodinTiempo--;
   _cronometroRestante += 10;
   ['q-cronometro', 'pq-cronometro', 'inf-cronometro'].forEach(id => {
     const el = document.getElementById(id);
@@ -6952,12 +7053,10 @@ function usarComodinTiempo() {
 // ── Comodín "cambiar pregunta": cambia la pregunta actual por otra de la misma
 // categoría, SIN penalización (no cuenta como acierto ni como fallo). Sí necesita
 // sincronizarse online, porque cambia una pregunta que ven todos los jugadores.
-const COMODIN_CAMBIAR_USOS_INICIALES = 2;
-let comodinCambiarRestantes = COMODIN_CAMBIAR_USOS_INICIALES;
 let comodinCambiarUsadoEnPreguntaActual = false;
 
 function comodinCambiarReset() {
-  comodinCambiarRestantes = COMODIN_CAMBIAR_USOS_INICIALES;
+  _listaJugadoresComodines().forEach(j => { j.comodinCambiar = COMODIN_CAMBIAR_USOS_INICIALES; });
   actualizarComodinCambiarUI();
 }
 function comodinCambiarResetPorPregunta() {
@@ -6965,11 +7064,13 @@ function comodinCambiarResetPorPregunta() {
   actualizarComodinCambiarUI();
 }
 function actualizarComodinCambiarUI() {
+  const jugador = _jugadorActualComodines();
+  const restantes = _comodinValor(jugador, 'comodinCambiar', COMODIN_CAMBIAR_USOS_INICIALES);
   ['q-cambiar-btn', 'pq-cambiar-btn', 'inf-cambiar-btn'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.textContent = `🔄 Cambiar (${comodinCambiarRestantes})`;
-    const disponible = comodinCambiarRestantes > 0 && !comodinCambiarUsadoEnPreguntaActual;
+    el.textContent = `🔄 Cambiar (${restantes})`;
+    const disponible = restantes > 0 && !comodinCambiarUsadoEnPreguntaActual;
     el.style.opacity = disponible ? '' : '0.35';
     el.style.pointerEvents = disponible ? '' : 'none';
   });
@@ -6982,7 +7083,8 @@ function usarCambiarCompartidoUI() {
   usarCambiarCompartido();
 }
 function usarCambiarCompartido() {
-  if (comodinCambiarRestantes <= 0 || comodinCambiarUsadoEnPreguntaActual || questionAnswered) return;
+  const jugador = _jugadorActualComodines();
+  if (_comodinValor(jugador, 'comodinCambiar', COMODIN_CAMBIAR_USOS_INICIALES) <= 0 || comodinCambiarUsadoEnPreguntaActual || questionAnswered) return;
   if (!game || !game.pendingQuestion) return;
   const actual = game.pendingQuestion;
   const cat = actual.categoria;
@@ -6998,7 +7100,7 @@ function usarCambiarCompartido() {
   usadasSet.add(q);
   if (modo === 'rectangular') rectGame._preguntaActual = q;
   game.pendingQuestion = q;
-  comodinCambiarRestantes--;
+  jugador.comodinCambiar--;
   comodinCambiarUsadoEnPreguntaActual = true;
   actualizarComodinCambiarUI();
   showQuestionModal(false);
@@ -7014,7 +7116,8 @@ function usarCambiarPqUI() {
   usarCambiarPq();
 }
 function usarCambiarPq() {
-  if (comodinCambiarRestantes <= 0 || comodinCambiarUsadoEnPreguntaActual || pqRespondida) return;
+  const jugador = _jugadorActualComodines();
+  if (_comodinValor(jugador, 'comodinCambiar', COMODIN_CAMBIAR_USOS_INICIALES) <= 0 || comodinCambiarUsadoEnPreguntaActual || pqRespondida) return;
   const actual = pqGame._preguntaActual;
   if (!actual) return;
   const cat = actual.categoria;
@@ -7024,7 +7127,7 @@ function usarCambiarPq() {
   if (!q) return;
   pqGame.usadas.add(q);
   pqGame._preguntaActual = q;
-  comodinCambiarRestantes--;
+  jugador.comodinCambiar--;
   comodinCambiarUsadoEnPreguntaActual = true;
   actualizarComodinCambiarUI();
   pqRenderPreguntaUI(q, pqCatElegida, pqEsCorona);
@@ -7039,9 +7142,10 @@ function usarCambiarInfinitasUI() {
   usarCambiarInfinitas();
 }
 function usarCambiarInfinitas() {
-  if (comodinCambiarRestantes <= 0 || comodinCambiarUsadoEnPreguntaActual || infRespondida) return;
+  const jugador = _jugadorActualComodines();
+  if (_comodinValor(jugador, 'comodinCambiar', COMODIN_CAMBIAR_USOS_INICIALES) <= 0 || comodinCambiarUsadoEnPreguntaActual || infRespondida) return;
   infPreguntaActual = infPickQuestion();
-  comodinCambiarRestantes--;
+  jugador.comodinCambiar--;
   comodinCambiarUsadoEnPreguntaActual = true;
   actualizarComodinCambiarUI();
   infRenderPreguntaEnPantalla(infPreguntaActual);
@@ -7139,6 +7243,7 @@ function dueloMostrarPregunta() {
   badge.innerHTML = `${mascotaTag(q.categoria, 20, 'border-radius:50%;margin-right:0.3rem')}${catInfo.nombre}`;
   badge.style.background = catInfo.color;
   badge.style.color = '#FBF5EA';
+  mostrarDificultad('duelo-dif-badge', q.dificultad);
   document.getElementById('duelo-movie').textContent = q.pelicula;
   document.getElementById('duelo-texto').textContent = q.pregunta;
 
@@ -7742,6 +7847,7 @@ function infRenderPreguntaEnPantalla(q) {
   badge.innerHTML = `${mascotaTag(q.categoria, 20, 'border-radius:50%;margin-right:0.3rem')}${catInfo.nombre}`;
   badge.style.background = catInfo.color;
   badge.style.color = "#FBF5EA";
+  mostrarDificultad('inf-dif-badge', q.dificultad);
   document.getElementById("inf-movie").textContent = q.pelicula;
   document.getElementById("inf-texto").textContent = q.pregunta;
   document.getElementById("inf-contador").textContent = infContador;
@@ -8040,11 +8146,14 @@ function onlineBroadcastEstadoInf(faseExtra) {
   onlineUltimaFaseInf = faseExtra || 'pregunta';
   const estado = {
     turno: infTurno,
-    jugadores: infJugadores.map(j => ({ name:j.name, color:j.color, emoji:j.emoji, fichaId:j.fichaId, _peerId:j._peerId, _guestId:j._guestId, aciertos:j.aciertos, fallos:j.fallos })),
+    jugadores: infJugadores.map(j => ({
+      name:j.name, color:j.color, emoji:j.emoji, fichaId:j.fichaId, _peerId:j._peerId, _guestId:j._guestId, aciertos:j.aciertos, fallos:j.fallos,
+      comodin5050:j.comodin5050, comodinTiempo:j.comodinTiempo, comodinCambiar:j.comodinCambiar,
+    })),
     pregunta: infPreguntaActual,
     submodo: infSubmodo,
     contador: infContador,
-    fase: onlineUltimaFaseInf, // 'pregunta' | 'resultado'
+    fase: onlineUltimaFaseInf, // 'pregunta' | 'resultado' | '5050:i,j'
     resultado: infUltimoResultado,
   };
   onlineBroadcast({ type: 'STATE_UPDATE_INF', estado });
@@ -8070,6 +8179,9 @@ function onlineAplicarEstadoRemotoInf(estado) {
   } else if (estado.fase === 'resultado' && estado.resultado) {
     infRespondida = true;
     infMostrarResultadoRemoto(estado.resultado);
+  } else if (estado.fase && estado.fase.startsWith('5050:')) {
+    const ocultas = estado.fase.slice(5).split(',').map(Number);
+    _aplicar5050('inf-opt', -1, ocultas);
   }
   onlineActualizarBloqueoTurno();
   autoAjustarPantalla();
@@ -8419,6 +8531,7 @@ function pqRenderPreguntaUI(q, cat, esCorona) {
   badge.innerHTML = `${mascotaTag(cat, 20, 'border-radius:50%;margin-right:0.3rem;box-shadow:0 1px 4px rgba(0,0,0,0.4)')}${catInfo.nombre}`;
   badge.style.background = `linear-gradient(135deg, ${catInfo.color}, ${catInfo.color}bb)`;
   badge.style.boxShadow = `0 2px 10px rgba(0,0,0,0.4), 0 0 14px ${catInfo.color}66`;
+  mostrarDificultad('pq-dif-badge', q.dificultad);
   document.getElementById('pq-movie').textContent = q.pelicula;
   document.getElementById('pq-text').textContent = q.pregunta;
 
@@ -9337,23 +9450,21 @@ function rectMoverJugador(nuevaPos) {
   if (cas.tipo === 'dados') {
     const destino = RECT_DADOS[nuevaPos];
     setTimeout(() => {
-      rectMostrarAviso('🎲 ¡Salto de dados!');
+      rectMostrarAviso('🎲 ¡Salto de dados! Tiras otra vez');
       j.pos = destino;
       rectRenderBoard(); rectRenderTopbar();
       if (rectGame.casillas[j.pos].tipo === 'meta') { rectGame.ganador = j; rectGame.esperandoMovimiento = true; rectMostrarVictoria(j); }
-      else { rectGame.esperandoMovimiento = false; setTimeout(rectPasarTurno, 500); }
+      else { rectGame.esperandoMovimiento = false; rectRenderTopbar(); } // turno extra: no se pasa turno, como con la oca y el puente
     }, 400);
     return;
   }
 
   if (cas.tipo === 'laberinto') {
-    setTimeout(() => {
-      rectMostrarAviso('🌀 ¡Te pierdes en el laberinto!');
-      j.pos = RECT_LABERINTO_DESTINO;
-      rectRenderBoard(); rectRenderTopbar();
-      rectGame.esperandoMovimiento = false;
-      setTimeout(rectPasarTurno, 500);
-    }, 400);
+    j.turnosPerdidos = 2;
+    rectMostrarAviso('🌀 ¡Te pierdes en el laberinto! Pierdes 2 turnos');
+    rectGame.esperandoMovimiento = true;
+    rectRenderTopbar();
+    setTimeout(rectPasarTurno, 900);
     return;
   }
 
