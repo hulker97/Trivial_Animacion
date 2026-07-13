@@ -6207,6 +6207,9 @@ function removeJugador() {
 // Estado de filtros
 let filtroPelisSeleccionadas = null; // null = todas, Set = selección personalizada
 let peliculasPorEstudio = {};        // { 'Pixar Animation Studios': ['Toy Story', ...], ... }
+let preguntasPorPelicula = {};        // { 'Frozen': 143, ... } cuántas preguntas hay de cada película
+let filtroLimitePorPelicula = {};     // { 'Frozen': 30, ... } si se quiere usar solo N de esa película (si no aparece, se usan todas)
+const FILTRO_LIMITE_PASO = 10;
 let estudiosExpandidos = new Set();  // qué estudios están desplegados en la UI
 let _pantallaFiltrosOrigen = 'screen-setup'; // para saber a dónde volver
 
@@ -6242,12 +6245,14 @@ async function cargarListaPeliculas() {
     // (o en curso) de cargarPreguntas(), así solo hay una descarga real.
     const todas = await cargarPreguntas({ dificultad: '' });
     peliculasPorEstudio = {};
+    preguntasPorPelicula = {};
     todas.forEach(r => {
       const est = r.estudio || 'Otros';
       const pel = r.pelicula;
       if (!pel) return;
       if (!peliculasPorEstudio[est]) peliculasPorEstudio[est] = new Set();
       peliculasPorEstudio[est].add(pel);
+      preguntasPorPelicula[pel] = (preguntasPorPelicula[pel] || 0) + 1;
     });
     for (const est in peliculasPorEstudio) {
       peliculasPorEstudio[est] = [...peliculasPorEstudio[est]].sort((a,b) => a.localeCompare(b,'es'));
@@ -6327,11 +6332,25 @@ function renderFiltrosPantalla() {
       <div class="filtro-pelis-lista ${expandido ? 'abierta' : ''}">
         ${pelisVisible.map(p => {
           const activa = filtroPelisSeleccionadas === null || filtroPelisSeleccionadas.has(p);
-          return `<div class="filtro-peli-item" onclick="togglePeliFiltro('${p.replace(/'/g,"\\'")}')">
-            <div class="filtro-checkbox ${activa ? 'checked' : ''}">
-              ${activa ? '✓' : ''}
+          const totalPreguntas = preguntasPorPelicula[p] || 0;
+          const limite = filtroLimitePorPelicula[p];
+          const pEsc = p.replace(/'/g,"\\'");
+          return `<div class="filtro-peli-item" style="flex-direction:column;align-items:stretch;gap:0.3rem">
+            <div style="display:flex;align-items:center;gap:0.6rem;cursor:pointer" onclick="togglePeliFiltro('${pEsc}')">
+              <div class="filtro-checkbox ${activa ? 'checked' : ''}">
+                ${activa ? '✓' : ''}
+              </div>
+              <div class="filtro-peli-nombre" style="flex:1">${p}</div>
+              <div style="font-size:0.72rem;color:var(--text2);font-weight:700;white-space:nowrap">${totalPreguntas} preg.</div>
             </div>
-            <div class="filtro-peli-nombre">${p}</div>
+            ${activa && totalPreguntas > FILTRO_LIMITE_PASO ? `
+            <div style="display:flex;align-items:center;gap:0.5rem;padding-left:2.1rem" onclick="event.stopPropagation()">
+              <button class="btn btn-secondary btn-sm" style="width:28px;height:28px;padding:0;font-size:0.9rem;flex-shrink:0" onclick="ajustarLimitePelicula('${pEsc}', -1)">－</button>
+              <div style="font-size:0.75rem;color:var(--text2);font-weight:700;min-width:90px;text-align:center">
+                ${limite ? `Usar ${limite} de ${totalPreguntas}` : `Usar todas (${totalPreguntas})`}
+              </div>
+              <button class="btn btn-secondary btn-sm" style="width:28px;height:28px;padding:0;font-size:0.9rem;flex-shrink:0" onclick="ajustarLimitePelicula('${pEsc}', 1)">＋</button>
+            </div>` : ''}
           </div>`;
         }).join('')}
       </div>
@@ -6347,6 +6366,20 @@ function renderFiltrosPantalla() {
   if (badge) badge.textContent = filtroPelisSeleccionadas === null
     ? `✓ Todas (${totalPelis} pelis)`
     : `${total}/${totalPelis} pelis`;
+}
+
+// Sube o baja (de 10 en 10) el número de preguntas a usar de una película concreta.
+// Al llegar al total disponible, se considera "usar todas" (sin límite guardado).
+function ajustarLimitePelicula(pelicula, direccion) {
+  const totalPreguntas = preguntasPorPelicula[pelicula] || 0;
+  let actual = filtroLimitePorPelicula[pelicula] ?? totalPreguntas;
+  actual += direccion * FILTRO_LIMITE_PASO;
+  if (actual >= totalPreguntas) {
+    delete filtroLimitePorPelicula[pelicula]; // sin límite = usar todas
+  } else {
+    filtroLimitePorPelicula[pelicula] = Math.max(FILTRO_LIMITE_PASO, actual);
+  }
+  renderFiltrosPantalla();
 }
 
 function getEstudioEstado(estudio, pelis) {
@@ -6430,33 +6463,60 @@ function actualizarResumenFiltros() {
 }
 
 // ── Cargar preguntas según filtro activo ──
+// Si el usuario ha limitado cuántas preguntas usar de alguna película en concreto
+// (con el selector "－ Usar N de M ＋" de la pantalla de filtros), recorta el pool
+// a esa cantidad para esa película, eligiendo al azar cuáles se quedan.
+function _aplicarLimitesPorPelicula(data) {
+  if (Object.keys(filtroLimitePorPelicula).length === 0) return data;
+  const porPelicula = {};
+  data.forEach(q => {
+    if (!porPelicula[q.pelicula]) porPelicula[q.pelicula] = [];
+    porPelicula[q.pelicula].push(q);
+  });
+  let resultado = [];
+  for (const pelicula in porPelicula) {
+    const preguntas = porPelicula[pelicula];
+    const limite = filtroLimitePorPelicula[pelicula];
+    if (limite && limite < preguntas.length) {
+      const barajadas = [...preguntas].sort(() => Math.random() - 0.5);
+      resultado = resultado.concat(barajadas.slice(0, limite));
+    } else {
+      resultado = resultado.concat(preguntas);
+    }
+  }
+  return resultado;
+}
+
 async function cargarPreguntasConFiltros() {
   const dificultad = document.getElementById('filtro-dificultad')?.value || '';
-
+  let data;
   if (filtroPelisSeleccionadas === null) {
     // Todas las películas
-    return await cargarPreguntas({ dificultad });
+    data = await cargarPreguntas({ dificultad });
   } else if (filtroPelisSeleccionadas.size === 0) {
     return [];
   } else {
     // Cargar todo y filtrar por películas seleccionadas
-    const data = await cargarPreguntas({ dificultad });
-    return data.filter(q => filtroPelisSeleccionadas.has(q.pelicula));
+    const todas = await cargarPreguntas({ dificultad });
+    data = todas.filter(q => filtroPelisSeleccionadas.has(q.pelicula));
   }
+  return _aplicarLimitesPorPelicula(data);
 }
 
 // Variante para el Duelo: usa el mismo filtro de películas (compartido con el resto
 // del juego), pero sin depender del selector de dificultad de la pantalla de "Trivial"
 // (el Duelo no tiene su propio selector de dificultad todavía).
 async function cargarPreguntasParaDuelo() {
+  let data;
   if (filtroPelisSeleccionadas === null) {
-    return await cargarPreguntas({ dificultad: '' });
+    data = await cargarPreguntas({ dificultad: '' });
   } else if (filtroPelisSeleccionadas.size === 0) {
     return [];
   } else {
-    const data = await cargarPreguntas({ dificultad: '' });
-    return data.filter(q => filtroPelisSeleccionadas.has(q.pelicula));
+    const todas = await cargarPreguntas({ dificultad: '' });
+    data = todas.filter(q => filtroPelisSeleccionadas.has(q.pelicula));
   }
+  return _aplicarLimitesPorPelicula(data);
 }
 
 async function onFiltroChange() {
