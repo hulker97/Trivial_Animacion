@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0e2e">
+<link rel="icon" href="images/icono-192.png">
+<link rel="apple-touch-icon" href="images/icono-192.png">
 <meta name="theme-color" content="#0a0e2e"/>
 <!-- PWA: permite "Añadir a pantalla de inicio" y que se abra a pantalla completa como una app -->
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -9685,7 +9689,37 @@ function mostrarErrorVisible(texto) {
   caja.appendChild(linea);
 }
 
+// Registrar el service worker para que la app y el banco ya cargado funcionen
+// sin conexión. Si falla (por ejemplo, en un navegador sin soporte), no pasa
+// nada: el juego sigue funcionando con normalidad, solo sin la parte offline.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(e => console.error('No se pudo registrar el service worker:', e));
+  });
+}
+
+// Aviso discreto de "sin conexión" en la esquina, que aparece/desaparece solo
+function actualizarAvisoConexion() {
+  let aviso = document.getElementById('aviso-sin-conexion');
+  if (!navigator.onLine) {
+    if (!aviso) {
+      aviso = document.createElement('div');
+      aviso.id = 'aviso-sin-conexion';
+      aviso.style.cssText = 'position:fixed;bottom:0.6rem;left:50%;transform:translateX(-50%);'
+        + 'background:rgba(80,30,30,0.92);color:#FFCDD2;padding:0.4rem 1rem;border-radius:20px;'
+        + 'font-size:0.72rem;font-weight:700;z-index:9997;box-shadow:0 2px 10px rgba(0,0,0,0.5)';
+      aviso.textContent = '📴 Sin conexión — jugando con lo ya descargado';
+      document.body.appendChild(aviso);
+    }
+  } else if (aviso) {
+    aviso.remove();
+  }
+}
+window.addEventListener('online', actualizarAvisoConexion);
+window.addEventListener('offline', actualizarAvisoConexion);
+
 window.addEventListener("DOMContentLoaded", () => {
+  actualizarAvisoConexion();
   // Esperar a que el script de Supabase esté listo
   initSupabase();
 
