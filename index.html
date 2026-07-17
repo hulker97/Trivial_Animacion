@@ -608,6 +608,17 @@ body > * { position: relative; z-index: 1; }
 .q-dif-badge.facil    { color: #69F0AE; border-color: rgba(105,240,174,0.5); background: rgba(105,240,174,0.12); }
 .q-dif-badge.media     { color: #FFD54F; border-color: rgba(255,213,79,0.5); background: rgba(255,213,79,0.12); }
 .q-dif-badge.dificil   { color: #FF8A80; border-color: rgba(255,138,128,0.5); background: rgba(255,138,128,0.12); }
+.btn-reportar {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  opacity: 0.55;
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+  line-height: 1;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.btn-reportar:hover { opacity: 1; transform: scale(1.15); }
 .q-movie {
   font-family: 'Fredoka One', cursive;
   font-size: 1.2rem;
@@ -1642,6 +1653,7 @@ body > * { position: relative; z-index: 1; }
         <div class="q-header-top">
           <span class="q-cat-badge" id="duelo-cat-badge">–</span>
           <span class="q-dif-badge" id="duelo-dif-badge" style="display:none"></span>
+          <button class="btn-reportar" onclick="abrirModalReportar('duelo')" title="Reportar esta pregunta">🚩</button>
         </div>
         <div class="q-movie" id="duelo-movie">–</div>
       </div>
@@ -1849,6 +1861,7 @@ body > * { position: relative; z-index: 1; }
         <div class="q-header-top">
           <span class="q-cat-badge" id="inf-cat-badge">–</span>
           <span class="q-dif-badge" id="inf-dif-badge" style="display:none"></span>
+          <button class="btn-reportar" onclick="abrirModalReportar('inf')" title="Reportar esta pregunta">🚩</button>
         </div>
         <div class="q-header-extras">
           <span class="cronometro-display" id="inf-cronometro" style="display:none">⏱️ 15</span>
@@ -1986,6 +1999,7 @@ body > * { position: relative; z-index: 1; }
         <div class="q-header-top">
           <span class="q-cat-badge" id="pq-cat-badge">–</span>
           <span class="q-dif-badge" id="pq-dif-badge" style="display:none"></span>
+          <button class="btn-reportar" onclick="abrirModalReportar('pq')" title="Reportar esta pregunta">🚩</button>
           <span class="q-wedge-badge hidden" id="pq-wedge-badge">🏅</span>
         </div>
         <div class="q-header-extras">
@@ -2107,6 +2121,26 @@ body > * { position: relative; z-index: 1; }
 </div>
 
 <!-- ══════════════════════════════════════════════════
+     MODAL: REPORTAR PREGUNTA
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-reportar">
+  <div class="question-modal" style="max-width:420px">
+    <h3 style="font-family:'Fredoka One',cursive;color:var(--gold);margin:0 0 0.8rem">🚩 Reportar esta pregunta</h3>
+    <p style="color:var(--text2);font-size:0.85rem;margin:0 0 0.8rem">
+      ¿Qué está mal? (opcional, pero ayuda mucho a la hora de corregirla)
+    </p>
+    <textarea id="reportar-comentario" rows="3" placeholder="Ej: la respuesta correcta no es esa, o falta una tilde..."
+      style="width:100%;box-sizing:border-box;border-radius:12px;padding:0.7rem;background:rgba(255,255,255,0.08);
+      color:var(--text);border:1px solid rgba(255,255,255,0.2);font-family:inherit;font-size:0.9rem;resize:vertical"></textarea>
+    <div style="display:flex;gap:0.6rem;margin-top:1rem">
+      <button class="btn btn-secondary" style="flex:1" onclick="cerrarModalReportar()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" id="btn-enviar-reporte" onclick="enviarReporteUI()">Enviar</button>
+    </div>
+    <div id="reportar-estado" style="text-align:center;margin-top:0.6rem;font-size:0.85rem;color:var(--gold)"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
      MODAL: PREGUNTA
 ══════════════════════════════════════════════════ -->
 <div class="modal-overlay hidden" id="modal-pregunta">
@@ -2115,6 +2149,7 @@ body > * { position: relative; z-index: 1; }
       <div class="q-header-top">
         <span class="q-cat-badge" id="q-cat-badge">–</span>
           <span class="q-dif-badge" id="q-dif-badge" style="display:none"></span>
+          <button class="btn-reportar" onclick="abrirModalReportar('q')" title="Reportar esta pregunta">🚩</button>
         <span class="q-wedge-badge hidden" id="q-wedge-badge">🏅 Cuña</span>
       </div>
       <div class="q-header-extras">
@@ -2407,6 +2442,20 @@ async function supabaseCount(table, filters) {
   return total ? parseInt(total) : 0;
 }
 
+async function supabaseInsert(table, fila) {
+  const res = await fetch(SUPABASE_URL + "/rest/v1/" + table, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_KEY,
+      "Authorization": "Bearer " + SUPABASE_KEY,
+      "Content-Type": "application/json",
+      "Prefer": "return=minimal"
+    },
+    body: JSON.stringify(fila)
+  });
+  if (!res.ok) throw new Error("Supabase error " + res.status);
+}
+
 // Caché en memoria de sesión: cargar las ~3746 preguntas por HTTP (varias tandas de 1000)
 // puede tardar unos segundos en una conexión de móvil, y antes se repetía la descarga
 // entera cada vez que se entraba a elegir modo. Ahora, con los mismos filtros, se
@@ -2417,7 +2466,7 @@ async function cargarPreguntas(filtros) {
   if (_cachePreguntas[clave]) return _cachePreguntas[clave];
 
   const promesa = (async () => {
-    const params = new URLSearchParams({ select: 'categoria,pelicula,estudio,dificultad,pregunta,opcion_0,opcion_1,opcion_2,opcion_3,correcta,dato' });
+    const params = new URLSearchParams({ select: 'id,categoria,pelicula,estudio,dificultad,pregunta,opcion_0,opcion_1,opcion_2,opcion_3,correcta,dato' });
     if (filtros.estudio)    params.append('estudio',    'eq.' + filtros.estudio);
     if (filtros.dificultad) params.append('dificultad', 'eq.' + filtros.dificultad);
 
@@ -2438,6 +2487,7 @@ async function cargarPreguntas(filtros) {
     }
 
     return allData.map(r => ({
+      id:         r.id,
       categoria:  r.categoria,
       pelicula:   r.pelicula,
       estudio:    r.estudio,
@@ -6700,6 +6750,75 @@ function vibrar(patron) { try { navigator.vibrate && navigator.vibrate(patron); 
 
 // Muestra un pequeño recuadro con la dificultad de la pregunta actual (fácil/media/difícil)
 const DIFICULTAD_LABEL = { facil: 'Fácil', media: 'Media', dificil: 'Difícil' };
+// ── Reportar pregunta: guarda un reporte en Supabase para poder revisarlo después ──
+let _reportarPreguntaActual = null; // la pregunta concreta que se está reportando ahora
+let _reportadasEnSesion = new Set(); // evita reportar la misma pregunta 2 veces en la misma sesión
+
+// Devuelve la pregunta que se está mostrando ahora mismo en la pantalla indicada
+function _preguntaActualParaReportar(prefijo) {
+  if (prefijo === 'q') {
+    const modo = typeof onlineModoActivo === 'function' ? onlineModoActivo() : null;
+    if (modo === 'rectangular' && rectGame) return rectGame._preguntaActual;
+    return game && game.pendingQuestion;
+  }
+  if (prefijo === 'pq') return pqGame && pqGame._preguntaActual;
+  if (prefijo === 'inf') return infPreguntaActual;
+  if (prefijo === 'duelo') return duelo && duelo.preguntas && duelo.preguntas[duelo.indice];
+  return null;
+}
+
+function abrirModalReportar(prefijo) {
+  const q = _preguntaActualParaReportar(prefijo);
+  if (!q) return;
+  _reportarPreguntaActual = q;
+  document.getElementById('reportar-comentario').value = '';
+  document.getElementById('reportar-estado').textContent = '';
+  document.getElementById('btn-enviar-reporte').style.display = '';
+  showModal('modal-reportar');
+}
+function cerrarModalReportar() {
+  hideModal('modal-reportar');
+}
+
+async function enviarReporteUI() {
+  const q = _reportarPreguntaActual;
+  if (!q) return;
+  const clave = q.id || (q.pelicula + '|' + q.pregunta);
+  const comentario = document.getElementById('reportar-comentario').value.trim();
+  const btn = document.getElementById('btn-enviar-reporte');
+  const estado = document.getElementById('reportar-estado');
+
+  if (_reportadasEnSesion.has(clave)) {
+    estado.textContent = 'Ya has reportado esta pregunta, ¡gracias!';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  try {
+    await supabaseInsert('reportes_preguntas', {
+      pregunta_id: q.id || null,
+      pelicula: q.pelicula,
+      categoria: q.categoria,
+      pregunta: q.pregunta,
+      opcion_0: q.opciones[0], opcion_1: q.opciones[1], opcion_2: q.opciones[2], opcion_3: q.opciones[3],
+      correcta: q.correcta,
+      dato: q.dato,
+      comentario: comentario || null,
+    });
+    _reportadasEnSesion.add(clave);
+    estado.textContent = '✅ ¡Gracias! La revisaremos pronto.';
+    btn.textContent = 'Enviado';
+    vibrar(20);
+    setTimeout(cerrarModalReportar, 1200);
+  } catch (e) {
+    console.error('Error al enviar el reporte:', e);
+    estado.textContent = '⚠️ No se pudo enviar, revisa tu conexión.';
+    btn.disabled = false;
+    btn.textContent = 'Enviar';
+  }
+}
+
 function mostrarDificultad(elId, dificultad) {
   const el = document.getElementById(elId);
   if (!el) return;
